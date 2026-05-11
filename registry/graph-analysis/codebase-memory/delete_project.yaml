@@ -1,24 +1,15 @@
 name: delete_project
 server: codebase-memory
 category: graph-analysis
-description: |
-  Remove a project and all of its graph data (nodes, edges, ADRs, traces).
-
-  Destructive and irreversible. Use when:
-  - A project has been renamed or moved
-  - You want to free up storage from a stale index
-  - You need a clean slate before re-indexing with different settings
-
-  After deletion, run index_repository to rebuild.
+description: Delete a project from the index
 inputSchema:
   type: object
   properties:
-    project_name:
+    project:
       type: string
-      description: The project identifier (as returned by list_projects).
   required:
-    - project_name
-example: |
+    - project
+example: |-
   await codebase-memory["delete_project"]({
-    project_name: "my-app"
+    project: "<project>"
   });

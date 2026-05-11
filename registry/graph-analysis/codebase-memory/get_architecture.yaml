@@ -1,38 +1,20 @@
 name: get_architecture
 server: codebase-memory
 category: graph-analysis
-description: |
-  High-level codebase overview: languages used, packages, routes, hotspots
-  (high-degree nodes), clusters (modules that change together), and ADRs.
-
-  Use this when starting work in an unfamiliar codebase to orient yourself
-  before diving into specific symbols. Pair with manage_adr to read
-  Architecture Decision Records.
-
-  Aspects you can request:
-  - languages: language breakdown by file count and LOC
-  - packages: top-level packages/modules
-  - routes: HTTP routes if any are detected
-  - hotspots: nodes with the highest in/out degree (central to the codebase)
-  - clusters: groups of files connected via FILE_CHANGES_WITH
-  - adr: list of Architecture Decision Records
+description: Get high-level architecture overview — packages, services, dependencies, and project structure at a glance.
 inputSchema:
   type: object
   properties:
-    project_name:
+    project:
       type: string
-      description: The project to summarise.
     aspects:
       type: array
       items:
         type: string
-        enum: [languages, packages, routes, hotspots, clusters, adr]
-      description: |
-        Which aspects to include. If omitted, all aspects are returned.
   required:
-    - project_name
-example: |
+    - project
+example: |-
   await codebase-memory["get_architecture"]({
-    project_name: "my-app",
-    aspects: ["hotspots", "routes", "adr"]
+    project: "<project>",
+    aspects: []
   });

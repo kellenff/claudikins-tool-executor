@@ -1,73 +1,29 @@
 name: manage_adr
 server: codebase-memory
 category: graph-analysis
-description: |
-  CRUD for Architecture Decision Records (ADRs) attached to a project.
-
-  ADRs are durable rationale for design decisions, queryable via
-  get_architecture(aspects: ["adr"]). They live with the graph, not in
-  loose markdown files - which means they survive moves and renames.
-
-  Actions:
-  - create: add a new ADR (status, title, context, decision, consequences)
-  - read: fetch an ADR by id
-  - list: enumerate ADRs for a project, filterable by status
-  - update: modify an existing ADR (e.g. mark as superseded)
-  - delete: remove an ADR
-
-  Typical ADR statuses: proposed, accepted, deprecated, superseded.
+description: Create or update Architecture Decision Records
 inputSchema:
   type: object
   properties:
-    action:
+    project:
       type: string
-      enum: [create, read, list, update, delete]
-      description: Which CRUD operation to perform.
-    project_name:
+    mode:
       type: string
-      description: Project the ADR belongs to.
-    adr_id:
+      enum:
+        - get
+        - update
+        - sections
+    content:
       type: string
-      description: |
-        ADR identifier. Required for read, update, delete. Auto-generated
-        for create.
-    title:
-      type: string
-      description: ADR title. Required for create.
-    status:
-      type: string
-      enum: [proposed, accepted, deprecated, superseded]
-      description: Lifecycle status of the ADR.
-    context:
-      type: string
-      description: The forces in tension that prompted the decision.
-    decision:
-      type: string
-      description: The actual decision made.
-    consequences:
-      type: string
-      description: Positive and negative outcomes of the decision.
-    supersedes:
-      type: string
-      description: ADR id this one replaces (for create/update).
+    sections:
+      type: array
+      items:
+        type: string
   required:
-    - action
-    - project_name
-example: |
-  // Create
+    - project
+example: |-
   await codebase-memory["manage_adr"]({
-    action: "create",
-    project_name: "my-app",
-    title: "Use Postgres over MySQL",
-    status: "accepted",
-    context: "Need JSONB support and stronger transactional guarantees.",
-    decision: "Adopt PostgreSQL 16 as the primary RDBMS.",
-    consequences: "Slight ops complexity increase; gain JSONB + CTEs."
-  });
-
-  // List accepted ADRs
-  await codebase-memory["manage_adr"]({
-    action: "list",
-    project_name: "my-app",
-    status: "accepted"
+    project: "<project>",
+    mode: "<mode>",
+    content: "<content>"
   });

@@ -1,54 +1,26 @@
 name: query_graph
 server: codebase-memory
 category: graph-analysis
-description: |
-  Execute a read-only Cypher-like graph query. Use ONLY when search_graph
-  can't express your need (multi-hop patterns, custom WHERE, regex matching).
-
-  ALWAYS call get_graph_schema first to see which labels and edge types
-  exist. Composing queries against nonexistent patterns returns empty
-  results that look like real "nothing found" answers.
-
-  Supported Cypher subset:
-  - MATCH with node labels and relationship types
-  - Variable-length paths: -[:CALLS*1..3]->
-  - WHERE with comparisons (=, <>, <, >), regex (=~), CONTAINS
-  - RETURN with property access (n.name, n.qn) and COUNT, DISTINCT
-  - ORDER BY, LIMIT
-
-  NOT supported:
-  - WITH (no pipeline composition)
-  - COLLECT (no aggregation into lists)
-  - OPTIONAL MATCH
-  - Mutations: CREATE, MERGE, SET, DELETE, REMOVE
-
-  Queries that violate these constraints return an error - rephrase using
-  the supported subset or fall back to search_graph + client-side filtering.
+description: >-
+  Execute a Cypher query against the knowledge graph for complex multi-hop patterns, aggregations, and cross-service
+  analysis.
 inputSchema:
   type: object
   properties:
-    project_name:
-      type: string
-      description: Project to query.
     query:
       type: string
-      description: The Cypher query string (supported subset only).
-    limit:
+      description: Cypher query
+    project:
+      type: string
+    max_rows:
       type: integer
-      default: 100
-      description: |
-        Safety cap on results, applied even if the query omits LIMIT.
+      description: 'Optional row limit. Default: unlimited (100k ceiling)'
   required:
-    - project_name
     - query
-example: |
+    - project
+example: |-
   await codebase-memory["query_graph"]({
-    project_name: "my-app",
-    query: `
-      MATCH (r:Route)-[:HANDLES]->(f:Function)-[:CALLS*1..3]->(g:Function)
-      WHERE g.name CONTAINS "db"
-      RETURN DISTINCT r.path, f.qn, g.qn
-      ORDER BY r.path
-      LIMIT 50
-    `
+    query: "<query>",
+    project: "<project>",
+    max_rows: 0
   });

@@ -1,52 +1,48 @@
 name: search_code
 server: codebase-memory
 category: graph-analysis
-description: |
-  Grep-like text search across files indexed in a project, augmented with
-  graph context (which symbols each match belongs to).
-
-  Use when:
-  - You need a literal string match (config values, error strings, log text)
-  - You want grep results but with symbol attribution for free
-  - The pattern is text, not a code symbol (prefer search_graph for symbols)
-
-  Unlike vanilla grep, search_code only scans files that are part of the
-  indexed project (respects .cbmignore and .gitignore), and decorates each
-  hit with the enclosing symbol's qualified name when available.
+description: >-
+  Graph-augmented code search. Finds text patterns via grep, then enriches results with the knowledge graph:
+  deduplicates matches into containing functions, ranks by structural importance (definitions first, popular functions
+  next, tests last). Modes: compact (default, signatures only — token efficient), full (with source), files (just file
+  paths). Use path_filter regex to scope results.
 inputSchema:
   type: object
   properties:
-    project_name:
-      type: string
-      description: Project to search within.
     pattern:
       type: string
-      description: |
-        Text or regex pattern to search for. Treated as a regex - escape
-        special characters for literal matches.
+    project:
+      type: string
     file_pattern:
       type: string
-      description: |
-        Glob pattern to filter files (e.g. "src/**/*.ts").
-    case_sensitive:
-      type: boolean
-      default: true
-      description: Whether matching is case-sensitive.
-    context_lines:
+      description: Glob for grep --include (e.g. *.go)
+    path_filter:
+      type: string
+      description: Regex filter on result file paths (e.g. ^src/ or \.(go|ts)$)
+    mode:
+      type: string
+      enum:
+        - compact
+        - full
+        - files
+      default: compact
+      description: 'compact: signatures+metadata (default). full: with source. files: just file list.'
+    context:
       type: integer
-      default: 0
-      description: Lines of context to include before and after each match.
+      description: Lines of context around each match (like grep -C). Only used in compact mode.
+    regex:
+      type: boolean
+      default: false
     limit:
       type: integer
-      default: 100
-      description: Max number of matches to return.
+      description: Max results (default 10)
+      default: 10
   required:
-    - project_name
     - pattern
-example: |
+    - project
+example: |-
   await codebase-memory["search_code"]({
-    project_name: "my-app",
-    pattern: "DATABASE_URL",
-    file_pattern: "**/*.{ts,env,yaml}",
-    context_lines: 2
+    pattern: "<pattern>",
+    project: "<project>",
+    file_pattern: "<file_pattern>"
   });

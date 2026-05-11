@@ -1,40 +1,45 @@
 name: index_repository
 server: codebase-memory
 category: graph-analysis
-description: |
-  Index a repository into the code graph database. After initial indexing,
-  auto-sync keeps the graph fresh as files change.
-
-  Run this once per project before using any of the graph query/search tools.
-  Use index_status to monitor progress and list_projects to confirm completion.
-
-  Indexed entities: files, modules, classes, functions, methods, interfaces,
-  enums, types, routes, resources. Indexed relationships: containment, imports,
-  calls, HTTP calls, async calls, implementations, type usage, tests.
-
-  Respects .gitignore hierarchy and .cbmignore (project-specific, gitignore syntax).
-  Symlinks are always skipped.
+description: >-
+  Index a repository into the knowledge graph. Special mode 'cross-repo-intelligence': skip extraction, only match
+  Routes/Channels across projects to create CROSS_HTTP_CALLS/CROSS_ASYNC_CALLS/CROSS_CHANNEL edges. Requires
+  target_projects param. Ensure target projects have fresh indexes first.
 inputSchema:
   type: object
   properties:
-    repository_path:
+    repo_path:
       type: string
-      description: Absolute path to the repository root to index.
-    project_name:
+      description: Path to the repository
+    mode:
       type: string
-      description: |
-        Optional project identifier used as the prefix in qualified names.
-        Defaults to the repository directory name.
-    force_reindex:
+      enum:
+        - full
+        - moderate
+        - fast
+        - cross-repo-intelligence
+      default: full
+      description: >-
+        full: all passes. moderate: fast + semantic. fast: structure only. cross-repo-intelligence: match
+        Routes/Channels across projects.
+    target_projects:
+      type: array
+      items:
+        type: string
+      description: >-
+        Projects to search for cross-repo links (cross-repo-intelligence mode). Use ["*"] for all indexed projects. Run
+        list_projects to see available projects.
+    persistence:
       type: boolean
       default: false
-      description: |
-        If true, delete existing graph data for this project and rebuild
-        from scratch. Use sparingly - auto-sync usually suffices.
+      description: >-
+        Write compressed artifact to .codebase-memory/graph.db.zst for team sharing. Teammates can bootstrap from the
+        artifact instead of full re-indexing.
   required:
-    - repository_path
-example: |
+    - repo_path
+example: |-
   await codebase-memory["index_repository"]({
-    repository_path: "/Users/me/Projects/my-app",
-    project_name: "my-app"
+    repo_path: "<repo_path>",
+    mode: "<mode>",
+    target_projects: []
   });

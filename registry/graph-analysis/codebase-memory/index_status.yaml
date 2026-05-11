@@ -1,21 +1,15 @@
 name: index_status
 server: codebase-memory
 category: graph-analysis
-description: |
-  Check indexing status for a project: progress, last sync time, file counts,
-  any errors during parsing.
-
-  Use this after index_repository to know when the graph is ready to query,
-  and periodically to confirm auto-sync is keeping the graph fresh.
+description: Get the indexing status of a project
 inputSchema:
   type: object
   properties:
-    project_name:
+    project:
       type: string
-      description: The project identifier to check.
   required:
-    - project_name
-example: |
+    - project
+example: |-
   await codebase-memory["index_status"]({
-    project_name: "my-app"
+    project: "<project>"
   });

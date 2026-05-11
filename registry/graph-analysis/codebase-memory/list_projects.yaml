@@ -1,16 +1,8 @@
 name: list_projects
 server: codebase-memory
 category: graph-analysis
-description: |
-  List all indexed projects with their node and edge counts.
-
-  Useful to:
-  - Confirm a project has been indexed
-  - Compare relative graph sizes across projects
-  - Discover project names usable as the prefix in qualified names
-    (see get_code_snippet)
+description: List all indexed projects
 inputSchema:
   type: object
   properties: {}
-example: |
-  await codebase-memory["list_projects"]({});
+example: await codebase-memory.list_projects({});

@@ -1,31 +1,15 @@
 name: get_graph_schema
 server: codebase-memory
 category: graph-analysis
-description: |
-  Return the schema of the code graph: node labels with counts, edge types
-  with counts, relationship patterns (which labels connect via which edges),
-  and property definitions per label.
-
-  RUN THIS FIRST before composing query_graph queries. It tells you which
-  labels and edge types actually exist and how they connect, so your Cypher
-  queries don't reference nonexistent patterns.
-
-  Node labels: Project, Package, Folder, File, Module, Class, Function,
-  Method, Interface, Enum, Type, Route, Resource.
-
-  Edge types: CONTAINS_PACKAGE, CONTAINS_FOLDER, CONTAINS_FILE, DEFINES,
-  DEFINES_METHOD, IMPORTS, CALLS, HTTP_CALLS, ASYNC_CALLS, IMPLEMENTS,
-  HANDLES, USAGE, CONFIGURES, WRITES, MEMBER_OF, TESTS, USES_TYPE,
-  FILE_CHANGES_WITH.
+description: Get the schema of the knowledge graph (node labels, edge types)
 inputSchema:
   type: object
   properties:
-    project_name:
+    project:
       type: string
-      description: |
-        Optional project to scope the schema to. If omitted, returns the
-        global schema across all indexed projects.
-example: |
+  required:
+    - project
+example: |-
   await codebase-memory["get_graph_schema"]({
-    project_name: "my-app"
+    project: "<project>"
   });
