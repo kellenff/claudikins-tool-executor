@@ -1,0 +1,49 @@
+name: get_code_snippet
+server: codebase-memory
+category: graph-analysis
+description: |
+  Read the source code for a function, method, class, or other symbol
+  given its qualified name.
+
+  Qualified name format: `<project>.<path_parts>.<name>`
+  - <project>: as listed by list_projects
+  - <path_parts>: directory + file segments separated by dots
+                  (e.g. src.services.user for src/services/user.ts)
+  - <name>: the symbol name (or Class.method for class methods)
+
+  Examples:
+  - my-app.src.services.user.authenticateUser
+  - my-app.src.controllers.AuthController.login
+
+  Use search_graph FIRST to discover the exact qualified name - hand-rolling
+  it is error-prone for languages with unusual path conventions.
+
+  PREFER this over Read tool for known symbols: it returns just the symbol
+  body, not the entire file. Saves context.
+inputSchema:
+  type: object
+  properties:
+    qualified_name:
+      type: string
+      description: |
+        Qualified name of the symbol (discovered via search_graph).
+    include_context:
+      type: boolean
+      default: false
+      description: |
+        If true, include surrounding imports and type definitions referenced
+        by the symbol.
+  required:
+    - qualified_name
+example: |
+  // First discover the qualified name
+  const results = await codebase-memory["search_graph"]({
+    project_name: "my-app",
+    label: "Function",
+    name_pattern: "authenticateUser"
+  });
+
+  // Then fetch the source
+  await codebase-memory["get_code_snippet"]({
+    qualified_name: results[0].qn
+  });

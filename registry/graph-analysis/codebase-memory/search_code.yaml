@@ -1,0 +1,52 @@
+name: search_code
+server: codebase-memory
+category: graph-analysis
+description: |
+  Grep-like text search across files indexed in a project, augmented with
+  graph context (which symbols each match belongs to).
+
+  Use when:
+  - You need a literal string match (config values, error strings, log text)
+  - You want grep results but with symbol attribution for free
+  - The pattern is text, not a code symbol (prefer search_graph for symbols)
+
+  Unlike vanilla grep, search_code only scans files that are part of the
+  indexed project (respects .cbmignore and .gitignore), and decorates each
+  hit with the enclosing symbol's qualified name when available.
+inputSchema:
+  type: object
+  properties:
+    project_name:
+      type: string
+      description: Project to search within.
+    pattern:
+      type: string
+      description: |
+        Text or regex pattern to search for. Treated as a regex - escape
+        special characters for literal matches.
+    file_pattern:
+      type: string
+      description: |
+        Glob pattern to filter files (e.g. "src/**/*.ts").
+    case_sensitive:
+      type: boolean
+      default: true
+      description: Whether matching is case-sensitive.
+    context_lines:
+      type: integer
+      default: 0
+      description: Lines of context to include before and after each match.
+    limit:
+      type: integer
+      default: 100
+      description: Max number of matches to return.
+  required:
+    - project_name
+    - pattern
+example: |
+  await codebase-memory["search_code"]({
+    project_name: "my-app",
+    pattern: "DATABASE_URL",
+    file_pattern: "**/*.{ts,env,yaml}",
+    context_lines: 2
+  });

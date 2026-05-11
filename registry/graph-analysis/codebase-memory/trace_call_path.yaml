@@ -1,0 +1,55 @@
+name: trace_call_path
+server: codebase-memory
+category: graph-analysis
+description: |
+  BFS traversal of call relationships: who calls a function (callers) and
+  what it calls (callees), to a configurable depth.
+
+  Use this when:
+  - Investigating blast radius before changing a function's signature
+  - Understanding entry points: trace upward to find HTTP routes/CLI handlers
+  - Mapping data flow: trace downward to see what gets touched
+
+  Modes:
+  - calls: follow CALLS edges (synchronous function calls)
+  - data_flow: follow CALLS + USES_TYPE + WRITES (data dependencies)
+  - cross_service: follow HTTP_CALLS + ASYNC_CALLS (service boundaries)
+
+  Depth must be between 1 and 5. Higher depths can explode in result size -
+  start at 2 and increase only if needed.
+inputSchema:
+  type: object
+  properties:
+    function_name:
+      type: string
+      description: |
+        Qualified name of the starting function (use search_graph first to
+        discover it).
+    direction:
+      type: string
+      enum: [callers, callees, both]
+      default: callees
+      description: |
+        callers = traverse upward (who calls this?),
+        callees = traverse downward (what does this call?),
+        both = traverse both directions.
+    mode:
+      type: string
+      enum: [calls, data_flow, cross_service]
+      default: calls
+      description: Which edge types to follow during traversal.
+    depth:
+      type: integer
+      minimum: 1
+      maximum: 5
+      default: 2
+      description: How many hops to traverse.
+  required:
+    - function_name
+example: |
+  await codebase-memory["trace_call_path"]({
+    function_name: "my-app.src.services.user.authenticateUser",
+    direction: "callers",
+    mode: "calls",
+    depth: 3
+  });

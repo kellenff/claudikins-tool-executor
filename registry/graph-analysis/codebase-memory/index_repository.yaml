@@ -1,0 +1,40 @@
+name: index_repository
+server: codebase-memory
+category: graph-analysis
+description: |
+  Index a repository into the code graph database. After initial indexing,
+  auto-sync keeps the graph fresh as files change.
+
+  Run this once per project before using any of the graph query/search tools.
+  Use index_status to monitor progress and list_projects to confirm completion.
+
+  Indexed entities: files, modules, classes, functions, methods, interfaces,
+  enums, types, routes, resources. Indexed relationships: containment, imports,
+  calls, HTTP calls, async calls, implementations, type usage, tests.
+
+  Respects .gitignore hierarchy and .cbmignore (project-specific, gitignore syntax).
+  Symlinks are always skipped.
+inputSchema:
+  type: object
+  properties:
+    repository_path:
+      type: string
+      description: Absolute path to the repository root to index.
+    project_name:
+      type: string
+      description: |
+        Optional project identifier used as the prefix in qualified names.
+        Defaults to the repository directory name.
+    force_reindex:
+      type: boolean
+      default: false
+      description: |
+        If true, delete existing graph data for this project and rebuild
+        from scratch. Use sparingly - auto-sync usually suffices.
+  required:
+    - repository_path
+example: |
+  await codebase-memory["index_repository"]({
+    repository_path: "/Users/me/Projects/my-app",
+    project_name: "my-app"
+  });

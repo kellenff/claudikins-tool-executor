@@ -1,0 +1,48 @@
+name: detect_changes
+server: codebase-memory
+category: graph-analysis
+description: |
+  Map a git diff onto the graph: identify affected symbols, compute blast
+  radius (transitively dependent code), and classify risk.
+
+  Run this BEFORE merging risky changes to understand what could break.
+  Particularly valuable for:
+  - Pre-PR risk assessment
+  - Deciding test scope after a refactor
+  - Identifying cross-service impacts of an interface change
+
+  Risk classification combines:
+  - Number of affected symbols (blast radius size)
+  - Centrality of affected nodes (hotspot involvement)
+  - Whether HTTP_CALLS or ASYNC_CALLS edges are crossed (service boundary)
+  - Test coverage of affected symbols (TESTS edges)
+inputSchema:
+  type: object
+  properties:
+    project_name:
+      type: string
+      description: Project the diff belongs to.
+    diff:
+      type: string
+      description: |
+        Unified diff text. If omitted, uses git working-tree changes against
+        the project's tracked HEAD.
+    base_ref:
+      type: string
+      description: |
+        Git ref to diff against (e.g. "main", "HEAD~1"). Ignored if `diff`
+        is provided.
+    depth:
+      type: integer
+      minimum: 1
+      maximum: 5
+      default: 2
+      description: How far to propagate blast radius from each changed symbol.
+  required:
+    - project_name
+example: |
+  await codebase-memory["detect_changes"]({
+    project_name: "my-app",
+    base_ref: "main",
+    depth: 3
+  });

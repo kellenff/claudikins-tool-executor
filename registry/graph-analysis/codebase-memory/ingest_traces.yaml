@@ -1,0 +1,55 @@
+name: ingest_traces
+server: codebase-memory
+category: graph-analysis
+description: |
+  Ingest runtime traces (e.g. OpenTelemetry spans) to validate and enrich
+  HTTP_CALLS edges in the graph.
+
+  Static analysis can only infer HTTP_CALLS edges from code patterns
+  (fetch/axios/http.get with literal URLs). Runtime traces provide ground
+  truth: which services actually call which, with what frequency, and at
+  what latency.
+
+  After ingestion:
+  - HTTP_CALLS edges get `verified: true` and call_count properties
+  - New HTTP_CALLS edges may be added for previously undetected calls
+  - cross_service mode in trace_call_path becomes far more accurate
+
+  Accepts traces in OTLP JSON format or a simplified spans schema.
+inputSchema:
+  type: object
+  properties:
+    project_name:
+      type: string
+      description: |
+        Primary project the traces belong to. Cross-service edges to other
+        indexed projects are added automatically.
+    traces:
+      type: array
+      description: |
+        Array of trace objects. Each trace contains spans with service.name,
+        http.method, http.url, span.kind, and timing.
+      items:
+        type: object
+    format:
+      type: string
+      enum: [otlp_json, simple]
+      default: otlp_json
+      description: Format of the traces payload.
+  required:
+    - project_name
+    - traces
+example: |
+  await codebase-memory["ingest_traces"]({
+    project_name: "my-app",
+    format: "simple",
+    traces: [
+      {
+        service: "my-app",
+        method: "POST",
+        url: "https://payments.internal/charge",
+        kind: "client",
+        duration_ms: 142
+      }
+    ]
+  });

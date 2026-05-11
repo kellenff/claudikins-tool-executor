@@ -1,0 +1,36 @@
+# codebase-memory-mcp ignore patterns (gitignore syntax)
+# Layered on top of .gitignore - exclude these from graph indexing.
+
+# Build artefacts
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Tool-executor runtime workspace (ephemeral execution sandbox)
+workspace/
+
+# Plan/state machinery (not source code)
+.claude/agent-outputs/
+.claude/archive/
+.claude/errors/
+.claude/evidence/
+.claude/tmp/
+.claude/plans/
+.claude/kernel-outlines/
+
+# VCS internals
+.git/
+
+# Editor and OS noise
+.vscode/
+.idea/
+.DS_Store
+
+# Lockfiles (not analysed as code)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

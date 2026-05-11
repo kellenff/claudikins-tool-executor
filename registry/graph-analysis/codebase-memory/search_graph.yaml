@@ -1,0 +1,82 @@
+name: search_graph
+server: codebase-memory
+category: graph-analysis
+description: |
+  Structured search of the code graph by label, name pattern, file pattern,
+  and degree filters. Paginated via limit/offset.
+
+  PREFER this over query_graph for typical "find a function/class/route by
+  name" needs. Use query_graph only when you need multi-hop patterns or
+  custom WHERE logic search_graph cannot express.
+
+  Common workflows:
+  - Find a function: { label: "Function", name_pattern: "handleAuth" }
+  - Find routes: { label: "Route", name_pattern: "/api/users/*" }
+  - Find high-degree nodes: { label: "Class", min_in_degree: 5 }
+  - Files in a directory: { label: "File", file_pattern: "src/services/**" }
+
+  Returns nodes with their qualified names (qn) - keep these to feed into
+  get_code_snippet, trace_call_path, or query_graph.
+inputSchema:
+  type: object
+  properties:
+    project_name:
+      type: string
+      description: Project to search within.
+    label:
+      type: string
+      enum:
+        [
+          Project,
+          Package,
+          Folder,
+          File,
+          Module,
+          Class,
+          Function,
+          Method,
+          Interface,
+          Enum,
+          Type,
+          Route,
+          Resource,
+        ]
+      description: Node label to filter by.
+    name_pattern:
+      type: string
+      description: |
+        Glob or regex pattern to match against node names. Supports * and ?.
+    qn_pattern:
+      type: string
+      description: |
+        Pattern to match against fully qualified names
+        (<project>.<path>.<name>).
+    file_pattern:
+      type: string
+      description: |
+        Glob pattern to filter by source file path
+        (e.g. "src/services/**/*.ts").
+    min_in_degree:
+      type: integer
+      description: Minimum number of incoming edges.
+    min_out_degree:
+      type: integer
+      description: Minimum number of outgoing edges.
+    limit:
+      type: integer
+      default: 50
+      description: Max results to return.
+    offset:
+      type: integer
+      default: 0
+      description: Pagination offset.
+  required:
+    - project_name
+example: |
+  await codebase-memory["search_graph"]({
+    project_name: "my-app",
+    label: "Function",
+    name_pattern: "handle*",
+    file_pattern: "src/routes/**",
+    limit: 20
+  });
