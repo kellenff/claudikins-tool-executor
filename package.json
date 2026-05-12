@@ -32,8 +32,9 @@
     "tool-executor.config.example.json"
   ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "tchk": "tsc --noEmit",
     "start": "node dist/index.js",
     "extract": "tsx scripts/extract-schemas.ts",
     "test": "vitest",
@@ -57,6 +58,7 @@
     "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"

@@ -5,7 +5,6 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
     "types": ["node"],
-    "rootDir": "src",
     "outDir": "dist",
     "declaration": true,
     "sourceMap": false,
@@ -16,18 +15,9 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "noEmitOnError": true
+    "noEmitOnError": true,
+    "ignoreDeprecations": "6.0"
   },
-  "include": ["src/**/*.ts"],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "workspace",
-    "scripts",
-    "src/**/*.test.ts",
-    "src/**/*.spec.ts",
-    "src/*/*.test.ts",
-    "src/*/*.spec.ts",
-    "tests"
-  ]
+  "files": ["./tsup.config.ts"],
+  "include": ["src/**/*.ts"]
 }

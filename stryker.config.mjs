@@ -7,9 +7,10 @@ export default {
   mutator: {
     name: "typescript",
   },
+  ignoreStatic: true,
   testRunner: "vitest",
   reporters: ["progress", "clear-text", "html"],
-  coverageAnalysis: "off",
+  coverageAnalysis: "perTest",
   testFiles: ["src/**/*.test.ts"],
   tsconfigFile: "tsconfig.json",
   thresholds: {
