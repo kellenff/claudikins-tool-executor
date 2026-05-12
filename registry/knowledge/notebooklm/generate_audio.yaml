@@ -1,0 +1,63 @@
+name: generate_audio
+server: notebooklm
+category: knowledge
+description: >-
+  Trigger podcast-style Audio Overview generation for a notebook.
+
+
+  **Async by default** — returns immediately with one of:
+    • `status: "started"` — generation just kicked off
+    • `status: "in_progress"` — a generation was already running; this call attached to it
+    • `status: "ready"` (with `alreadyExisted: true`) — an Audio Overview already existed; nothing was triggered
+
+  Generation typically takes 2–10 minutes. **Workflow:**
+    1. `generate_audio` → returns immediately
+    2. Poll `get_audio_status` every ~30 s
+    3. When status is `ready`, call `download_audio`
+
+  Pass `wait_for_completion: true` for legacy synchronous behaviour (blocks for up to `timeout_ms`). Audio Overview is
+  the only Studio output exposed in v2.0 (Video / Mindmap / Quiz / Infographic / Datatable / Presentation are NotebookLM
+  features but not yet wrapped).
+inputSchema:
+  type: object
+  properties:
+    custom_prompt:
+      type: string
+      description: >-
+        Optional focus prompt for the Audio Overview, e.g. "Focus on the API authentication flow and skip pricing".
+        Passed into the NotebookLM "Customize" sub-dialog before generation starts.
+    wait_for_completion:
+      type: boolean
+      description: >-
+        If true, block until the audio tile is ready (up to `timeout_ms`). Default false — return immediately and let
+        the caller poll `get_audio_status`.
+    timeout_ms:
+      type: number
+      description: >-
+        Only relevant when `wait_for_completion=true`. Maximum wait for the audio tile to appear. Default 600 000 (10
+        min).
+    show_browser:
+      type: boolean
+      description: 'Show the browser window for debugging. Default: false.'
+    session_id:
+      type: string
+      description: >-
+        Reuse an existing browser session by id. Recommended when you have already called `ask_question` against the
+        same notebook — saves the 10–15 s page-load time. Obtain from `list_sessions` or any prior `ask_question`
+        response (`result.session_id`).
+    notebook_id:
+      type: string
+      description: >-
+        Library notebook id (from `list_notebooks` / `search_notebooks`). Defaults to the active notebook (see
+        `select_notebook`) when omitted.
+    notebook_url:
+      type: string
+      description: >-
+        Direct NotebookLM URL — overrides `notebook_id`. Use for ad-hoc notebooks not yet in your library. Format:
+        `https://notebooklm.google.com/notebook/<uuid>`.
+example: |-
+  await notebooklm["generate_audio"]({
+    custom_prompt: "<custom_prompt>",
+    wait_for_completion: true,
+    timeout_ms: 0
+  });

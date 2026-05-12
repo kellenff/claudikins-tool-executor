@@ -10,6 +10,6 @@ inputSchema:
   required:
     - project
 example: |-
-  await codebase-memory["get_graph_schema"]({
+  await codebase_memory["get_graph_schema"]({
     project: "<project>"
   });

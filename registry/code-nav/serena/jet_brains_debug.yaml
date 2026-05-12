@@ -1,0 +1,33 @@
+name: jet_brains_debug
+server: serena
+category: code-nav
+description: >-
+  Debug code interactively by evaluating Groovy expressions in a persistent REPL.
+
+  Important: Debugging should only be applied if the user has requested it!
+
+
+  Use the `serena_info` tool with topic `jet_brains_debug_repl` for usage information. Returns string representation of
+  the result.
+inputSchema:
+  type: object
+  properties:
+    expression:
+      title: Expression
+      type: string
+      description: |-
+        A Groovy/Java expression/statement to evaluate in the REPL.
+        If empty/null, closes the REPL with the given key.
+    repl_key:
+      default: default
+      title: Repl Key
+      type: string
+      description: Identifier for the REPL instance. State persists across calls with the same key.
+  required:
+    - expression
+  title: applyArguments
+example: |-
+  await serena["jet_brains_debug"]({
+    expression: "<expression>",
+    repl_key: "<repl_key>"
+  });

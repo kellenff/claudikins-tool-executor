@@ -14,7 +14,7 @@ inputSchema:
   required:
     - project
 example: |-
-  await codebase-memory["get_architecture"]({
+  await codebase_memory["get_architecture"]({
     project: "<project>",
     aspects: []
   });

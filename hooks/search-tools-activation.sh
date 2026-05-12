@@ -6,7 +6,7 @@
 read -r -d '' MESSAGE <<'PROMPT'
 INSTRUCTION: MANDATORY MCP TOOL DISCOVERY SEQUENCE
 
-You have access to a tool-executor MCP that wraps 7 specialized MCP servers with 96 tools.
+You have access to a tool-executor MCP that wraps 8 specialized MCP servers with 110 tools.
 BEFORE using basic tools (Read, Grep, Glob, Bash), you MUST check if a better tool exists.
 
 ## Step 1 - EVALUATE (think about this):
@@ -14,7 +14,8 @@ Could any of these MCP categories help with this task?
 
 | Category | Server | Capabilities |
 |----------|--------|--------------|
-| code-nav | Serena (28 tools) | Symbol search, refactoring, code analysis, persistent memory, pattern search, shell execution |
+| code-nav | Serena (29 tools) | Symbol search, refactoring, code analysis, persistent memory, pattern search, shell execution |
+| graph-analysis | codebase-memory (14 tools) | Code graph indexing, symbol search, call/data-flow traversal, blast-radius analysis, ADRs |
 | knowledge | Context7, NotebookLM | Library docs lookup, notebook Q&A, research management |
 | ai-models | Gemini (37 tools) | Deep research agent, brainstorming (Claude+Gemini), code analysis, structured output, 4K image generation + multi-turn editing, video generation, thinking levels, summarization, Google search, URL/document analysis |
 | reasoning | Sequential-thinking | Multi-step reasoning with thought chains |
@@ -39,6 +40,7 @@ mcp__tool-executor__search_tools({ query: "describe what you need" })
 
 ## Quick Reference - When to ALWAYS search_tools:
 - "Find where X is defined/used" → Serena symbol search & references
+- "Trace call paths or impact analysis" → codebase-memory graph traversal
 - "Refactor this code" → Serena rename_symbol, replace_symbol_body
 - "What's the API for library Y?" → Context7 docs lookup
 - "Research topic Z thoroughly" → Gemini deep-research agent

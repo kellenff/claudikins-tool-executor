@@ -37,11 +37,11 @@ You are orchestrating Tool Executor configuration changes with user guidance at 
 ## Post-Configuration
 
 After any configuration changes, remind the user to:
-1. Run `npm run build`
+1. Run `npm run extract`
 2. Restart Claude Code
 
 ## Critical Facts
 
 - **Serena is mandatory** - Two instances, neither removable
-- **Config location** - `src/sandbox/clients.ts` for MCP servers
+- **Config location** - `dist/sandbox/clients.js` for MCP servers
 - **Environment variables** - Set in shell profile or `.env` file

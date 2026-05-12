@@ -6,4 +6,4 @@ inputSchema:
   type: object
   properties: {}
   required: []
-example: await shadcn.list_shadcn_components({});
+example: await shadcn["list_shadcn_components"]({});

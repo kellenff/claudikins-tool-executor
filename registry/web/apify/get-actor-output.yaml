@@ -34,7 +34,7 @@ description: >-
 
 
   Note: This tool is automatically included if the Apify MCP Server is configured with any Actor tools (e.g.,
-  "apify-slash-rag-web-browser") or tools that can interact with Actors (e.g., "call-actor", "add-actor").
+  "apify--rag-web-browser") or tools that can interact with Actors (e.g., "call-actor", "add-actor").
 inputSchema:
   type: object
   properties:
@@ -57,9 +57,6 @@ inputSchema:
       type: number
   required:
     - datasetId
-    - offset
-    - limit
-  $schema: https://json-schema.org/draft/2020-12/schema
   additionalProperties: false
 example: |-
   await apify["get-actor-output"]({

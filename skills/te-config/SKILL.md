@@ -27,7 +27,8 @@ Create `tool-executor.config.json` in the project root:
       "name": "serena",
       "displayName": "Serena",
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
+      "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
+      "trusted": true
     },
     {
       "name": "gemini",
@@ -62,25 +63,14 @@ Create `tool-executor.config.json` in the project root:
       "args": ["-y", "@example/new-mcp-server"],
       "env": {
         "API_KEY": "${NEW_SERVER_API_KEY}"
-      }
+      },
+      "trusted": true
     }
   ]
 }
 ```
 
-### Step 2: Add Type Definition
-
-Edit `src/types.ts` to add the client type:
-
-```typescript
-export interface MCPClients {
-  serena: Client | null;
-  // ... existing clients ...
-  newServer: Client | null;  // Add this
-}
-```
-
-### Step 3: Regenerate Registry
+### Step 2: Regenerate Registry
 
 ```bash
 npm run extract
@@ -88,10 +78,12 @@ npm run extract
 
 This connects to all configured MCP servers and generates YAML files in `registry/`.
 
-### Step 4: Rebuild and Restart
+Hyphenated server names are exposed with underscore aliases in `execute_code`; for example `codebase-memory` becomes `codebase_memory`. The original name is always available through `clients["codebase-memory"]`.
+
+### Step 3: Refresh and Restart
 
 ```bash
-npm run build
+npm run extract
 # Restart Claude Code to pick up new MCP server
 ```
 
@@ -103,21 +95,17 @@ npm run build
 
 Delete the server entry from `tool-executor.config.json`.
 
-### Step 2: Remove Type Definition
-
-Remove from `src/types.ts` MCPClients interface.
-
-### Step 3: Clean Registry
+### Step 2: Clean Registry
 
 ```bash
 rm -rf registry/{category}/{serverName}/
 npm run extract  # Regenerate remaining
 ```
 
-### Step 4: Rebuild
+### Step 3: Restart
 
 ```bash
-npm run build
+# Restart Claude Code after removing server and running extract
 ```
 
 ## Environment Variables
@@ -141,6 +129,7 @@ Environment variables use `${VAR_NAME}` syntax in config:
 |--------|----------|---------|
 | gemini | `GEMINI_API_KEY` | Google AI API key |
 | apify | `APIFY_TOKEN` | Apify platform token |
+| codebase-memory | `CODEBASE_MEMORY_MCP_BIN` | Optional path override for `codebase-memory-mcp` |
 
 ### Setting Variables
 
@@ -171,6 +160,7 @@ export GEMINI_API_KEY="your-key-here"
 registry/
 ├── ai-models/gemini/          # Gemini tools (AI queries, images, diagrams)
 ├── code-nav/serena/           # Serena tools
+├── graph-analysis/codebase-memory/ # codebase-memory graph tools
 ├── knowledge/context7/        # Context7 tools
 ├── knowledge/notebooklm/      # NotebookLM tools
 ├── reasoning/sequentialThinking/
@@ -223,8 +213,7 @@ Serena indexes the registry for semantic search. If search results seem stale:
 # Re-run extraction to refresh YAML files
 npm run extract
 
-# Rebuild to pick up changes
-npm run build
+# Restart Claude Code to pick up refreshed registry files
 ```
 
 ## Default Server Configurations
@@ -239,11 +228,14 @@ These are the built-in defaults if no config file exists:
 | notebooklm | npx | notebooklm-mcp |
 | shadcn | npx | shadcn-ui-mcp-server |
 | apify | npx | @apify/actors-mcp-server |
+| codebase-memory | codebase-memory-mcp | Override with CODEBASE_MEMORY_MCP_BIN |
 | sequentialThinking | npx | @modelcontextprotocol/server-sequential-thinking |
+
+> If `codebase-memory` is expected, install `codebase-memory-mcp` and set `CODEBASE_MEMORY_MCP_BIN` when it is not on your shell `PATH`.
 
 ## Source Code Reference
 
-- `${CLAUDE_PLUGIN_ROOT}/src/sandbox/clients.ts` - Client configuration and lifecycle
-- `${CLAUDE_PLUGIN_ROOT}/src/config.ts` - Config file loading
-- `${CLAUDE_PLUGIN_ROOT}/src/types.ts` - Type definitions
+- `${CLAUDE_PLUGIN_ROOT}/dist/sandbox/clients.js` - Client configuration and lifecycle
+- `${CLAUDE_PLUGIN_ROOT}/dist/config.js` - Config file loading
+- `${CLAUDE_PLUGIN_ROOT}/dist/types.d.ts` - Type definitions
 - `${CLAUDE_PLUGIN_ROOT}/scripts/extract-schemas.ts` - Registry generation

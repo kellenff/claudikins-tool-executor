@@ -1,0 +1,34 @@
+name: jet_brains_find_referencing_symbols
+server: serena
+category: code-nav
+description: >-
+  Finds symbols that reference the symbol at the specified symbol, i.e. returns symbols whose definitions (e.g. a
+  function body) contain a reference to the given symbol.
+
+  The result will contain metadata about the referencing symbols.
+inputSchema:
+  type: object
+  properties:
+    name_path:
+      title: Name Path
+      type: string
+      description: Name path of the symbol for which to find references.
+    relative_path:
+      title: Relative Path
+      type: string
+      description: The relative path to the file containing the symbol (must be a file, not a directory).
+    max_answer_chars:
+      default: -1
+      title: Max Answer Chars
+      type: integer
+      description: Max characters for the result (-1 for default). If exceeded, no content/a shortened result is returned.
+  required:
+    - name_path
+    - relative_path
+  title: applyArguments
+example: |-
+  await serena["jet_brains_find_referencing_symbols"]({
+    name_path: "<name_path>",
+    relative_path: "<relative_path>",
+    max_answer_chars: 0
+  });

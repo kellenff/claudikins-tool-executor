@@ -18,11 +18,11 @@ You are orchestrating Tool Executor diagnostics with clear reporting at each ste
 
 ## Arguments
 
-- `test` → Run `npm test` and report results (43 tests expected)
+- `test` → Run syntax and registry checks and report results
 - `health` → Check build status, registry integrity, workspace state
 - `reset` → Guide through full reset (clean + reinstall + rebuild)
 - `--verbose` → Show detailed output for any mode
-- No argument → Run quick health check (build + test)
+- No argument → Run quick health check (syntax + registry checks)
 
 ## Workflow
 
@@ -35,13 +35,13 @@ You are orchestrating Tool Executor diagnostics with clear reporting at each ste
 
 | Check | Command | Expected |
 |-------|---------|----------|
-| Build current | `npm run build` | Exit 0 |
-| Tests pass | `npm test` | 43 passing |
-| Registry valid | Check `registry/*.json` | Valid JSON |
+| Build current | `node --check dist/index.js dist/search.js dist/config.js dist/cli.js` | Exit 0 |
+| Tests pass | Registry and runtime health checks | No parse/runtime check failures |
+| Registry valid | Parse `registry/**/*.yaml` with `node --input-type=module` and `js-yaml` | YAML parses cleanly |
 | Workspace clean | Check `./workspace/` | Exists, writable |
 
 ## Critical Facts
 
-- **43 tests** - Unit tests for workspace, clients, search; integration tests for execute_code
-- **Build required** - Always run `npm run build` after code changes
+- **Tests are not pinned in this release** - use runtime syntax + registry checks as the baseline validation
+- **Build command** - regenerate outputs with `npm run extract` then restart Claude Code
 - **Serena health** - Two instances must be running for full functionality

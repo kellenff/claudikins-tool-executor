@@ -1,0 +1,9 @@
+name: open_dashboard
+server: serena
+category: code-nav
+description: Opens the Serena web dashboard in the default web browser.
+inputSchema:
+  type: object
+  properties: {}
+  title: applyArguments
+example: await serena["open_dashboard"]({});

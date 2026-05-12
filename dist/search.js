@@ -42,7 +42,7 @@ async function getRegistrySerena() {
  */
 async function connectRegistrySerena() {
     try {
-        const client = new Client({ name: "claudikins-registry-search", version: "1.0.0" }, { capabilities: {} });
+        const client = new Client({ name: "claudikins-registry-search", version: "1.1.0" }, { capabilities: {} });
         const transport = new StdioClientTransport({
             command: "uvx",
             args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
@@ -124,8 +124,9 @@ async function searchWithSerena(query, limit) {
                 continue;
             // Extract file paths from Serena output (relative to registry root)
             const text = item.text;
-            // Match paths like "ui/mermaid/generate_diagram.yaml" or "knowledge/context7/query-docs.yaml"
-            const fileMatches = text.match(/[a-z-]+\/[a-z]+\/[^\s:]+\.ya?ml/gi);
+            // Match paths like "ui/mermaid/generate_diagram.yaml", "knowledge/context7/query-docs.yaml", or
+            // "reasoning/sequentialThinking/sequentialthinking.yaml"
+            const fileMatches = text.match(/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/[^\s:]+\.ya?ml/gi);
             if (fileMatches) {
                 for (const match of fileMatches) {
                     if (seenFiles.has(match))
@@ -255,7 +256,7 @@ export async function searchTools(query, limit = 10, offset = 0) {
             source: "local",
             totalCount: 0,
             fallbackReason,
-            suggestion: "Try broader terms like 'image', 'code search', 'diagram', or browse categories: game-dev, knowledge, ai-models, web, ui",
+            suggestion: "Try broader terms like 'image', 'code search', 'graph analysis', 'diagram', or browse categories: code-nav, graph-analysis, knowledge, ai-models, web, ui",
         };
     }
     const paginatedResults = localResults.slice(offset, offset + limit);

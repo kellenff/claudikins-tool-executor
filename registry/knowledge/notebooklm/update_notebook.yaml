@@ -1,59 +1,48 @@
 name: update_notebook
 server: notebooklm
 category: knowledge
-description: |-
-  Update notebook metadata based on user intent.
+description: >-
+  Patch metadata fields on an existing notebook. Pass `id` plus any subset of `name`, `description`, `topics`,
+  `content_types`, `use_cases`, `tags`, `url` — only supplied fields change.
 
-  ## Pattern
-  1) Identify target notebook and fields (topics, description, use_cases, tags, url)
-  2) Propose the exact change back to the user
-  3) After explicit confirmation, call this tool
 
-  ## Examples
-  - User: "React notebook also covers Next.js 14"
-    You: "Add 'Next.js 14' to topics for React?"
-    User: "Yes" → call update_notebook
-
-  - User: "Include error handling in n8n description"
-    You: "Update the n8n description to mention error handling?"
-    User: "Yes" → call update_notebook
-
-  Tip: You may update multiple fields at once if requested.
+  Workflow: identify the target notebook → propose the exact change back to the user → call only after explicit
+  confirmation. Multiple fields can be updated in one call.
 inputSchema:
   type: object
   properties:
     id:
       type: string
-      description: The notebook ID to update
+      description: Notebook id to update (from `list_notebooks`).
     name:
       type: string
-      description: New display name
+      description: New display name.
     description:
       type: string
-      description: New description
+      description: New 1–2 sentence summary.
     topics:
       type: array
       items:
         type: string
-      description: New topics list
+      description: Replacement topics list (full replacement, not append).
     content_types:
       type: array
       items:
         type: string
-      description: New content types
+      description: Replacement content classification.
     use_cases:
       type: array
       items:
         type: string
-      description: New use cases
+      description: Replacement use-cases.
     tags:
       type: array
       items:
         type: string
-      description: New tags
+      description: Replacement tags.
     url:
       type: string
-      description: New notebook URL
+      description: New NotebookLM share URL (rarely needed).
   required:
     - id
 example: |-

@@ -43,13 +43,13 @@ You are teaching Tool Executor usage with clear examples and explanations.
 
 | Concept | Description |
 |---------|-------------|
-| **Semantic Search** | Serena-powered with BM25 fallback over 102 tools |
+| **Semantic Search** | Serena-powered with BM25 fallback over 110 tools |
 | **Workspace API** | Sandboxed file operations in `./workspace/` |
 | **Lazy Loading** | MCP clients connect on first use, disconnect after 3 mins |
 | **Context Efficiency** | Large responses (>200 chars) auto-saved to workspace |
 
 ## Critical Facts
 
-- **97% context reduction** - 48k tokens down to 1.1k
-- **9 MCP servers** - Wrapped into 3 context-efficient tools
+- **98% context reduction** - 55k tokens down to 1.1k
+- **8 MCP servers** - Wrapped into 3 context-efficient tools
 - **Sandbox isolation** - All paths scoped to `./workspace/`

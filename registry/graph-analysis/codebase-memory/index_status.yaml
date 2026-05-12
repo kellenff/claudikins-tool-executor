@@ -10,6 +10,6 @@ inputSchema:
   required:
     - project
 example: |-
-  await codebase-memory["index_status"]({
+  await codebase_memory["index_status"]({
     project: "<project>"
   });

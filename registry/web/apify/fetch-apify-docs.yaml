@@ -23,7 +23,6 @@ inputSchema:
         https://docs.apify.com/).
   required:
     - url
-  $schema: https://json-schema.org/draft/2020-12/schema
   additionalProperties: false
 example: |-
   await apify["fetch-apify-docs"]({

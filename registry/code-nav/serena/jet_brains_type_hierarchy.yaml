@@ -1,0 +1,52 @@
+name: jet_brains_type_hierarchy
+server: serena
+category: code-nav
+description: >-
+  Gets the type hierarchy of a symbol (supertypes, subtypes, or both). Returns Compact JSON with file-grouped hierarchy.
+  Error string if not applicable.
+inputSchema:
+  type: object
+  properties:
+    name_path:
+      title: Name Path
+      type: string
+      description: Name path of the symbol for which to get the type hierarchy.
+    relative_path:
+      title: Relative Path
+      type: string
+      description: The relative path to the file containing the symbol.
+    hierarchy_type:
+      default: both
+      enum:
+        - super
+        - sub
+        - both
+      title: Hierarchy Type
+      type: string
+      description: |-
+        Which hierarchy to retrieve: "super" for parent classes/interfaces,
+        "sub" for subclasses/implementations, or "both" for both directions. Default is "sub".
+    depth:
+      anyOf:
+        - type: integer
+        - type: 'null'
+      default: 1
+      title: Depth
+      description: Depth limit for hierarchy traversal (None or 0 for unlimited). Default is 1.
+    max_answer_chars:
+      default: -1
+      title: Max Answer Chars
+      type: integer
+      description: |-
+        Max characters for the JSON result. If exceeded, no content is returned.
+        -1 means the default value from the config will be used.
+  required:
+    - name_path
+    - relative_path
+  title: applyArguments
+example: |-
+  await serena["jet_brains_type_hierarchy"]({
+    name_path: "<name_path>",
+    relative_path: "<relative_path>",
+    hierarchy_type: "<hierarchy_type>"
+  });

@@ -65,7 +65,8 @@ digraph tool_flow {
 
 | Category | Server | Capabilities |
 |----------|--------|--------------|
-| code-nav | Serena (28 tools) | Symbol search, refactoring, code analysis, persistent memory |
+| code-nav | Serena (29 tools) | Symbol search, refactoring, code analysis, persistent memory |
+| graph-analysis | codebase-memory (14 tools) | Code graph indexing, symbol search, call/data-flow traversal, blast-radius analysis, ADRs |
 | knowledge | Context7, NotebookLM | Library docs lookup, notebook Q&A, research |
 | ai-models | Gemini (37 tools) | Deep research, brainstorming, image gen, video gen, structured output |
 | reasoning | Sequential-thinking | Multi-step reasoning with thought chains |
@@ -134,6 +135,7 @@ if (result._savedTo) {
 
 **Use MCP for (via search_tools first!):**
 - "Find where X is defined" → Serena (`find_symbol`)
+- "Trace code relationships/blast radius" → codebase-memory (`search_graph`, `trace_path`, `detect_changes`)
 - "Rename this function everywhere" → Serena (`rename_symbol`)
 - "What's the API for library Y?" → Context7 (`query-docs`)
 - "Research topic Z thoroughly" → Gemini (`gemini-deep-research`)

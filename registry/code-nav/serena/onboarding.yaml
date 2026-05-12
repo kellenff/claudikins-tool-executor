@@ -10,4 +10,4 @@ inputSchema:
   type: object
   properties: {}
   title: applyArguments
-example: await serena.onboarding({});
+example: await serena["onboarding"]({});

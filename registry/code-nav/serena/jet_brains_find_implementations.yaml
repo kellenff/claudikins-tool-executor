@@ -1,0 +1,24 @@
+name: jet_brains_find_implementations
+server: serena
+category: code-nav
+description: Finds the implementations of a symbol.
+inputSchema:
+  type: object
+  properties:
+    relative_path:
+      title: Relative Path
+      type: string
+      description: The relative path to the source file containing the symbol for which to find implementations.
+    name_path:
+      title: Name Path
+      type: string
+      description: Name path of the symbol for which to find implementations.
+  required:
+    - relative_path
+    - name_path
+  title: applyArguments
+example: |-
+  await serena["jet_brains_find_implementations"]({
+    relative_path: "<relative_path>",
+    name_path: "<name_path>"
+  });

@@ -19,7 +19,7 @@ inputSchema:
     - query
     - project
 example: |-
-  await codebase-memory["query_graph"]({
+  await codebase_memory["query_graph"]({
     query: "<query>",
     project: "<project>",
     max_rows: 0

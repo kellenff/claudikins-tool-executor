@@ -22,6 +22,12 @@ function summariseLogs(logs) {
 function createClientProxy(name) {
     return new Proxy({}, {
         get(_, toolName) {
+            if (toolName === "then") {
+                return undefined;
+            }
+            if (typeof toolName !== "string") {
+                return undefined;
+            }
             return async (args = {}) => {
                 const client = await getClient(name);
                 if (!client) {
@@ -83,6 +89,92 @@ function createClientProxy(name) {
     });
 }
 /**
+ * Convert arbitrary MCP server names into JavaScript-safe sandbox bindings.
+ */
+function toSandboxIdentifier(name) {
+    const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_") || "_";
+    return /^[0-9]/.test(identifier) ? `_${identifier}` : identifier;
+}
+const RESERVED_IDENTIFIERS = new Set([
+    "await",
+    "break",
+    "case",
+    "class",
+    "catch",
+    "const",
+    "continue",
+    "debugger",
+    "default",
+    "delete",
+    "do",
+    "else",
+    "enum",
+    "export",
+    "extends",
+    "false",
+    "finally",
+    "for",
+    "function",
+    "if",
+    "implements",
+    "import",
+    "in",
+    "instanceof",
+    "interface",
+    "let",
+    "new",
+    "null",
+    "package",
+    "private",
+    "protected",
+    "public",
+    "return",
+    "static",
+    "super",
+    "switch",
+    "this",
+    "throw",
+    "true",
+    "try",
+    "typeof",
+    "var",
+    "void",
+    "while",
+    "with",
+    "yield",
+    "arguments",
+    "eval",
+]);
+const RESERVED_GLOBAL_BINDINGS = new Set(["console", "workspace", "clients", "globalThis"]);
+function toGlobalIdentifier(name, usedIdentifiers) {
+    let identifier = toSandboxIdentifier(name);
+    if (RESERVED_IDENTIFIERS.has(identifier)) {
+        identifier = `_${identifier}`;
+    }
+    if (RESERVED_GLOBAL_BINDINGS.has(identifier)) {
+        identifier = `${identifier}_`;
+    }
+    let candidate = identifier;
+    let i = 1;
+    while (usedIdentifiers.has(candidate)) {
+        candidate = `${identifier}_${i++}`;
+    }
+    return candidate;
+}
+/**
+ * Map server names to guaranteed-usable sandbox bindings.
+ */
+function buildServerBindingMap() {
+    const bindings = new Map();
+    const used = new Set(["console", "workspace", "clients", "globalThis"]);
+    for (const config of SERVER_CONFIGS) {
+        const identifier = toGlobalIdentifier(config.name, used);
+        used.add(identifier);
+        bindings.set(config.name, identifier);
+    }
+    return bindings;
+}
+/**
  * Create a mock console that captures output
  */
 function createMockConsole() {
@@ -100,13 +192,21 @@ function createMockConsole() {
  * Build the sandbox globals object with all MCP clients and workspace
  */
 function buildSandboxGlobals(mockConsole) {
+    const bindingMap = buildServerBindingMap();
+    const clients = {};
     const globals = {
         console: mockConsole,
         workspace,
+        clients,
     };
     // Add all MCP client proxies
     for (const config of SERVER_CONFIGS) {
-        globals[config.name] = createClientProxy(config.name);
+        const proxy = createClientProxy(config.name);
+        clients[config.name] = proxy;
+        const identifier = bindingMap.get(config.name) || toSandboxIdentifier(config.name);
+        if (!Object.prototype.hasOwnProperty.call(globals, identifier)) {
+            globals[identifier] = proxy;
+        }
     }
     return globals;
 }
@@ -150,4 +250,13 @@ export async function executeCode(code, timeout = DEFAULT_TIMEOUT) {
  */
 export function getAvailableClientNames() {
     return SERVER_CONFIGS.map((c) => c.name);
+}
+/**
+ * Get available MCP client bindings as exposed inside execute_code.
+ */
+export function getSandboxClientBindings() {
+    return SERVER_CONFIGS.map((c) => {
+        const identifier = buildServerBindingMap().get(c.name) || toSandboxIdentifier(c.name);
+        return identifier === c.name ? c.name : `${identifier} (server: ${c.name})`;
+    });
 }

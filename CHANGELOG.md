@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - New `graph-analysis` registry category with 14 codebase-memory-mcp tools (indexing, graph queries, traversal, ADRs, runtime trace ingestion)
 - `.cbmignore` excluding build artefacts and ephemeral state from graph indexing
+- codebase-memory-mcp default sandbox client exposed as `codebase_memory` and through `clients["codebase-memory"]`
+
+### Changed
+
+- Custom server config now accepts arbitrary command binaries instead of only `npx`, `uvx`, `node`, or `python`
+
+### Fixed
+
+- Registry examples for hyphenated server names now use JavaScript-safe sandbox bindings
 
 ## [1.0.1] - 2026-01-20
 

@@ -1,0 +1,47 @@
+name: jet_brains_rename
+server: serena
+category: code-nav
+description: |-
+  Renames a symbol, file or directory throughout the codebase.
+  Note: renaming in comments/text is on a best-effort basis by the IDE; if the symbol name is non-unique, further
+  verification is recommended. Returns a status message.
+inputSchema:
+  type: object
+  properties:
+    relative_path:
+      title: Relative Path
+      type: string
+      description: |-
+        If `name_path` is passed, the relative path of the file containing the symbol.
+        Otherwise, the path to the directory or file to rename.
+    new_name:
+      title: New Name
+      type: string
+      description: The new name.
+    name_path:
+      anyOf:
+        - type: string
+        - type: 'null'
+      default: null
+      title: Name Path
+      description: The name path of the symbol to rename or None if renaming a file or directory.
+    rename_in_comments:
+      default: false
+      title: Rename In Comments
+      type: boolean
+      description: Whether to also rename occurrences in comments. Default True.
+    rename_in_text_occurrences:
+      default: false
+      title: Rename In Text Occurrences
+      type: boolean
+      description: Whether to also rename occurrences in text. Default True.
+  required:
+    - relative_path
+    - new_name
+  title: applyArguments
+example: |-
+  await serena["jet_brains_rename"]({
+    relative_path: "<relative_path>",
+    new_name: "<new_name>",
+    name_path: "<name_path>"
+  });

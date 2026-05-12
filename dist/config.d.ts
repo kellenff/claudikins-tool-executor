@@ -2,12 +2,8 @@ import { z } from "zod";
 export declare const ServerConfigSchema: z.ZodObject<{
     name: z.ZodString;
     displayName: z.ZodString;
-    command: z.ZodEnum<{
-        npx: "npx";
-        uvx: "uvx";
-        node: "node";
-        python: "python";
-    }>;
+    command: z.ZodString;
+    trusted: z.ZodOptional<z.ZodBoolean>;
     args: z.ZodArray<z.ZodString>;
     env: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
 }, z.core.$strip>;
@@ -16,12 +12,8 @@ export declare const ToolExecutorConfigSchema: z.ZodObject<{
     servers: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         displayName: z.ZodString;
-        command: z.ZodEnum<{
-            npx: "npx";
-            uvx: "uvx";
-            node: "node";
-            python: "python";
-        }>;
+        command: z.ZodString;
+        trusted: z.ZodOptional<z.ZodBoolean>;
         args: z.ZodArray<z.ZodString>;
         env: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
     }, z.core.$strip>>;

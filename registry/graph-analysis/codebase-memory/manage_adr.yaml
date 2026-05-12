@@ -22,7 +22,7 @@ inputSchema:
   required:
     - project
 example: |-
-  await codebase-memory["manage_adr"]({
+  await codebase_memory["manage_adr"]({
     project: "<project>",
     mode: "<mode>",
     content: "<content>"

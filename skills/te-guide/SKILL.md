@@ -5,7 +5,7 @@ description: Use this skill when users ask "how does tool executor work", "how t
 
 # Claudikins Tool Executor Guide
 
-The Tool Executor wraps 7 MCP servers into 3 context-efficient tools. Master this workflow to reduce token consumption from ~50k to ~1.1k.
+The Tool Executor wraps 8 MCP servers into 3 context-efficient tools. Master this workflow to reduce token consumption from ~55k to ~1.1k.
 
 ## The Three-Tool Workflow
 
@@ -69,12 +69,15 @@ All clients are pre-connected and available as globals:
 | Client | Purpose |
 |--------|---------|
 | `serena` | Semantic code search (REQUIRED - cannot be removed) |
+| `codebase_memory` | Graph-based code intelligence, call/data-flow traversal, blast-radius analysis |
 | `context7` | Library documentation lookup |
 | `gemini` | AI model queries, image generation, diagrams |
 | `notebooklm` | Research and notes |
 | `shadcn` | UI component generation |
 | `apify` | Web scraping |
 | `sequentialThinking` | Reasoning chains |
+
+Hyphenated server names are also available through `clients["server-name"]`; `codebase-memory` is exposed as `codebase_memory`.
 
 ### Client Usage Pattern
 
@@ -230,7 +233,7 @@ const result = await mcp__tool-executor__execute_code({
 ## Source Code Reference
 
 For implementation details, see:
-- `${CLAUDE_PLUGIN_ROOT}/src/sandbox/runtime.ts` - Execution engine
-- `${CLAUDE_PLUGIN_ROOT}/src/sandbox/workspace.ts` - Workspace API
-- `${CLAUDE_PLUGIN_ROOT}/src/sandbox/clients.ts` - MCP client management
-- `${CLAUDE_PLUGIN_ROOT}/src/search.ts` - Tool search implementation
+- `${CLAUDE_PLUGIN_ROOT}/dist/sandbox/runtime.js` - Execution engine
+- `${CLAUDE_PLUGIN_ROOT}/dist/sandbox/workspace.js` - Workspace API
+- `${CLAUDE_PLUGIN_ROOT}/dist/sandbox/clients.js` - MCP client management
+- `${CLAUDE_PLUGIN_ROOT}/dist/search.js` - Tool search implementation

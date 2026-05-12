@@ -1,5 +1,5 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { MCPClients, ServerConfig, AuditLogEntry } from "../types.js";
+import { ServerConfig, AuditLogEntry } from "../types.js";
 export declare function getServerConfigs(): ServerConfig[];
 export declare const SERVER_CONFIGS: ServerConfig[];
 /**
@@ -9,11 +9,11 @@ export declare function initClientStates(): void;
 /**
  * Get a client, connecting lazily if needed
  */
-export declare function getClient(name: keyof MCPClients): Promise<Client | null>;
+export declare function getClient(name: string): Promise<Client | null>;
 /**
  * Disconnect a specific client
  */
-export declare function disconnectClient(name: keyof MCPClients): Promise<void>;
+export declare function disconnectClient(name: string): Promise<void>;
 /**
  * Disconnect all clients
  */

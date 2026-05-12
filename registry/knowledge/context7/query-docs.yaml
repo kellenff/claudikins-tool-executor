@@ -6,13 +6,12 @@ description: >-
   framework.
 
 
-  You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool,
-  UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their
-  query.
+  You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to
+  use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version'
+  in their query.
 
 
-  IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use
-  the best information you have.
+  Do not call this tool more than 3 times per question.
 inputSchema:
   type: object
   properties:
@@ -27,28 +26,14 @@ inputSchema:
       description: >-
         The question or task you need help with. Be specific and include relevant details. Good: 'How to set up
         authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'.
-        IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or
-        personal data in your query.
+        The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information
+        such as API keys, passwords, credentials, personal data, or proprietary code in your query.
   required:
     - libraryId
     - query
-  additionalProperties: false
   $schema: http://json-schema.org/draft-07/schema#
 example: |-
-  // Query Next.js documentation
   await context7["query-docs"]({
-    libraryId: "/vercel/next.js",
-    query: "How to set up API routes with middleware"
-  });
-
-  // Get React hooks examples
-  await context7["query-docs"]({
-    libraryId: "/facebook/react",
-    query: "useEffect cleanup function best practices"
-  });
-
-  // Query specific library version
-  await context7["query-docs"]({
-    libraryId: "/supabase/supabase",
-    query: "How to implement row-level security policies"
+    libraryId: "<libraryId>",
+    query: "<query>"
   });

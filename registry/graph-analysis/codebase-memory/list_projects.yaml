@@ -5,4 +5,4 @@ description: List all indexed projects
 inputSchema:
   type: object
   properties: {}
-example: await codebase-memory.list_projects({});
+example: await codebase_memory["list_projects"]({});

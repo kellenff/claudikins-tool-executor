@@ -41,7 +41,7 @@ inputSchema:
     - pattern
     - project
 example: |-
-  await codebase-memory["search_code"]({
+  await codebase_memory["search_code"]({
     pattern: "<pattern>",
     project: "<project>",
     file_pattern: "<file_pattern>"

@@ -2,14 +2,15 @@ name: reset_session
 server: notebooklm
 category: knowledge
 description: >-
-  Reset a session's chat history (keep same session ID). Use for a clean slate when the task changes; ask the user
-  before resetting.
+  Clear a session's chat history while keeping the same session id. Use this when the task changes mid-conversation and
+  you want a fresh context without losing the underlying browser tab. Ask the user before resetting if they might still
+  need the prior history.
 inputSchema:
   type: object
   properties:
     session_id:
       type: string
-      description: The session ID to reset
+      description: Session id to reset. Obtain from `list_sessions` or from a prior `ask_question` response (`result.session_id`).
   required:
     - session_id
 example: |-

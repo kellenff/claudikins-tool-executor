@@ -1,47 +1,32 @@
 name: re_auth
 server: notebooklm
 category: knowledge
-description: |-
-  Switch to a different Google account or re-authenticate. Use this when:
-  - NotebookLM rate limit is reached (50 queries/day for free accounts)
-  - You want to switch to a different Google account
-  - Authentication is broken and needs a fresh start
+description: >-
+  Switch to a different Google account or recover from broken auth. Closes all active sessions, deletes saved cookies
+  and Chrome profile, and opens a fresh login browser.
 
-  This will:
-  1. Close all active browser sessions
-  2. Delete all saved authentication data (cookies, Chrome profile)
-  3. Open browser for fresh Google login
 
-  After completion, use 'get_health' to verify authentication.
+  Common triggers:
+    • NotebookLM's 50 queries/day free-tier limit is reached and the user wants to rotate to another Google account
+    • `setup_auth` failed and a clean slate is needed
 
-  TROUBLESHOOTING for persistent auth issues:
-  If re_auth fails repeatedly:
-  1. Ask user to close ALL Chrome/Chromium instances
-  2. Run cleanup_data(confirm=false, preserve_library=true) to preview old files
-  3. Run cleanup_data(confirm=true, preserve_library=true) to clean everything except library
-  4. Run re_auth again for completely fresh start
-  This removes old installation data and browser sessions that can cause conflicts.
+  After login, call `get_health` to verify. For very stuck states, run `cleanup_data(confirm=true,
+  preserve_library=true)` before `re_auth`.
 inputSchema:
   type: object
   properties:
     show_browser:
       type: boolean
-      description: >-
-        Show browser window (simple version). Default: true for re-auth. For advanced control, use browser_options
-        instead.
+      description: 'Show the browser window. Default: true.'
     browser_options:
       type: object
-      description: Optional browser settings. Control visibility, timeouts, and stealth behavior.
       properties:
         show:
           type: boolean
-          description: 'Show browser window (default: true for re-auth)'
         headless:
           type: boolean
-          description: 'Run browser in headless mode (default: false for re-auth)'
         timeout_ms:
           type: number
-          description: 'Browser operation timeout in milliseconds (default: 30000)'
 example: |-
   await notebooklm["re_auth"]({
     show_browser: true,

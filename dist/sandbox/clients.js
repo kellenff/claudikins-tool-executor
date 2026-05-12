@@ -15,9 +15,20 @@ const DEFAULT_CONFIGS = [
     { name: "gemini", displayName: "Gemini", command: "npx", args: ["-y", "@rlabs-inc/gemini-mcp"], envKeys: ["GEMINI_API_KEY"] },
     { name: "shadcn", displayName: "shadcn", command: "npx", args: ["-y", "shadcn-ui-mcp-server"] },
     { name: "apify", displayName: "Apify", command: "npx", args: ["-y", "@apify/actors-mcp-server"], envKeys: ["APIFY_TOKEN"] },
+    // Local binaries
+    { name: "codebase-memory", displayName: "Codebase Memory", command: "codebase-memory-mcp", trusted: true, commandEnvKey: "CODEBASE_MEMORY_MCP_BIN", args: [] },
     // UVX servers (Python)
     { name: "serena", displayName: "Serena", command: "uvx", args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"] },
 ];
+const SAFE_SERVER_COMMANDS = new Set(["npx", "uvx", "node", "python", "codebase-memory-mcp"]);
+/**
+ * Resolve optional command env override at runtime (after dotenv loads)
+ */
+function resolveCommand(config) {
+    if (!config.commandEnvKey)
+        return config.command;
+    return process.env[config.commandEnvKey] || config.command;
+}
 /**
  * Resolve envKeys to actual env values at runtime (after dotenv loads)
  */
@@ -30,13 +41,39 @@ function resolveEnvKeys(envKeys) {
     }, {});
 }
 /**
+ * Validate server commands to avoid accidental command injection from config
+ */
+function isSafeCommand(config) {
+    const command = config.command;
+    if (command === "")
+        return false;
+    if (SAFE_SERVER_COMMANDS.has(command))
+        return true;
+    return Boolean(config.trusted);
+}
+function normalizeServerConfig(config) {
+    return {
+        ...config,
+        command: resolveCommand(config),
+    };
+}
+/**
  * Load server configs from file or use defaults
  */
 function loadServerConfigs() {
     const config = loadConfig();
     if (config) {
         console.error(`Loaded config with ${config.servers.length} servers`);
-        return config.servers.map(s => ({
+        return config.servers
+            .map(normalizeServerConfig)
+            .filter((server) => {
+            if (isSafeCommand(server)) {
+                return true;
+            }
+            console.error(`Ignoring server "${server.name}" because command "${server.command}" is not in the safe command set. Set "trusted: true" to allow explicit command use.`);
+            return false;
+        })
+            .map(s => ({
             name: s.name,
             displayName: s.displayName,
             command: s.command,
@@ -46,7 +83,13 @@ function loadServerConfigs() {
     }
     console.error("No config file found, using default servers");
     // Resolve envKeys to env at runtime (dotenv should be loaded by now)
-    return DEFAULT_CONFIGS.map(c => ({
+    return DEFAULT_CONFIGS.map(normalizeServerConfig).filter((server) => {
+        if (isSafeCommand(server)) {
+            return true;
+        }
+        console.error(`Ignoring default server "${server.name}" because command "${server.command}" is not in the safe command set. Set "trusted: true" in DEFAULT_CONFIGS to allow explicit command use.`);
+        return false;
+    }).map(c => ({
         name: c.name,
         displayName: c.displayName,
         command: c.command,
@@ -138,7 +181,7 @@ async function connectClientInternal(name, state) {
         return null;
     }
     try {
-        const client = new Client({ name: `claudikins-${name}`, version: "1.0.0" }, { capabilities: {} });
+        const client = new Client({ name: `claudikins-${name}`, version: "1.1.0" }, { capabilities: {} });
         const transport = new StdioClientTransport({
             command: config.command,
             args: config.args,

@@ -1,0 +1,40 @@
+name: jet_brains_get_symbols_overview
+server: serena
+category: code-nav
+description: |-
+  Gets an overview of the top-level symbols in the given file.
+  Calling this is often a good idea before more targeted reading, searching or editing operations on the code symbols.
+  Before requesting a symbol overview, it is usually a good idea to narrow down the scope of the overview
+  by first understanding the basic directory structure of the repository that you can get from memories
+  or by using the `list_dir` and `find_file` tools (or similar).
+inputSchema:
+  type: object
+  properties:
+    relative_path:
+      title: Relative Path
+      type: string
+      description: The relative path to the file to get the overview of.
+    depth:
+      default: 0
+      title: Depth
+      type: integer
+      description: Depth up to which descendants shall be retrieved (e.g., use 1 to also retrieve immediate children).
+    max_answer_chars:
+      default: -1
+      title: Max Answer Chars
+      type: integer
+      description: Max characters for the result (-1 for default). If exceeded, no content/a shortened result is returned.
+    include_file_documentation:
+      default: false
+      title: Include File Documentation
+      type: boolean
+      description: Whether to include the file's docstring. Default False.
+  required:
+    - relative_path
+  title: applyArguments
+example: |-
+  await serena["jet_brains_get_symbols_overview"]({
+    relative_path: "<relative_path>",
+    depth: 0,
+    max_answer_chars: 0
+  });

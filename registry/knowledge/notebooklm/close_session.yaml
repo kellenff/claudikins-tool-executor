@@ -1,13 +1,18 @@
 name: close_session
 server: notebooklm
 category: knowledge
-description: Close a specific session by session ID. Ask before closing if the user might still need it.
+description: >-
+  Permanently close a session and discard its browser tab. Use the `id` returned by `list_sessions` (or the `session_id`
+  from a prior `ask_question` response). Closed sessions cannot be resumed — start a new one with `ask_question` (no
+  `session_id`) or pick another from `list_sessions`. Ask the user before closing if the session might still be needed.
 inputSchema:
   type: object
   properties:
     session_id:
       type: string
-      description: The session ID to close
+      description: >-
+        Session id to close. Obtain from `list_sessions` or from any prior `ask_question` response
+        (`result.session_id`).
   required:
     - session_id
 example: |-

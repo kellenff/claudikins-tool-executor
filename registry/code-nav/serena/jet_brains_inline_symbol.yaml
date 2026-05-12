@@ -1,0 +1,37 @@
+name: jet_brains_inline_symbol
+server: serena
+category: code-nav
+description: |-
+  Inlines a symbol (usually a method/function, but also classes may be amenable to inlining,
+  which turns invocation into anonymous class creation),
+  replacing all call sites with the symbol's body.
+  **Important**: this tool should always be preferred to naive inlining (e.g. via searching for references and
+  editing them).
+inputSchema:
+  type: object
+  properties:
+    name_path:
+      title: Name Path
+      type: string
+      description: The name path of the symbol to inline.
+    relative_path:
+      title: Relative Path
+      type: string
+      description: The relative path to the file containing the symbol to inline.
+    keep_definition:
+      default: false
+      title: Keep Definition
+      type: boolean
+      description: |-
+        Whether to keep the original method definition after inlining all call sites.
+        May be ignored in some cases (e.g. when inlining a class).
+  required:
+    - name_path
+    - relative_path
+  title: applyArguments
+example: |-
+  await serena["jet_brains_inline_symbol"]({
+    name_path: "<name_path>",
+    relative_path: "<relative_path>",
+    keep_definition: true
+  });

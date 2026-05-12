@@ -1,0 +1,49 @@
+name: jet_brains_safe_delete
+server: serena
+category: code-nav
+description: |-
+  Safely deletes a symbol, file, or directory, checking for usages first and propagating deletion, if desired.
+  Propagation means it is possible to request deleting of usages and cleaning up of unused code.
+  Propagation is powerful for cleaning up code but should be used with care, and only when you are sure that
+  **Important**: this tool should always be preferred to naive deleting (e.g. via file system operations or edits).
+  When using it, you don't have to search for usages first, as the tool will do it for you.
+inputSchema:
+  type: object
+  properties:
+    relative_path:
+      title: Relative Path
+      type: string
+      description: The relative path to the file containing the symbol to delete.
+    name_path:
+      anyOf:
+        - type: string
+        - type: 'null'
+      default: null
+      title: Name Path
+      description: |-
+        The name path of the symbol to delete.
+        A name path identifies a symbol within a source file, e.g. "MyClass/my_method".
+        Omit for deleting a file or directory.
+    delete_even_if_used:
+      default: false
+      title: Delete Even If Used
+      type: boolean
+      description: |-
+        Whether to force deletion even if the symbol still has usages.
+        Default is False (safe mode: will report usages instead of deleting).
+    propagate:
+      default: false
+      title: Propagate
+      type: boolean
+      description: |-
+        Whether to propagate the deletion to usages of the symbol and also
+        remove symbols that become unused after the deletion. Default is False.
+  required:
+    - relative_path
+  title: applyArguments
+example: |-
+  await serena["jet_brains_safe_delete"]({
+    relative_path: "<relative_path>",
+    name_path: "<name_path>",
+    delete_even_if_used: true
+  });

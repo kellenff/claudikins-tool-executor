@@ -1,9 +1,16 @@
 name: list_memories
 server: serena
 category: code-nav
-description: List available memories. Any memory can be read using the `read_memory` tool.
+description: Lists available memories, optionally filtered by topic.
 inputSchema:
   type: object
-  properties: {}
+  properties:
+    topic:
+      default: ''
+      title: Topic
+      type: string
   title: applyArguments
-example: await serena.list_memories({});
+example: |-
+  await serena["list_memories"]({
+    topic: "<topic>"
+  });

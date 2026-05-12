@@ -1,0 +1,66 @@
+name: jet_brains_move
+server: serena
+category: code-nav
+description: >-
+  Moves a symbol, file or directory to a different location and automatically update all references to affected symbols.
+
+  **Important**: this tool should always be preferred to naive moving (e.g. via file system operations or edits)
+
+  as it is much more reliable and efficient. It is always safe to use this tool. For some symbols, moving may not be
+  applicable,
+
+  and will result in no edits and a suitable error message.
+
+  The target location is the new parent of the symbol,
+
+  i.e. the moved entity is never renamed by the operation, only moved.
+
+
+
+  Valid moves:
+
+  - Symbol:
+     * (relative_path, name_path) -> new parent symbol (target_relative_path, target_parent_name_path)
+     * (relative_path, name_path) -> top level of target file or directory (target_relative_path)
+       Always consider the concrete language-specific semantics!
+       - target is a file: valid for languages like Python, where files are modules
+       - target is a directory: valid for languages like Java, where directories are packages and can contain classes
+  - File or directory:
+     * relative_path -> new parent directory (target_relative_path).
+inputSchema:
+  type: object
+  properties:
+    relative_path:
+      title: Relative Path
+      type: string
+      description: The relative path to the file containing the symbol to move.
+    name_path:
+      anyOf:
+        - type: string
+        - type: 'null'
+      default: null
+      title: Name Path
+      description: The name path of the symbol to move (empty for moving file or dir).
+    target_relative_path:
+      anyOf:
+        - type: string
+        - type: 'null'
+      default: null
+      title: Target Relative Path
+      description: The relative path of the target directory or file.
+    target_parent_name_path:
+      anyOf:
+        - type: string
+        - type: 'null'
+      default: null
+      title: Target Parent Name Path
+      description: The name path of the target parent symbol.
+  required:
+    - relative_path
+  title: applyArguments
+example: |-
+  await serena["jet_brains_move"]({
+    relative_path: "<relative_path>",
+    name_path: "<name_path>",
+    target_relative_path: "<target_relative_path>"
+  });

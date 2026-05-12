@@ -2,44 +2,38 @@ name: setup_auth
 server: notebooklm
 category: knowledge
 description: >-
-  Google authentication for NotebookLM access - opens a browser window for manual login to your Google account. Returns
-  immediately after opening the browser. You have up to 10 minutes to complete the login. Use 'get_health' tool
-  afterwards to verify authentication was saved successfully. Use this for first-time authentication or when auto-login
-  credentials are not available. For switching accounts or rate-limit workarounds, use 're_auth' tool instead.
+  Open a browser window for first-time Google login. Returns immediately after spawning the browser; the user has up to
+  10 minutes to complete sign-in, then cookies are persisted for future runs.
 
 
-  TROUBLESHOOTING for persistent auth issues:
+  When to use:
+    • `get_health` reports `authenticated=false` for the first time
+    • Auto-login credentials are not configured
+    • `re_auth` is the right call when you want to *switch* accounts or recover from a daily-quota lockout
 
-  If setup_auth fails or you encounter browser/session issues:
+  After login finishes, call `get_health` to verify success.
 
-  1. Ask user to close ALL Chrome/Chromium instances
 
-  2. Run cleanup_data(confirm=true, preserve_library=true) to clean old data
-
-  3. Run setup_auth again for fresh start
-
-  This helps resolve conflicts from old browser sessions and installation data.
+  If the browser session feels broken (auth keeps failing, stale cookies), run `cleanup_data(confirm=true,
+  preserve_library=true)` first, then retry `setup_auth`.
 inputSchema:
   type: object
   properties:
     show_browser:
       type: boolean
       description: >-
-        Show browser window (simple version). Default: true for setup. For advanced control, use browser_options
-        instead.
+        Show the browser window. Default: true (must be visible so the user can interact). For advanced control use
+        `browser_options`.
     browser_options:
       type: object
-      description: Optional browser settings. Control visibility, timeouts, and stealth behavior.
+      description: 'Advanced browser settings. Override visibility, timeout, or headless mode (default: visible, 30 s).'
       properties:
         show:
           type: boolean
-          description: 'Show browser window (default: true for setup)'
         headless:
           type: boolean
-          description: 'Run browser in headless mode (default: false for setup)'
         timeout_ms:
           type: number
-          description: 'Browser operation timeout in milliseconds (default: 30000)'
 example: |-
   await notebooklm["setup_auth"]({
     show_browser: true,

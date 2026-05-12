@@ -53,7 +53,7 @@ inputSchema:
     - function_name
     - project
 example: |-
-  await codebase-memory["trace_path"]({
+  await codebase_memory["trace_path"]({
     function_name: "<function_name>",
     project: "<project>",
     direction: "<direction>"

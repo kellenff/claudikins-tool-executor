@@ -1,0 +1,67 @@
+name: jet_brains_run_inspections
+server: serena
+category: code-nav
+description: >-
+  Runs IDE inspections (code analysis) on the given file and returns the problems found.
+
+  This leverages the full power of JetBrains' static analysis engine, including language-specific
+
+  inspections, type checking, potential bugs, code style issues, and more. Returns JSON string with inspection results
+  including severity, message, and location.
+inputSchema:
+  type: object
+  properties:
+    relative_path:
+      title: Relative Path
+      type: string
+      description: The relative path to the file to inspect.
+    min_severity:
+      anyOf:
+        - type: string
+        - type: 'null'
+      default: null
+      title: Min Severity
+      description: |-
+        Minimum severity level to include in results (e.g. "ERROR", "WARNING", "WEAK_WARNING", "INFO").
+        If not specified, all severities are returned.
+    inspection_names:
+      anyOf:
+        - items:
+            type: string
+          type: array
+        - type: 'null'
+      default: null
+      title: Inspection Names
+      description: |-
+        Optional list of specific inspection names to run (e.g. ["UnusedImport", "TypeMismatch"]).
+        If not specified, all applicable inspections are run.
+    start_line:
+      anyOf:
+        - type: integer
+        - type: 'null'
+      default: null
+      title: Start Line
+      description: Optional 1-based start line to restrict the inspection range.
+    end_line:
+      anyOf:
+        - type: integer
+        - type: 'null'
+      default: null
+      title: End Line
+      description: Optional 1-based end line to restrict the inspection range.
+    max_answer_chars:
+      default: -1
+      title: Max Answer Chars
+      type: integer
+      description: |-
+        Max characters for the JSON result. If exceeded, no content is returned.
+        -1 means the default value from the config will be used.
+  required:
+    - relative_path
+  title: applyArguments
+example: |-
+  await serena["jet_brains_run_inspections"]({
+    relative_path: "<relative_path>",
+    min_severity: "<min_severity>",
+    inspection_names: "<inspection_names>"
+  });

@@ -15,7 +15,7 @@ inputSchema:
     - traces
     - project
 example: |-
-  await codebase-memory["ingest_traces"]({
+  await codebase_memory["ingest_traces"]({
     traces: [],
     project: "<project>"
   });

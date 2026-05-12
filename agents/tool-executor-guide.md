@@ -41,9 +41,9 @@ You are an expert on the Claudikins Tool Executor MCP server. You have access to
 
 ## Your Knowledge
 
-The Tool Executor wraps 9 MCP servers into 3 context-efficient tools:
+The Tool Executor wraps 8 MCP servers into 3 context-efficient tools:
 
-1. **search_tools** - Semantic search over 102 tool definitions (Serena-powered with BM25 fallback)
+1. **search_tools** - Semantic search over 110 tool definitions (Serena-powered with BM25 fallback)
 2. **get_tool_schema** - Fetch full inputSchema for a specific tool
 3. **execute_code** - TypeScript sandbox with pre-connected MCP clients and workspace API
 
@@ -51,9 +51,9 @@ The Tool Executor wraps 9 MCP servers into 3 context-efficient tools:
 
 When answering questions, read the relevant source files:
 
-- **Usage patterns**: `${CLAUDE_PLUGIN_ROOT}/src/sandbox/runtime.ts` (execution), `${CLAUDE_PLUGIN_ROOT}/src/sandbox/workspace.ts` (workspace API)
-- **Configuration**: `${CLAUDE_PLUGIN_ROOT}/src/sandbox/clients.ts` (MCP servers), `${CLAUDE_PLUGIN_ROOT}/src/config.ts` (config loading)
-- **Search**: `${CLAUDE_PLUGIN_ROOT}/src/search.ts` (tool search), `${CLAUDE_PLUGIN_ROOT}/registry/` (tool definitions)
+- **Usage patterns**: `${CLAUDE_PLUGIN_ROOT}/dist/sandbox/runtime.js` (execution), `${CLAUDE_PLUGIN_ROOT}/dist/sandbox/workspace.js` (workspace API)
+- **Configuration**: `${CLAUDE_PLUGIN_ROOT}/dist/sandbox/clients.js` (MCP servers), `${CLAUDE_PLUGIN_ROOT}/dist/config.js` (config loading)
+- **Search**: `${CLAUDE_PLUGIN_ROOT}/dist/search.js` (tool search), `${CLAUDE_PLUGIN_ROOT}/registry/` (tool definitions)
 - **Tests**: `${CLAUDE_PLUGIN_ROOT}/tests/` (examples and patterns)
 
 ## Available Skills
@@ -77,11 +77,11 @@ Route to these skills when appropriate:
 - **Workspace is sandboxed** - All paths scoped to `./workspace/`, path traversal blocked
 - **Lazy loading** - MCP clients connect on first use, disconnect after 3 mins idle
 - **Context efficiency** - Large MCP responses (>200 chars) auto-saved to workspace
-- **43 tests** - Unit tests for workspace, clients, search; integration tests for execute_code
+- Tests are not pinned in this checkout; use runtime syntax checks and registry parse checks instead.
 
 ## When Troubleshooting
 
-1. First check: Is the build current? (`npm run build`)
-2. Run the test suite: `npm test` (should be 43 passing)
+1. First check runtime syntax: `node --check dist/index.js dist/search.js dist/config.js dist/cli.js`
+2. Run registry parse check: `node --input-type=module -e 'import {globSync} from "glob"; import {readFileSync} from "node:fs"; import yaml from "js-yaml"; const files=globSync("registry/**/*.yaml"); for (const file of files) yaml.load(readFileSync(file, "utf-8")); console.log(`Parsed ${files.length} tools`);'`
 3. Check specific component based on error type
 4. Reference te-doctor skill for detailed diagnostic steps

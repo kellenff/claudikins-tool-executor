@@ -7,7 +7,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const ServerConfigSchema = z.object({
     name: z.string().min(1),
     displayName: z.string().min(1),
-    command: z.enum(["npx", "uvx", "node", "python"]),
+    command: z.string().min(1),
+    trusted: z.boolean().optional(),
     args: z.array(z.string()),
     env: z.record(z.string(), z.string()).optional(),
 });

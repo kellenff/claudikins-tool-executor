@@ -1,10 +1,12 @@
 name: search-apify-docs
 server: apify
 category: web
-description: |-
+description: >-
   Search Apify and Crawlee documentation using full-text search.
 
+
   You must explicitly select which documentation source to search using the docSource parameter:
+
 
   • docSource="apify" - Apify:
     Apify Platform documentation including: Platform features, SDKs (JS, Python), CLI, REST API, Academy (web scraping fundamentals), Actor development and deployment
@@ -16,9 +18,15 @@ description: |-
     Crawlee is a web scraping library for Python. It handles blocking, crawling, proxies, and browsers for you.
 
   The results will include the URL of the documentation page (which may include an anchor),
+
   and a limited piece of content that matches the search query.
 
+
   Fetch the full content of the document using the fetch-apify-docs tool by providing the URL.
+
+
+  When results contain both platform documentation (`docs.apify.com/platform`) and Academy content
+  (`docs.apify.com/academy`) on the same topic, prefer the platform documentation.
 inputSchema:
   type: object
   properties:
@@ -60,11 +68,7 @@ inputSchema:
         offset to 5 and limit to 5.
       type: number
   required:
-    - docSource
     - query
-    - limit
-    - offset
-  $schema: https://json-schema.org/draft/2020-12/schema
   additionalProperties: false
 example: |-
   await apify["search-apify-docs"]({

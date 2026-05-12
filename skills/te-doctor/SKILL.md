@@ -9,28 +9,29 @@ Diagnose and fix issues with the Claudikins Tool Executor.
 
 ## Quick Health Check
 
-Run the test suite to verify everything works:
+Run focused checks that are available in this repo:
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}
-npm test
+node --version
+node --check dist/index.js dist/search.js dist/config.js dist/cli.js dist/sandbox/clients.js dist/sandbox/runtime.js
+find registry -name "*.yaml" | wc -l
 ```
 
-**Expected output:** 43 tests passing across 4 test files.
+**Expected output:** no syntax errors, no parse failures, and expected registry count.
 
 ## Diagnostic Checklist
 
 ### 1. Build Status
 
-Check the build is current:
+Check the runtime JavaScript entrypoints:
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}
-npm run build
+node --check dist/index.js dist/search.js dist/config.js dist/cli.js dist/sandbox/clients.js dist/sandbox/runtime.js
 ```
 
 **If build fails:**
-- Check `tsconfig.json` for TypeScript errors
 - Run `npm install` to ensure dependencies are installed
 - Check Node.js version (requires 18+)
 
@@ -64,10 +65,10 @@ Verify YAML files are valid:
 cd ${CLAUDE_PLUGIN_ROOT}
 # Count tool definitions
 find registry -name "*.yaml" | wc -l
-# Should be ~102 files
+# Should be ~110 files
 
 # Check for syntax errors
-npm run extract 2>&1 | grep -i error
+node --input-type=module -e 'import {globSync} from "glob"; import {readFileSync} from "node:fs"; import yaml from "js-yaml"; const files=globSync("registry/**/*.yaml"); for (const file of files) yaml.load(readFileSync(file, "utf-8")); console.log(`Parsed ${files.length} tools`);'
 ```
 
 **If registry is corrupted:**
@@ -127,7 +128,6 @@ console.log("Found symbols:", symbols.content?.length || 0);
 **Fix:**
 ```bash
 npm run extract   # Regenerate registry
-npm run build     # Rebuild
 # Restart Claude Code
 ```
 
@@ -203,24 +203,9 @@ claude --debug
 // Access via getAuditLog() in clients.ts (internal only)
 ```
 
-## Test Suite Details
+## Test Coverage Notes
 
-| Test File | Tests | Coverage |
-|-----------|-------|----------|
-| `tests/unit/workspace.test.ts` | 13 | Path traversal, read/write, JSON, directories |
-| `tests/unit/clients.test.ts` | 6 | Server configs, client management |
-| `tests/unit/search.test.ts` | 10 | Tool loading, search, pagination |
-| `tests/integration/execute-code.test.ts` | 14 | Execution, workspace access, MCP proxies |
-
-**Run specific test file:**
-```bash
-npm test -- tests/unit/workspace.test.ts
-```
-
-**Run with verbose output:**
-```bash
-npm test -- --verbose
-```
+No fixed test corpus is guaranteed in this checkout. Use the runtime checks in this guide and `claude --debug` logs for validation.
 
 ## Nuclear Option: Full Reset
 
@@ -235,7 +220,6 @@ rm -rf node_modules dist registry workspace/mcp-results
 # Reinstall and rebuild
 npm install
 npm run extract
-npm run build
 
 # Restart Claude Code
 ```
@@ -243,6 +227,6 @@ npm run build
 ## Source Code Reference
 
 - `${CLAUDE_PLUGIN_ROOT}/tests/` - All test files
-- `${CLAUDE_PLUGIN_ROOT}/src/sandbox/clients.ts` - Client lifecycle
-- `${CLAUDE_PLUGIN_ROOT}/src/search.ts` - Search implementation
-- `${CLAUDE_PLUGIN_ROOT}/src/sandbox/runtime.ts` - Execution engine
+- `${CLAUDE_PLUGIN_ROOT}/dist/sandbox/clients.js` - Client lifecycle
+- `${CLAUDE_PLUGIN_ROOT}/dist/search.js` - Search implementation
+- `${CLAUDE_PLUGIN_ROOT}/dist/sandbox/runtime.js` - Execution engine

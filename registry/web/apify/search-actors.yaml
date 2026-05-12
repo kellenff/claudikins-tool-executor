@@ -29,8 +29,8 @@ description: >
   - Learn about MCP servers or AI agents available in the Store
 
 
-  Do NOT use this tool when user wants immediate data retrieval - use apify-slash-rag-web-browser instead for getting
-  actual data right now.
+  Do NOT use this tool when user wants immediate data retrieval - use apify/rag-web-browser instead for getting actual
+  data right now.
 
   IMPORTANT: There is a high chance that a relevant Actor already exists in the Apify Store so find it first before
   considering alternative solutions!
@@ -38,9 +38,10 @@ description: >
 
   Usage:
 
-  - Use the most direct query possible.
+  - Prefer broad, generic keywords - use just the platform name (e.g. "Instagram" instead of "Instagram scraper").
 
-  - The search is smart enough to return all relevant actors from one query.
+  - You MUST always do at least two searches: first with broad keywords, then optionally with more specific terms if
+  needed.
 
 
   Important limitations: This tool does not return full Actor documentation, input schemas, or detailed usage
@@ -74,21 +75,9 @@ description: >
 inputSchema:
   type: object
   properties:
-    limit:
-      default: 10
-      description: The maximum number of Actors to return (default = 10)
-      type: integer
-      minimum: 1
-      maximum: 100
-    offset:
-      default: 0
-      description: The number of elements to skip from the start (default = 0)
-      type: integer
-      minimum: 0
-      maximum: 9007199254740991
     keywords:
       default: ''
-      description: >
+      description: >-
         Space-separated keywords used to search pre-built solutions (Actors) in the Apify Store.
 
         The search engine searches across Actor's name, description, username, and readme content.
@@ -118,20 +107,23 @@ inputSchema:
 
         ❌ Bad: "data extraction scraping tools" (too generic)
       type: string
-    category:
-      default: ''
-      description: Filter the results by the specified category.
-      type: string
-  required:
-    - limit
-    - offset
-    - keywords
-    - category
-  $schema: https://json-schema.org/draft/2020-12/schema
+    limit:
+      default: 5
+      description: The maximum number of Actors to return (default = 5)
+      type: integer
+      minimum: 1
+      maximum: 100
+    offset:
+      default: 0
+      description: The number of elements to skip from the start (default = 0)
+      type: integer
+      minimum: 0
+      maximum: 9007199254740991
+  required: []
   additionalProperties: false
 example: |-
   await apify["search-actors"]({
+    keywords: "<keywords>",
     limit: 0,
-    offset: 0,
-    keywords: "<keywords>"
+    offset: 0
   });

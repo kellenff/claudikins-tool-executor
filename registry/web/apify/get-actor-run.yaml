@@ -1,0 +1,41 @@
+name: get-actor-run
+server: apify
+category: web
+description: >-
+  Get detailed information about a specific Actor run by runId.
+
+  The results will include run metadata (status, timestamps), performance stats, and resource IDs (datasetId,
+  keyValueStoreId, requestQueueId).
+
+
+  USAGE:
+
+  - Use when the user asks about a specific run's status or details.
+
+  - Use to check the status of a run started with call-actor (e.g., before fetching output).
+
+  - Returns pure data with no UI.
+
+  - If `call-actor-widget` or `get-actor-run-widget` are available in this session, do NOT call this after them — those
+  render self-polling widgets, additional polling here is forbidden duplicate work.
+
+
+  USAGE EXAMPLES:
+
+  - user_input: Show details of run y2h7sK3Wc (where y2h7sK3Wc is an existing run)
+
+  - user_input: What is the datasetId for run y2h7sK3Wc?
+inputSchema:
+  type: object
+  properties:
+    runId:
+      type: string
+      minLength: 1
+      description: The ID of the Actor run.
+  required:
+    - runId
+  additionalProperties: false
+example: |-
+  await apify["get-actor-run"]({
+    runId: "<runId>"
+  });

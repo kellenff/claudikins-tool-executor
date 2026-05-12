@@ -2,14 +2,18 @@ name: search_notebooks
 server: notebooklm
 category: knowledge
 description: >-
-  Search library by query (name, description, topics, tags). Use to propose relevant notebooks for the task and then ask
-  which to use.
+  Search the library by free-text query — matches against `name`, `description`, `topics`, and `tags`. Returns notebook
+  objects with their `id` so you can chain into `select_notebook` etc.
+
+
+  Use this when the user references a notebook by topic ("the React one") instead of by exact name. If multiple
+  notebooks match, propose the top 1–2 and let the user choose.
 inputSchema:
   type: object
   properties:
     query:
       type: string
-      description: Search query
+      description: Search keywords (case-insensitive).
   required:
     - query
 example: |-

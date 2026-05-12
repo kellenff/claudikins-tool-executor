@@ -1,12 +1,66 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { existsSync, readFileSync } from "fs";
-import { resolve, dirname } from "path";
+import { existsSync, readFileSync, statSync } from "fs";
+import { resolve, dirname, isAbsolute, delimiter, join, extname } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
-// Read version from package.json
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const packageJson = JSON.parse(readFileSync(resolve(__dirname, "..", "package.json"), "utf-8"));
+import { getServerConfigs } from "./sandbox/clients.js";
+import { findConfigFile } from "./config.js";
+const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const packageJson = JSON.parse(readFileSync(resolve(CLI_ROOT, "package.json"), "utf-8"));
+function hasExecutable(pathToCheck) {
+    try {
+        return statSync(pathToCheck).isFile();
+    }
+    catch (_a) {
+        return false;
+    }
+}
+function isCommandAvailable(command) {
+    const commandHasExtension = process.platform === "win32" && Boolean(extname(command));
+    const pathExtensions = process.platform === "win32" && !commandHasExtension
+        ? (process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";")
+        : [""];
+    const pathDirs = (process.env.PATH || "").split(delimiter);
+    if (isAbsolute(command) || command.includes("/") || command.includes("\\")) {
+        return hasExecutable(command);
+    }
+    for (const pathDir of pathDirs) {
+        const cleanDir = pathDir.replace(/^["']|["']$/g, "");
+        for (const ext of pathExtensions) {
+            if (!cleanDir) {
+                continue;
+            }
+            if (hasExecutable(join(cleanDir, `${command}${ext}`))) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+function checkCommand(command, label, hint) {
+    const found = isCommandAvailable(command);
+    console.log(`${label}: ${found ? "✅ Found" : "⚠️ Not found"}${!found && hint ? ` (${hint})` : ""}`);
+}
+function checkConfiguredServers() {
+    for (const config of getServerConfigs()) {
+        checkCommand(config.command, `${config.displayName} (${config.name}) command`, "Ensure executable is available in PATH or set an explicit absolute command in config");
+    }
+}
+function checkUvx() {
+    checkCommand("uvx", "uvx", "optional, needed for Python MCP servers");
+}
+function checkConfig() {
+    const configPath = findConfigFile(CLI_ROOT);
+    const found = configPath !== null;
+    console.log(`Config file: ${found ? "✅ Found" : "⚠️ Not found (using defaults)"}`);
+    if (found) {
+        console.log(`  - ${configPath}`);
+    }
+}
+function checkRegistry() {
+    return existsSync(resolve(CLI_ROOT, "registry"));
+}
 const program = new Command();
 program
     .name("claudikins")
@@ -22,19 +76,13 @@ program
     const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0]);
     console.log(`Node.js: ${nodeVersion} ${nodeMajor >= 18 ? "✅" : "❌ (need 18+)"}`);
     // Check for Python/uv (for uvx servers)
-    try {
-        execSync("which uvx", { stdio: "pipe" });
-        console.log("uvx: ✅ Found");
-    }
-    catch {
-        console.log("uvx: ⚠️ Not found (optional, needed for Python MCP servers)");
-    }
+    checkUvx();
     // Check for config file
-    const configExists = existsSync(resolve(process.cwd(), "tool-executor.config.json"));
-    console.log(`Config file: ${configExists ? "✅ Found" : "⚠️ Not found (using defaults)"}`);
+    checkConfig();
     // Check for registry
-    const registryExists = existsSync(resolve(process.cwd(), "registry"));
+    const registryExists = checkRegistry();
     console.log(`Registry: ${registryExists ? "✅ Found" : "❌ Not found"}`);
+    checkConfiguredServers();
     console.log("\n✨ Doctor complete");
 });
 program

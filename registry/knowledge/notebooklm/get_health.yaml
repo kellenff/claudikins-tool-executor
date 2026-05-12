@@ -2,14 +2,17 @@ name: get_health
 server: notebooklm
 category: knowledge
 description: >-
-  Get server health status including authentication state, active sessions, and configuration. Use this to verify the
-  server is ready before starting research workflows.
-
-
-  If authenticated=false and having persistent issues:
-
-  Consider running cleanup_data(preserve_library=true) + setup_auth for fresh start with clean browser session.
+  Inspect server state. Returns:
+    • `authenticated` — whether saved Google cookies are still valid
+    • `notebook_url`, `active_notebook_id`, `active_notebook_name` —
+      the currently selected library notebook (or null)
+    • `total_notebooks` — library size
+    • `active_sessions`, `max_sessions`, `session_timeout` — runtime
+      session stats (timeout in seconds; sessions auto-close after this)
+    • `headless`, `auto_login_enabled`, `stealth_enabled` — config
+  Use this first thing in a new conversation. If `authenticated=false`, run `setup_auth` (or `re_auth` to switch
+  accounts).
 inputSchema:
   type: object
   properties: {}
-example: await notebooklm.get_health({});
+example: await notebooklm["get_health"]({});

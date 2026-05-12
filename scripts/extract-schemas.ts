@@ -23,6 +23,7 @@ interface ServerConfig {
   category: string;
   env?: Record<string, string>;
 }
+const MCP_CLIENT_VERSION = "1.1.0";
 
 const SERVERS: ServerConfig[] = [
   // NPX servers (Node.js)
@@ -96,6 +97,59 @@ const SERVERS: ServerConfig[] = [
 ];
 
 const REGISTRY_ROOT = join(process.cwd(), "registry");
+const RESERVED_IDENTIFIERS = new Set([
+  "await",
+  "break",
+  "case",
+  "class",
+  "catch",
+  "const",
+  "continue",
+  "debugger",
+  "default",
+  "delete",
+  "do",
+  "else",
+  "enum",
+  "export",
+  "extends",
+  "false",
+  "finally",
+  "for",
+  "function",
+  "if",
+  "implements",
+  "import",
+  "in",
+  "instanceof",
+  "interface",
+  "let",
+  "new",
+  "null",
+  "package",
+  "private",
+  "protected",
+  "public",
+  "return",
+  "static",
+  "super",
+  "switch",
+  "this",
+  "throw",
+  "true",
+  "try",
+  "typeof",
+  "var",
+  "void",
+  "while",
+  "with",
+  "yield",
+  "arguments",
+  "eval",
+]);
+const RESERVED_GLOBAL_BINDINGS = new Set(["console", "workspace", "clients", "globalThis"]);
+const SERVER_BINDINGS = new Map<string, string>();
+const usedBindings = new Set<string>(["console", "workspace", "clients", "globalThis"]);
 
 /**
  * Connect to an MCP server and extract tool schemas
@@ -104,7 +158,7 @@ async function extractFromServer(config: ServerConfig): Promise<void> {
   console.log(`\nConnecting to ${config.displayName}...`);
 
   const client = new Client(
-    { name: "schema-extractor", version: "1.0.0" },
+    { name: "schema-extractor", version: MCP_CLIENT_VERSION },
     { capabilities: {} },
   );
 
@@ -182,9 +236,10 @@ function generateExample(
   };
   const props = schema?.properties || {};
   const propNames = Object.keys(props);
+  const serverBinding = getServerBinding(serverName);
 
   if (propNames.length === 0) {
-    return `await ${serverName}.${toolName}({});`;
+    return `await ${serverBinding}["${toolName}"]({});`;
   }
 
   const args = propNames
@@ -192,11 +247,51 @@ function generateExample(
     .map((name) => {
       const prop = props[name];
       const placeholder = getPlaceholder(prop?.type, name);
-      return `  ${name}: ${placeholder}`;
+      return `  ${toObjectKey(name)}: ${placeholder}`;
     })
     .join(",\n");
 
-  return `await ${serverName}["${toolName}"]({\n${args}\n});`;
+  return `await ${serverBinding}["${toolName}"]({\n${args}\n});`;
+}
+
+/**
+ * Match execute_code sandbox bindings for server names that are not valid JS identifiers.
+ */
+function toSandboxIdentifier(serverName: string): string {
+  const identifier = serverName.replace(/[^a-zA-Z0-9_$]/g, "_") || "_";
+  return /^[0-9]/.test(identifier) ? `_${identifier}` : identifier;
+}
+
+function getServerBinding(serverName: string): string {
+  const existing = SERVER_BINDINGS.get(serverName);
+  if (existing) {
+    return existing;
+  }
+
+  let binding = toSandboxIdentifier(serverName);
+  if (RESERVED_IDENTIFIERS.has(binding)) {
+    binding = `_${binding}`;
+  }
+  if (RESERVED_GLOBAL_BINDINGS.has(binding)) {
+    binding = `${binding}_`;
+  }
+
+  let candidate = binding;
+  let suffix = 1;
+  while (usedBindings.has(candidate)) {
+    candidate = `${binding}_${suffix++}`;
+  }
+
+  usedBindings.add(candidate);
+  SERVER_BINDINGS.set(serverName, candidate);
+  return candidate;
+}
+
+/**
+ * Quote input object keys only when JavaScript requires it.
+ */
+function toObjectKey(name: string): string {
+  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
 }
 
 /**

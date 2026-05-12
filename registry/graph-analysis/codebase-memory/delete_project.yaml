@@ -10,6 +10,6 @@ inputSchema:
   required:
     - project
 example: |-
-  await codebase-memory["delete_project"]({
+  await codebase_memory["delete_project"]({
     project: "<project>"
   });

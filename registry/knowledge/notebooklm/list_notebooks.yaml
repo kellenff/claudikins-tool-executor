@@ -2,9 +2,10 @@ name: list_notebooks
 server: notebooklm
 category: knowledge
 description: >-
-  List all library notebooks with metadata (name, topics, use cases, URL). Use this to present options, then ask which
-  notebook to use for the task.
+  List every notebook in the local library with its metadata (`id`, `name`, `description`, `topics`, `tags`, `url`,
+  `use_count`, etc.). Use the returned `id` for `select_notebook`, `update_notebook`, `get_notebook`, `remove_notebook`,
+  or as `notebook_id` on `ask_question` / `add_source` / audio tools.
 inputSchema:
   type: object
   properties: {}
-example: await notebooklm.list_notebooks({});
+example: await notebooklm["list_notebooks"]({});

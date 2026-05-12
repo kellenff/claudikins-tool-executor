@@ -1,0 +1,96 @@
+name: jet_brains_find_symbol
+server: serena
+category: code-nav
+description: >-
+  Retrieves information on all symbols/code entities (classes, methods, etc.) based on the given name path pattern.
+
+  The returned symbol information can be used for edits or further queries.
+
+  Specify `depth > 0` to retrieve children (e.g., methods of a class).
+
+  Important: through `search_deps=True` dependencies can be searched, which
+
+  should be preferred to web search or other less sophisticated approaches to analyzing dependencies.
+
+
+  A name path is a path in the symbol tree *within a source file*.
+
+  For example, the method `my_method` defined in class `MyClass` would have the name path `MyClass/my_method`.
+
+  If a symbol is overloaded (e.g., in Java), a 0-based index is appended (e.g. "MyClass/my_method[0]") to
+
+  uniquely identify it.
+
+
+  To search for a symbol, you provide a name path pattern that is used to match against name paths.
+
+  It can be
+   * a simple name (e.g. "method"), which will match any symbol with that name
+   * a relative path like "class/method", which will match any symbol with that name path suffix
+   * an absolute name path "/class/method" (absolute name path), which requires an exact match of the full name path within the source file.
+  Append an index `[i]` to match a specific overload only, e.g. "MyClass/my_method[1]". Returns symbols matching the
+  name.
+inputSchema:
+  type: object
+  properties:
+    name_path_pattern:
+      title: Name Path Pattern
+      type: string
+      description: The name path matching pattern (see above).
+    depth:
+      default: 0
+      title: Depth
+      type: integer
+      description: |-
+        Depth up to which descendants shall be retrieved (e.g. use 1 to also retrieve immediate children;
+        for the case where the symbol is a class, this will return its methods).
+        Ignored if `include_body=True`. Default 0.
+    relative_path:
+      anyOf:
+        - type: string
+        - type: 'null'
+      default: null
+      title: Relative Path
+      description: |-
+        Optional. Restrict search to this file or directory. If not specified, searches entire codebase.
+        Note: for external dependencies, this must be an identifier starting with `<ext` that you have received
+        earlier (don't try to guess!).
+    include_body:
+      default: false
+      title: Include Body
+      type: boolean
+      description: If True, include the symbol's source code. Use judiciously.
+    include_info:
+      default: false
+      title: Include Info
+      type: boolean
+      description: |-
+        Whether to include additional info (hover-like, typically including docstring and signature),
+        about the symbol.
+        Default False; info is never included for child symbols or if include_body is True.
+    search_deps:
+      default: false
+      title: Search Deps
+      type: boolean
+      description: If True, also search in project dependencies (e.g., libraries).
+    max_matches:
+      default: -1
+      title: Max Matches
+      type: integer
+      description: |-
+        Maximum number of permitted matches. If exceeded, a shortened result is returned
+        which allows refining the search. -1 (default) means no limit. Set to 1 if you search for a single symbol.
+    max_answer_chars:
+      default: -1
+      title: Max Answer Chars
+      type: integer
+      description: Max characters for the result (-1 for default). If exceeded, no content/a shortened result is returned.
+  required:
+    - name_path_pattern
+  title: applyArguments
+example: |-
+  await serena["jet_brains_find_symbol"]({
+    name_path_pattern: "<name_path_pattern>",
+    depth: 0,
+    relative_path: "<relative_path>"
+  });

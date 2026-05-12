@@ -10,10 +10,10 @@ import { MAX_LOG_CHARS } from "./constants.js";
 import { SearchToolsInputSchema, GetToolSchemaInputSchema, ExecuteCodeInputSchema, } from "./schemas.js";
 import { handleSearchTools, handleGetToolSchema, handleExecuteCode, } from "./tools/index.js";
 import { startLifecycleManagement } from "./sandbox/clients.js";
-import { getAvailableClientNames } from "./sandbox/runtime.js";
+import { getAvailableClientNames, getSandboxClientBindings } from "./sandbox/runtime.js";
 const server = new McpServer({
     name: "@claudikins/tool-executor",
-    version: "1.0.0",
+    version: "1.1.0",
 });
 /**
  * Tool: search_tools
@@ -25,11 +25,11 @@ server.registerTool("search_tools", {
 
 Use get_tool_schema(name) to get the full inputSchema when you're ready to call a specific tool.
 
-Available categories: game-dev, code-nav, knowledge, ai-models, web, source-control, ui, reasoning, debugging, misc
+Available categories: code-nav, graph-analysis, knowledge, ai-models, web, ui, reasoning
 
 Example queries:
-- "godot scene" - tools for Godot game development
 - "semantic code search" - Serena code navigation
+- "impact analysis" - codebase-memory graph analysis
 - "generate diagram" - Gemini image/diagram generation
 - "fetch webpage" - HTTP fetch tools`,
     inputSchema: SearchToolsInputSchema,
@@ -48,7 +48,7 @@ server.registerTool("get_tool_schema", {
     title: "Get Tool Schema",
     description: `Get the full inputSchema for a specific tool. Use after search_tools to get parameter details before calling execute_code.
 
-Example: get_tool_schema("gemini_generateContent") - returns full schema with all parameters, types, enums, etc.`,
+Example: get_tool_schema("gemini-generate-image") - returns full schema with all parameters, types, enums, etc.`,
     inputSchema: GetToolSchemaInputSchema,
     annotations: {
         readOnlyHint: true,
@@ -61,7 +61,7 @@ Example: get_tool_schema("gemini_generateContent") - returns full schema with al
  * Tool: execute_code
  * Execute TypeScript/JavaScript code in sandbox
  */
-const clientList = getAvailableClientNames().map((n) => `- ${n}`).join("\n");
+const clientList = getSandboxClientBindings().map((n) => `- ${n}`).join("\n");
 server.registerTool("execute_code", {
     title: "Execute Code",
     description: `Execute TypeScript/JavaScript code with access to MCP clients and workspace.
@@ -76,13 +76,15 @@ If you don't know which tool to use, ALWAYS search first.
 **IMPORTANT: Context-Efficient Pattern**
 MCP tool responses are auto-saved to workspace when large. Your code receives a reference:
 \`\`\`typescript
-const result = await gemini.gemini_generateContent({...});
+const result = await gemini["gemini-generate-image"]({...});
 // If large: { _savedTo: "mcp-results/123.json", _preview: "..." }
 // Read full result: await workspace.readJSON(result._savedTo)
 \`\`\`
 
 **Available MCP clients:**
 ${clientList}
+Hyphenated server names are exposed as safe identifiers, e.g. codebase_memory for server codebase-memory.
+All clients are also available by original server name through clients["server-name"].
 
 **Workspace API:**
 - workspace.write(path, data) / workspace.read(path)

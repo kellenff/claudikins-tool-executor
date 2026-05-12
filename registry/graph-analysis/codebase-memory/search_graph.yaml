@@ -55,7 +55,7 @@ inputSchema:
   required:
     - project
 example: |-
-  await codebase-memory["search_graph"]({
+  await codebase_memory["search_graph"]({
     project: "<project>",
     query: "<query>",
     label: "<label>"

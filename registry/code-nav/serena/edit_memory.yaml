@@ -5,8 +5,8 @@ description: Replaces content matching a regular expression in a memory.
 inputSchema:
   type: object
   properties:
-    memory_file_name:
-      title: Memory File Name
+    memory_name:
+      title: Memory Name
       type: string
       description: The name of the memory.
     needle:
@@ -28,15 +28,22 @@ inputSchema:
       title: Mode
       type: string
       description: Either "literal" or "regex", specifying how the `needle` parameter is to be interpreted.
+    allow_multiple_occurrences:
+      default: false
+      title: Allow Multiple Occurrences
+      type: boolean
+      description: |-
+        Whether to allow matching and replacing multiple occurrences.
+        If false and multiple occurrences are found, an error will be returned.
   required:
-    - memory_file_name
+    - memory_name
     - needle
     - repl
     - mode
   title: applyArguments
 example: |-
   await serena["edit_memory"]({
-    memory_file_name: "<memory_file_name>",
+    memory_name: "<memory_name>",
     needle: "<needle>",
     repl: "<repl>"
   });

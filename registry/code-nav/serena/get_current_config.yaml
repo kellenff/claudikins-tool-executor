@@ -6,4 +6,4 @@ inputSchema:
   type: object
   properties: {}
   title: applyArguments
-example: await serena.get_current_config({});
+example: await serena["get_current_config"]({});

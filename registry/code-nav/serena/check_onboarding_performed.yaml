@@ -8,4 +8,4 @@ inputSchema:
   type: object
   properties: {}
   title: applyArguments
-example: await serena.check_onboarding_performed({});
+example: await serena["check_onboarding_performed"]({});

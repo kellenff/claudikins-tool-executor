@@ -5,22 +5,26 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
  */
 export interface MCPClients {
     serena: Client | null;
+    "codebase-memory": Client | null;
     context7: Client | null;
     notebooklm: Client | null;
     shadcn: Client | null;
     gemini: Client | null;
     apify: Client | null;
     sequentialThinking: Client | null;
+    [name: string]: Client | null;
 }
 /**
  * Configuration for connecting to an MCP server
  */
 export interface ServerConfig {
-    name: keyof MCPClients;
+    name: string;
     displayName: string;
     command: string;
+    trusted?: boolean;
     args: string[];
     env?: Record<string, string>;
+    commandEnvKey?: string;
 }
 /**
  * Result of code execution in the sandbox

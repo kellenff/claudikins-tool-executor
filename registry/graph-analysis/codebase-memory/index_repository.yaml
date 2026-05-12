@@ -38,7 +38,7 @@ inputSchema:
   required:
     - repo_path
 example: |-
-  await codebase-memory["index_repository"]({
+  await codebase_memory["index_repository"]({
     repo_path: "<repo_path>",
     mode: "<mode>",
     target_projects: []

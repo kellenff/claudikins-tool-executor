@@ -1,8 +1,11 @@
 name: get_library_stats
 server: notebooklm
 category: knowledge
-description: Get statistics about your notebook library (total notebooks, usage, etc.)
+description: >-
+  Aggregate statistics about the local notebook library: `total_notebooks`, `active_notebook` (id),
+  `most_used_notebook`, `total_queries`, `last_modified`. Useful as a quick health check or when the user asks "what
+  notebooks do I have?".
 inputSchema:
   type: object
   properties: {}
-example: await notebooklm.get_library_stats({});
+example: await notebooklm["get_library_stats"]({});

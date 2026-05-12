@@ -1,13 +1,15 @@
 name: get_notebook
 server: notebooklm
 category: knowledge
-description: Get detailed information about a specific notebook by ID
+description: >-
+  Fetch full metadata for one notebook by id. Use to verify what's currently stored before calling `update_notebook`, or
+  to show the user the exact `description`/`topics`/`use_cases` Claude has for it.
 inputSchema:
   type: object
   properties:
     id:
       type: string
-      description: The notebook ID
+      description: Notebook id, as returned by `list_notebooks`/`search_notebooks`.
   required:
     - id
 example: |-

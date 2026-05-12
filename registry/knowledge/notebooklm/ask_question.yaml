@@ -26,18 +26,41 @@ inputSchema:
   properties:
     question:
       type: string
-      description: The question to ask NotebookLM
+      description: >-
+        The question to ask NotebookLM. Plain natural language; can be multi-line. Gemini responds grounded on the
+        notebook's sources.
     session_id:
       type: string
-      description: Optional session ID for contextual conversations. If omitted, a new session is created.
+      description: >-
+        Reuse an existing browser session for follow-up questions. Pass back the `session_id` returned in a prior
+        `ask_question` response — NotebookLM keeps the prior conversation in context, so follow-ups get sharper. Omit
+        for a fresh session. `list_sessions` enumerates live sessions.
     notebook_id:
       type: string
       description: >-
-        Optional notebook ID from your library. If omitted, uses the active notebook. Use list_notebooks to see
-        available notebooks.
+        Library notebook id (from `list_notebooks` / `search_notebooks`). Defaults to the active notebook (see
+        `select_notebook`) when omitted.
     notebook_url:
       type: string
-      description: Optional notebook URL (overrides notebook_id). Use this for ad-hoc queries to notebooks not in your library.
+      description: >-
+        Direct NotebookLM URL — overrides `notebook_id`. Use for ad-hoc queries against notebooks not yet in your
+        library. Format: `https://notebooklm.google.com/notebook/<uuid>`.
+    source_format:
+      type: string
+      enum:
+        - none
+        - inline
+        - footnotes
+        - json
+      description: >-
+        How citations are returned alongside the answer:
+          • `none` (default) — raw answer, no citation extraction (fastest)
+          • `footnotes` — answer plus a `Sources:` block, e.g. `[1] DocName — "excerpt…"`
+          • `inline` — `[N]` markers in the answer are replaced with `[N] (DocName: "excerpt…")`
+          • `json` — answer text untouched; structured `sources` array on the response
+
+        Use `none` for snappy chat. Use `json` when downstream code needs to process citations programmatically. Use
+        `footnotes`/`inline` when showing the answer to a human reader.
     show_browser:
       type: boolean
       description: >-

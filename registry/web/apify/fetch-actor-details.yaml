@@ -5,24 +5,28 @@ description: >-
   Get detailed information about an Actor by its ID or full name (format: "username/name", e.g.,
   "apify/rag-web-browser").
 
-  This returns the Actor's title, description, URL, README (documentation), input schema, pricing/usage information, and
-  basic stats.
 
-  Present the information in a user-friendly Actor card.
+  Use 'output' parameter with boolean flags to control returned information:
+
+  - Default: All fields true except mcpTools
+
+  - Selective: Set desired fields to true (e.g., output: { inputSchema: true })
+
+  - Common patterns: inputSchema only, description + readme, mcpTools for MCP Actors
 
 
-  USAGE:
+  The 'readme' field returns the summary when available, full README otherwise.
 
-  - Use when a user asks about an Actor’s details, input schema, README, or how to use it.
+  Use when querying Actor details, documentation, input requirements, or MCP tools.
 
 
-  USAGE EXAMPLES:
+  EXAMPLES:
 
-  - user_input: How to use apify/rag-web-browser
+  - What does apify/rag-web-browser do?
 
-  - user_input: What is the input schema for apify/rag-web-browser?
+  - What is the input schema for apify/web-scraper?
 
-  - user_input: What is the pricing for apify/instagram-scraper?
+  - What tools does apify/actors-mcp-server provide?
 inputSchema:
   type: object
   properties:
@@ -30,11 +34,43 @@ inputSchema:
       type: string
       minLength: 1
       description: Actor ID or full name in the format "username/name", e.g., "apify/rag-web-browser".
+    output:
+      description: Specify which information to include in the response to save tokens.
+      type: object
+      properties:
+        description:
+          description: Include Actor description text only.
+          type: boolean
+        stats:
+          description: Include usage statistics (users, runs, success rate).
+          type: boolean
+        pricing:
+          description: Include pricing model and costs.
+          type: boolean
+        rating:
+          description: Include user rating (out of 5 stars).
+          type: boolean
+        metadata:
+          description: Include developer, categories, last modified date, and deprecation status.
+          type: boolean
+        inputSchema:
+          description: Include required input parameters schema.
+          type: boolean
+        readme:
+          description: Include Actor README documentation (summary when available, full otherwise).
+          type: boolean
+        outputSchema:
+          description: Include inferred output schema from recent successful runs (TypeScript type).
+          type: boolean
+        mcpTools:
+          description: List available tools (only for MCP server Actors).
+          type: boolean
+      additionalProperties: false
   required:
     - actor
-  $schema: https://json-schema.org/draft/2020-12/schema
   additionalProperties: false
 example: |-
   await apify["fetch-actor-details"]({
-    actor: "<actor>"
+    actor: "<actor>",
+    output: {}
   });

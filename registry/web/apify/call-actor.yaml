@@ -2,56 +2,56 @@ name: call-actor
 server: apify
 category: web
 description: >-
-  Call any Actor from the Apify Store using a mandatory two-step workflow.
+  Call any Actor from the Apify Store.
 
-  This ensures you first get the Actor’s input schema and details before executing it safely.
+
+  WORKFLOW:
+
+  1. Use fetch-actor-details to get the Actor's input schema
+
+  2. Call this tool with the actor name and proper input based on the schema
+
+
+  If the actor name is not in "username/name" format and search-actors is available in this session, use it to resolve
+  the correct Actor first.
+
+
+  For MCP server Actors:
+
+  - Use fetch-actor-details with output={ mcpTools: true } to list available tools
+
+  - Call using format: "actorName:toolName" (e.g., "apify/actors-mcp-server:fetch-apify-docs")
+
+
+  IMPORTANT:
+
+  - Typically returns a datasetId and preview of output items
+
+  - Use get-actor-output tool with the datasetId to fetch full results
+
+  - Use dedicated Actor tools when available for better experience
 
 
   There are two ways to run Actors:
 
-  1. Dedicated Actor tools (e.g., apify-slash-rag-web-browser): These are pre-configured tools, offering a simpler and
-  more direct experience.
+  1. Dedicated Actor tools (e.g., apify--rag-web-browser): These are pre-configured tools, offering a simpler and more
+  direct experience.
 
   2. Generic call-actor tool (call-actor): Use this when a dedicated tool is not available or when you want to run any
   Actor dynamically. This tool is especially useful if you do not want to add specific tools or your client does not
   support dynamic tool registration.
 
 
-  **Important:**
-
-
-  Typically, a successful run returns a `datasetId` (the Actor's output stored as an Apify dataset) and a short preview
-  of items.
-
-  To fetch the full output, use the get-actor-output tool with the `datasetId`.
-
-
   USAGE:
 
-  - Always use dedicated tools when available (e.g., apify-slash-rag-web-browser)
+  - Always use dedicated tools when available (e.g., apify--rag-web-browser)
 
   - Use the generic call-actor tool only if a dedicated tool does not exist for your Actor.
 
 
-  MANDATORY TWO-STEP-WORKFLOW:
-
-  Step 1: Get Actor Info (step="info", default)
-
-  - First call this tool with step="info" to get Actor details and input schema
-
-  - This returns the Actor description, documentation, and required input schema
-
-  - You MUST do this step first - it's required to understand how to call the Actor
-
-
-  Step 2: Call Actor (step="call")
-
-  - Only after step 1, call this tool again with step="call" and proper input based on the schema
-
-  - This runs the Actor. It will create an output as an Apify dataset (with datasetId).
-
-  - This step returns a dataset preview, typically JSON-formatted tabular data.
-
+  - This tool supports async execution via the `async` parameter:
+    - **When `async: false` or not provided** (default): Waits for completion and returns results immediately with dataset preview. Use this whenever the user asks for data or results.
+    - **When `async: true`**: Starts the run and returns immediately with runId. Only use this when the user explicitly asks to run the Actor in the background or does not need immediate results.
 
   EXAMPLES:
 
@@ -61,22 +61,31 @@ inputSchema:
   properties:
     actor:
       type: string
-      description: The name of the Actor to call. For example, "apify/rag-web-browser".
-    step:
-      type: string
-      enum:
-        - info
-        - call
       description: >-
-        Step to perform: "info" to get Actor details and input schema (required first step), "call" to run the Actor
-        (only after getting info).
+        The name of the Actor to call. Format: "username/name" (e.g., "apify/rag-web-browser").
+
+
+        For MCP server Actors, use format "actorName:toolName" to call a specific tool (e.g.,
+        "apify/actors-mcp-server:fetch-apify-docs").
     input:
-      description: >-
-        The input JSON to pass to the Actor. For example, {"query": "apify", "maxResults": 5}. Must be used only when
-        step="call".
       type: object
       properties: {}
       additionalProperties: {}
+      description: The input JSON to pass to the Actor. Required.
+    async:
+      description: >-
+        When true, starts the run and returns immediately with runId.
+
+        When false or omitted, behavior depends on the active server mode/tool variant.
+
+        IMPORTANT: use async=true only when the user explicitly asks to run in the background or does not need immediate
+        results.
+      type: boolean
+    previewOutput:
+      description: |-
+        When true (default): includes preview items. When false: metadata only (reduces context).
+        Use when fetching fields via get-actor-output.
+      type: boolean
     callOptions:
       description: Optional call options for the Actor run configuration.
       type: object
@@ -84,25 +93,28 @@ inputSchema:
         memory:
           description: >-
             Memory allocation for the Actor in MB. Must be a power of 2 (e.g., 128, 256, 512, 1024, 2048, 4096, 8192,
-            16384, 32768). Minimum: 128 MB, Maximum: 32768 MB (32 GB).
+            16384, 32768).
+
+            Minimum: 128 MB, Maximum: 32768 MB (32 GB).
           type: number
           minimum: 128
           maximum: 32768
         timeout:
           description: >-
             Maximum runtime for the Actor in seconds. After this time elapses, the Actor will be automatically
-            terminated. Use 0 for infinite timeout (no time limit). Minimum: 0 seconds (infinite).
+            terminated.
+
+            Use 0 for infinite timeout (no time limit). Minimum: 0 seconds (infinite).
           type: number
           minimum: 0
       additionalProperties: false
   required:
     - actor
-    - step
-  $schema: https://json-schema.org/draft/2020-12/schema
+    - input
   additionalProperties: false
 example: |-
   await apify["call-actor"]({
     actor: "<actor>",
-    step: "<step>",
-    input: {}
+    input: {},
+    async: true
   });

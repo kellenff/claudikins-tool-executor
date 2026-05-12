@@ -1,0 +1,42 @@
+name: get_audio_status
+server: notebooklm
+category: knowledge
+description: >-
+  Non-blocking probe for the current Audio Overview state of a notebook.
+
+
+  Returned `status` values:
+    • `ready` — Audio Overview is generated and ready to download
+    • `in_progress` — generation is currently running
+    • `not_started` — no Audio Overview exists yet for this notebook
+
+  Safe to poll every ~30 s while waiting for `generate_audio` to finish. When status flips to `ready`, call
+  `download_audio` with a destination directory.
+inputSchema:
+  type: object
+  properties:
+    show_browser:
+      type: boolean
+      description: 'Show the browser window for debugging. Default: false.'
+    session_id:
+      type: string
+      description: >-
+        Reuse an existing browser session by id. Recommended when you have already called `ask_question` against the
+        same notebook — saves the 10–15 s page-load time. Obtain from `list_sessions` or any prior `ask_question`
+        response (`result.session_id`).
+    notebook_id:
+      type: string
+      description: >-
+        Library notebook id (from `list_notebooks` / `search_notebooks`). Defaults to the active notebook (see
+        `select_notebook`) when omitted.
+    notebook_url:
+      type: string
+      description: >-
+        Direct NotebookLM URL — overrides `notebook_id`. Use for ad-hoc notebooks not yet in your library. Format:
+        `https://notebooklm.google.com/notebook/<uuid>`.
+example: |-
+  await notebooklm["get_audio_status"]({
+    show_browser: true,
+    session_id: "<session_id>",
+    notebook_id: "<notebook_id>"
+  });

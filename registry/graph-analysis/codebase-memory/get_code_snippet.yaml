@@ -20,7 +20,7 @@ inputSchema:
     - qualified_name
     - project
 example: |-
-  await codebase-memory["get_code_snippet"]({
+  await codebase_memory["get_code_snippet"]({
     qualified_name: "<qualified_name>",
     project: "<project>",
     include_neighbors: true

@@ -2,9 +2,11 @@ name: list_sessions
 server: notebooklm
 category: knowledge
 description: >-
-  List all active sessions with stats (age, message count, last activity). Use to continue the most relevant session
-  instead of starting from scratch.
+  List all active browser sessions for this server. Each entry includes `id`, `created_at`, `last_activity`,
+  `age_seconds`, `inactive_seconds`, `message_count`, and `notebook_url`. Useful before `reset_session` /
+  `close_session` or to recover a `session_id` you can pass back into `ask_question` to continue an existing
+  conversation. Sessions older than `session_timeout` (see `get_health`) are auto-closed.
 inputSchema:
   type: object
   properties: {}
-example: await notebooklm.list_sessions({});
+example: await notebooklm["list_sessions"]({});

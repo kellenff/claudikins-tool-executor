@@ -9,4 +9,4 @@ inputSchema:
   type: object
   properties: {}
   title: applyArguments
-example: await serena.initial_instructions({});
+example: await serena["initial_instructions"]({});

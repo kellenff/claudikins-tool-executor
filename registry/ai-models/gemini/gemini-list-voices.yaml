@@ -6,4 +6,4 @@ inputSchema:
   type: object
   properties: {}
   $schema: http://json-schema.org/draft-07/schema#
-example: await gemini.gemini-list-voices({});
+example: await gemini["gemini-list-voices"]({});

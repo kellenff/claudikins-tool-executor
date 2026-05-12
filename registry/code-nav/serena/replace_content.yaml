@@ -48,10 +48,8 @@ inputSchema:
       title: Allow Multiple Occurrences
       type: boolean
       description: |-
-        If True, the regex may match multiple occurrences in the file
-        and all of them will be replaced.
-        If this is set to False and the regex matches multiple occurrences, an error will be returned
-        (and you may retry with a revised, more specific regex).
+        Whether to allow matching and replacing multiple occurrences.
+        If false and multiple occurrences are found, an error will be returned.
   required:
     - relative_path
     - needle

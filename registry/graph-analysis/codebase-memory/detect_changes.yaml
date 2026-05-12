@@ -21,7 +21,7 @@ inputSchema:
   required:
     - project
 example: |-
-  await codebase-memory["detect_changes"]({
+  await codebase_memory["detect_changes"]({
     project: "<project>",
     scope: "<scope>",
     depth: 0
