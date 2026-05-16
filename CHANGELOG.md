@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.1] - 2026-05-16
+
+### Fixed
+
+- `yarn tchk` now passes: relaxed type narrowing in test mocks for overloaded `fs/promises.readFile`, `glob`, and `Buffer` signatures (TypeScript 6.x)
+- `yarn test:unit` no longer surfaces phantom failures from `.stryker-tmp/` sandboxes; script switched from shell-glob expansion to a directory argument
+- Stray comma-slash typo in `package.json` dependencies block
+
+### Added
+
+- `vitest.config.ts` with explicit include/exclude blocking `.stryker-tmp/`, `dist/`, and `node_modules/` from test runs
+
+### Removed
+
+- Stale `reports/mutation/mutation.html` mutation-testing artefact
+
+## [1.1.0] - 2026-05-11
 
 ### Added
 
