@@ -1,0 +1,3 @@
+import {b}from'./chunk-GQTRWYMT.js';function r(e){if(!e)return "";let t=e.split(`
+`)[0].trim();return t.length>80?t.slice(0,77)+"...":t}async function l(e){let t=await b(e.query,e.limit,e.offset),o={results:t.results.map(n=>({name:n.tool.name,server:n.tool.server,description:r(n.tool.description)})),count:t.results.length,limit:e.limit,offset:e.offset,totalCount:t.totalCount,has_more:e.offset+t.results.length<(t.totalCount||0),source:t.source,...t.fallbackReason&&{fallbackReason:t.fallbackReason},...t.suggestion&&{suggestion:t.suggestion}};return {content:[{type:"text",text:JSON.stringify(o,null,2)}],structuredContent:o}}export{l as a};//# sourceMappingURL=chunk-KS25HVOI.js.map
+//# sourceMappingURL=chunk-KS25HVOI.js.map
