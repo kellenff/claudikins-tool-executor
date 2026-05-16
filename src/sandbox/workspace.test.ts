@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 
 import { MCP_RESULTS_DIR } from "../constants.js";
@@ -22,7 +28,9 @@ describe("workspace", () => {
     await workspace.write(`${fixtureRoot}/notes.txt`, "start");
     expect(await workspace.read(`${fixtureRoot}/notes.txt`)).toBe("start");
     await workspace.append(`${fixtureRoot}/notes.txt`, "\nextra");
-    expect(await workspace.read(`${fixtureRoot}/notes.txt`)).toBe("start\nextra");
+    expect(await workspace.read(`${fixtureRoot}/notes.txt`)).toBe(
+      "start\nextra",
+    );
   });
 
   it("supports JSON and binary helpers", async () => {
@@ -32,7 +40,7 @@ describe("workspace", () => {
     expect(parsed).toEqual({ value: 42 });
 
     const bufferPath = `${fixtureRoot}/data.bin`;
-    const data = new TextEncoder().encode("bytes");
+    const data = Buffer.from(new TextEncoder().encode("bytes"));
     await workspace.writeBuffer(bufferPath, data);
     const out = await workspace.readBuffer(bufferPath);
     expect(Buffer.from(out).toString("utf8")).toBe("bytes");
@@ -51,13 +59,21 @@ describe("workspace", () => {
     expect(stat.size).toBeGreaterThan(0);
 
     await workspace.delete(`${fixtureRoot}/nested/file.txt`);
-    expect(await workspace.exists(`${fixtureRoot}/nested/file.txt`)).toBe(false);
+    expect(await workspace.exists(`${fixtureRoot}/nested/file.txt`)).toBe(
+      false,
+    );
   });
 
   it("guards path traversal attempts", async () => {
-    await expect(workspace.read("../package.json")).rejects.toThrow("Path traversal blocked");
-    await expect(workspace.write("/etc/hosts", "x")).rejects.toThrow("Path traversal blocked");
-    await expect(workspace.glob("../**/*.txt")).rejects.toThrow("Glob traversal blocked");
+    await expect(workspace.read("../package.json")).rejects.toThrow(
+      "Path traversal blocked",
+    );
+    await expect(workspace.write("/etc/hosts", "x")).rejects.toThrow(
+      "Path traversal blocked",
+    );
+    await expect(workspace.glob("../**/*.txt")).rejects.toThrow(
+      "Glob traversal blocked",
+    );
   });
 
   it("runs glob on safe patterns", async () => {

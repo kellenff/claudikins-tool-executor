@@ -28,7 +28,9 @@ vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
 }));
 
 vi.mock("@modelcontextprotocol/sdk/server/stdio.js", async () => {
-  const actual = await vi.importActual("@modelcontextprotocol/sdk/server/stdio.js");
+  const actual = await vi.importActual(
+    "@modelcontextprotocol/sdk/server/stdio.js",
+  );
   return {
     ...(actual as Record<string, unknown>),
     StdioServerTransport: class {
@@ -76,13 +78,21 @@ describe("index", () => {
   });
 
   it("registers tools and starts server bootstrap on module load", async () => {
-    const stdinOnSpy = vi.spyOn(process.stdin, "on").mockImplementation(() => process.stdin);
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const stdinOnSpy = vi
+      .spyOn(process.stdin, "on")
+      .mockImplementation(() => process.stdin);
+    const exitSpy = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
 
     await import("./index.js");
 
-    expect(dotenvConfig).toHaveBeenCalledWith({ path: expect.stringContaining(".env") });
+    expect(dotenvConfig).toHaveBeenCalledWith({
+      path: expect.stringContaining(".env"),
+    });
     expect(mcpServerConstructor).toHaveBeenCalledWith({
       name: "@claudikins/tool-executor",
       version: "1.1.0",
@@ -93,7 +103,11 @@ describe("index", () => {
     expect(registerTool).toHaveBeenCalledTimes(3);
 
     const toolNames = registerTool.mock.calls.map((call) => call[0]);
-    expect(toolNames).toEqual(["search_tools", "get_tool_schema", "execute_code"]);
+    expect(toolNames).toEqual([
+      "search_tools",
+      "get_tool_schema",
+      "execute_code",
+    ]);
     expect(registerTool.mock.calls[0]?.[1]).toMatchObject({
       title: "Search MCP Tools",
       annotations: {
@@ -126,24 +140,38 @@ describe("index", () => {
     expect(executeToolOptions?.description).toContain("Available MCP clients");
     expect(executeToolOptions?.description).toContain("- serena");
     expect(executeToolOptions?.description).toContain("- gemini");
-    expect(executeToolOptions?.description).toContain("Results are summarised if console.log output exceeds");
+    expect(executeToolOptions?.description).toContain(
+      "Results are summarised if console.log output exceeds",
+    );
 
     expect(stdioConstructor).toHaveBeenCalledTimes(1);
     expect(connect).toHaveBeenCalledTimes(1);
     expect(stdinOnSpy).toHaveBeenCalledWith("close", expect.any(Function));
 
-    const closeHandler = stdinOnSpy.mock.calls.find((call) => call[0] === "close")?.[1] as () => void;
+    const closeHandler = stdinOnSpy.mock.calls.find(
+      (call) => (call[0] as string) === "close",
+    )?.[1] as () => void;
     closeHandler();
-    expect(consoleErrorSpy).toHaveBeenCalledWith("Client disconnected, shutting down");
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "Client disconnected, shutting down",
+    );
     expect(exitSpy).toHaveBeenCalledWith(0);
-    expect(consoleErrorSpy).toHaveBeenCalledWith("Claudikins Tool Executor running");
-    expect(consoleErrorSpy).toHaveBeenCalledWith("Available MCP clients: serena, gemini");
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "Claudikins Tool Executor running",
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "Available MCP clients: serena, gemini",
+    );
   });
 
   it("reports fatal bootstrap errors", async () => {
     vi.spyOn(process.stdin, "on").mockImplementation(() => process.stdin);
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const exitSpy = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     const error = new Error("connect failed");
     connect.mockRejectedValueOnce(error);
 
