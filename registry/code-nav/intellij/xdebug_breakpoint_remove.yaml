@@ -1,0 +1,23 @@
+name: xdebug_breakpoint_remove
+server: intellij
+category: code-nav
+description: Removes a breakpoint by its ID. Use xdebug_breakpoint_list to find breakpoint IDs.
+inputSchema:
+  type: object
+  properties:
+    id:
+      type: string
+      description: Breakpoint ID to remove
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - id
+example: |-
+  await intellij["xdebug_breakpoint_remove"]({
+    id: "<id>",
+    projectPath: "<projectPath>"
+  });

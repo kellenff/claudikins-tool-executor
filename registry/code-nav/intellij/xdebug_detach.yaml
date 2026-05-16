@@ -1,0 +1,21 @@
+name: xdebug_detach
+server: intellij
+category: code-nav
+description: |-
+  Ends debugging and lets the PHP script finish normally.
+  Use this when debugging with the dev server — the HTTP response completes
+  and the server is ready for the next xdebug_request.
+inputSchema:
+  type: object
+  properties:
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["xdebug_detach"]({
+    projectPath: "<projectPath>"
+  });

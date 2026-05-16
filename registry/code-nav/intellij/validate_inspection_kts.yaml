@@ -1,0 +1,36 @@
+name: validate_inspection_kts
+server: intellij
+category: code-nav
+description: |2-
+      Validates an inspection.kts script against specification examples.
+      Compiles the inspection and runs it against positive/negative examples.
+      Returns compilation status and detailed verification results.
+      
+      Positive examples should trigger the inspection (problems expected).
+      Negative examples should NOT trigger the inspection (no problems expected on forbidden lines).
+      
+      Returns overall success, per-example results, and aggregation statistics.
+inputSchema:
+  type: object
+  properties:
+    inspectionKtsCode:
+      type: string
+      description: The inspection.kts script content to compile and validate
+    pathToSpecification:
+      type: string
+      description: Path to specification with examples to validate against.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - inspectionKtsCode
+    - pathToSpecification
+example: |-
+  await intellij["validate_inspection_kts"]({
+    inspectionKtsCode: "<inspectionKtsCode>",
+    pathToSpecification: "<pathToSpecification>",
+    projectPath: "<projectPath>"
+  });

@@ -1,0 +1,26 @@
+name: xdebug_eval
+server: intellij
+category: code-nav
+description: |-
+  Evaluates a PHP expression in the current scope and returns the result.
+  Only available when paused at a breakpoint.
+  Examples: "$user->getName()", "count($items)", "$a + $b".
+inputSchema:
+  type: object
+  properties:
+    expression:
+      type: string
+      description: PHP expression to evaluate
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - expression
+example: |-
+  await intellij["xdebug_eval"]({
+    expression: "<expression>",
+    projectPath: "<projectPath>"
+  });

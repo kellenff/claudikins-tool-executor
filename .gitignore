@@ -31,6 +31,7 @@ coverage/
 /.claude/
 /CLAUDE.md
 /SPEC.md
+/tool-executor.config.json
 
 # Workspace runtime (keep .gitkeep)
 workspace/*

@@ -1,0 +1,30 @@
+name: xdebug_property_get
+server: intellij
+category: code-nav
+description: |-
+  Returns the value of a specific variable by name.
+  Supports nested properties like "$obj->field" or "$arr[0]".
+  Only available when paused at a breakpoint.
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: Variable name, e.g. "$myVar", "$this->field"
+    stackDepth:
+      type: integer
+      description: 'Stack depth to inspect (default: 0 = current frame)'
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - name
+example: |-
+  await intellij["xdebug_property_get"]({
+    name: "<name>",
+    stackDepth: 0,
+    projectPath: "<projectPath>"
+  });

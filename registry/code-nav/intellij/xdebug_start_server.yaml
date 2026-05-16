@@ -1,0 +1,33 @@
+name: xdebug_start_server
+server: intellij
+category: code-nav
+description: |-
+  Starts PHP's built-in dev server and the XDebug listener.
+  After calling this, use xdebug_set_breakpoint to set breakpoints,
+  then xdebug_request to debug a specific URL.
+inputSchema:
+  type: object
+  properties:
+    projectRoot:
+      type: string
+      description: Absolute path to the PHP project root directory
+    host:
+      type: string
+      description: 'Host to bind the dev server to (default: localhost)'
+    port:
+      type: integer
+      description: 'Port for the dev server (default: 8081)'
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - projectRoot
+example: |-
+  await intellij["xdebug_start_server"]({
+    projectRoot: "<projectRoot>",
+    host: "<host>",
+    port: 0
+  });

@@ -1,0 +1,18 @@
+name: xdebug_breakpoint_list
+server: intellij
+category: code-nav
+description: Lists all breakpoints currently set in the XDebug engine.
+inputSchema:
+  type: object
+  properties:
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["xdebug_breakpoint_list"]({
+    projectPath: "<projectPath>"
+  });

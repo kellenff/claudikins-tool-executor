@@ -1,0 +1,30 @@
+name: get_composer_dependencies
+server: intellij
+category: code-nav
+description: |-
+  Returns all Composer packages installed in the project with their exact versions.
+
+  Reads from the already-indexed composer.lock data — no disk I/O or network calls.
+  In monorepo setups, packages from all composer.json sub-projects are included.
+
+  Use this to determine which libraries and versions are available before generating code.
+inputSchema:
+  type: object
+  properties:
+    nameFilter:
+      type: string
+      description: >-
+        Glob pattern to filter packages by name (e.g. "laravel/*", "*phpunit*", "symfony/console"). Case-insensitive.
+        Omit to return all packages.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["get_composer_dependencies"]({
+    nameFilter: "<nameFilter>",
+    projectPath: "<projectPath>"
+  });

@@ -1,0 +1,25 @@
+name: list_recent_sql_queries
+server: intellij
+category: code-nav
+description: |-
+  Retrieves a list of recent (including currently running) queries for the given database connection.
+  Do not use this tool for DDL data sources as they have no underlying DBMS connection.
+inputSchema:
+  type: object
+  properties:
+    connectionId:
+      type: string
+      description: The unique ID of a database connection.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - connectionId
+example: |-
+  await intellij["list_recent_sql_queries"]({
+    connectionId: "<connectionId>",
+    projectPath: "<projectPath>"
+  });

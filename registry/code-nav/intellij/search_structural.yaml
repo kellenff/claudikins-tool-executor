@@ -1,0 +1,127 @@
+name: search_structural
+server: intellij
+category: code-nav
+description: |-
+  Searches for code patterns using Structural Search (SSR).
+  Unlike text/regex search, SSR understands code structure semantically.
+
+  ## Pattern Syntax Examples (PHP)
+
+  Basic patterns:
+  - `$a$->$b$()` - any method call on any object
+  - `new $Class$()` - any constructor call
+  - `class $a$ extends $b$ {}` - class inheritance
+  - `$a$ = $b$` - any assignment
+
+  Variables in patterns:
+  - `$name$` denotes a pattern variable (matches any element of that kind)
+  - `$a${2,5}` - count constraint: matches 2 to 5 occurrences
+  - `$a$+` - one or more occurrences
+  - `$a$*` - zero or more occurrences
+
+  Use `get_structural_patterns` to see predefined PHP patterns with descriptions.
+
+  ## Known Limitations
+
+  PHP SSR has some limitations compared to Java SSR:
+  - Some class modifiers (e.g., `readonly`) may not be matched
+  - Complex nested patterns with constraints may not work as expected
+  - Use `get_structural_patterns` to discover reliably working patterns
+
+  ## Constraints
+
+  You can add constraints to pattern variables via the `constraints` parameter.
+  Variable names in constraints use the name without dollar signs (e.g., `"b"` for `$b$`):
+  - `regex`: Match variable text against a regex (e.g., `"^get.*"` for methods starting with "get")
+  - `invertRegex`: Invert the regex match (match if NOT matching)
+  - `minCount`/`maxCount`: Occurrence count bounds
+  - `exprType`: Match expression type (e.g., `"string"`, `"int"`)
+
+  Example constraints:
+  ```json
+  {
+    "b": {"regex": "^get.*", "minCount": 1, "maxCount": 1}
+  }
+  ```
+inputSchema:
+  type: object
+  properties:
+    pattern:
+      type: string
+      description: SSR pattern to search for (e.g., `$a$->$b$()` for method calls)
+    fileType:
+      type: string
+      description: File type name for the language to search (e.g., 'PHP', 'Java', 'Kotlin', 'Python')
+    directoryToSearch:
+      type: string
+      description: Directory to search in, relative to project root. If not specified, searches the entire project.
+    constraints:
+      type: object
+      additionalProperties:
+        type: object
+        required: []
+        properties:
+          regex:
+            type:
+              - string
+              - 'null'
+            description: Regex pattern to match against the variable's text
+          invertRegex:
+            type:
+              - boolean
+              - 'null'
+            description: If true, inverts the regex match (matches if NOT matching)
+          minCount:
+            type:
+              - integer
+              - 'null'
+            description: Minimum number of occurrences
+          maxCount:
+            type:
+              - integer
+              - 'null'
+            description: Maximum number of occurrences
+          exprType:
+            type:
+              - string
+              - 'null'
+            description: Expression type to match (e.g., 'string', 'int', 'MyClass')
+          invertExprType:
+            type:
+              - boolean
+              - 'null'
+            description: If true, inverts the expression type match
+          wholeWordsOnly:
+            type:
+              - boolean
+              - 'null'
+            description: If true, matches whole words only
+          withinHierarchy:
+            type:
+              - boolean
+              - 'null'
+            description: If true, includes type hierarchy in matching
+      description: >-
+        Variable constraints as a map from variable name (without dollar signs) to constraint object. Example: {"b":
+        {"regex": "^get.*"}}
+    maxResults:
+      type: integer
+      description: 'Maximum number of matches to return. Default: 100'
+    timeout:
+      type: integer
+      description: Timeout in milliseconds
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - pattern
+    - fileType
+example: |-
+  await intellij["search_structural"]({
+    pattern: "<pattern>",
+    fileType: "<fileType>",
+    directoryToSearch: "<directoryToSearch>"
+  });

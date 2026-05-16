@@ -1,0 +1,21 @@
+name: xdebug_run
+server: intellij
+category: code-nav
+description: |-
+  Resumes execution until the next breakpoint or end of script.
+  If a breakpoint is hit, the session pauses and you can inspect or step.
+  If the script ends, the session is finished.
+inputSchema:
+  type: object
+  properties:
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["xdebug_run"]({
+    projectPath: "<projectPath>"
+  });

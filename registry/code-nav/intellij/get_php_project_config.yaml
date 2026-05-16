@@ -1,0 +1,28 @@
+name: get_php_project_config
+server: intellij
+category: code-nav
+description: |-
+  Returns the PHP project configuration as seen by PhpStorm.
+
+  Includes: configured PHP language level, interpreter details (name, path, local/remote),
+  and PHP runtime information (exact version, loaded extensions, php.ini path, debuggers).
+
+  This data comes from IDE settings and cached interpreter metadata — no disk I/O or network calls.
+  Use this to understand the project's PHP environment before generating or analyzing code.
+
+  The language level may differ from the system PHP version (e.g. project targets 8.1 while system runs 8.3).
+  For remote interpreters (Docker/SSH), this is the only way to get PHP info.
+inputSchema:
+  type: object
+  properties:
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["get_php_project_config"]({
+    projectPath: "<projectPath>"
+  });

@@ -1,0 +1,48 @@
+name: get_database_object_description
+server: intellij
+category: code-nav
+description: >-
+  Retrieves the structure of a database object (columns, types, keys, indexes) within a particular schema as a
+  hierarchical text representation.
+
+  In case of ambiguity returns definition of all applicable objects.
+inputSchema:
+  type: object
+  properties:
+    connectionId:
+      type: string
+      description: The unique ID of a database connection.
+    databaseName:
+      type: string
+      description: >-
+        Name of the database the schema belongs to. Might be empty if DBMS has no databases, but only schemas.
+
+        Together with `schemaName` property forms qualified schema name that uniquely identifies the schema within the
+        connection.
+    schemaName:
+      type: string
+      description: Name of the schema.
+    kind:
+      type: string
+      description: Object kind (e.g., table, view, routine). May not be empty
+    objectName:
+      type: string
+      description: Object name of the specified kind (e.g., table or view name). May not be empty.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - connectionId
+    - databaseName
+    - schemaName
+    - kind
+    - objectName
+example: |-
+  await intellij["get_database_object_description"]({
+    connectionId: "<connectionId>",
+    databaseName: "<databaseName>",
+    schemaName: "<schemaName>"
+  });

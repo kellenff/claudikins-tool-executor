@@ -1,0 +1,30 @@
+name: xdebug_set_breakpoint
+server: intellij
+category: code-nav
+description: |-
+  Sets a line breakpoint. Can be called before or during a debug session.
+  Breakpoints persist across requests — they are automatically re-applied
+  on each new xdebug_request call.
+inputSchema:
+  type: object
+  properties:
+    line:
+      type: integer
+      description: Line number to set breakpoint on
+    file:
+      type: string
+      description: File path (absolute or relative to project root). Optional for single-script mode.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - line
+example: |-
+  await intellij["xdebug_set_breakpoint"]({
+    line: 0,
+    file: "<file>",
+    projectPath: "<projectPath>"
+  });

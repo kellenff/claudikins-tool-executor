@@ -1,0 +1,34 @@
+name: run_inspection_kts
+server: intellij
+category: code-nav
+description: |2-
+      Compiles an inspection.kts script and runs it against a target file.
+      Returns compilation errors if any, or the list of problems found by the inspection.
+      Use this tool to test inspection.kts scripts during development.
+inputSchema:
+  type: object
+  properties:
+    inspectionKtsCode:
+      type: string
+      description: The inspection.kts script content to compile and run
+    contextPath:
+      type: string
+      description: Relative path of the target file inside project to analyze (e.g., 'src/my/package/Example.kt'
+    targetFileContent:
+      type: string
+      description: The content of the target file to analyze. If not provided, the file must exist in the project.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - inspectionKtsCode
+    - contextPath
+example: |-
+  await intellij["run_inspection_kts"]({
+    inspectionKtsCode: "<inspectionKtsCode>",
+    contextPath: "<contextPath>",
+    targetFileContent: "<targetFileContent>"
+  });

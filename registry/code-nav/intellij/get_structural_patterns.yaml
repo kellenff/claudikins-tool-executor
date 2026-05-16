@@ -1,0 +1,31 @@
+name: get_structural_patterns
+server: intellij
+category: code-nav
+description: |-
+  Lists predefined PHP structural search patterns with descriptions.
+
+  These patterns provide common search templates that can be used directly
+  or as a reference for creating custom patterns.
+
+  Categories:
+  - **General**: Class, interface, trait definitions and structure
+  - **Expressions**: Assignments, method calls, field access, etc.
+  - **Suspicious**: Potentially problematic code patterns
+inputSchema:
+  type: object
+  properties:
+    category:
+      type: string
+      description: 'Filter patterns by category: ''General'', ''Expressions'', ''Suspicious''. If not specified, returns all patterns.'
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["get_structural_patterns"]({
+    category: "<category>",
+    projectPath: "<projectPath>"
+  });

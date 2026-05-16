@@ -1,0 +1,34 @@
+name: invoke_ide_action
+server: intellij
+category: code-nav
+description: |-
+  Invokes an IDE action by its action ID.
+  Use this to trigger any IDE action programmatically (e.g., open a tool window, toggle a setting)
+
+  Optionally provide file/folder context via filePaths so that actions requiring
+  a selected file, folder, or module work correctly (e.g., MarkExcludeRoot, ReformatCode, NewFile).
+inputSchema:
+  type: object
+  properties:
+    actionId:
+      type: string
+      description: The action ID to invoke (e.g., 'ActivateTerminalToolWindow', 'TogglePresentationMode')
+    filePaths:
+      type: array
+      items:
+        type: string
+      description: Optional file/folder paths (relative to project root) to provide as context for the action
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - actionId
+example: |-
+  await intellij["invoke_ide_action"]({
+    actionId: "<actionId>",
+    filePaths: [],
+    projectPath: "<projectPath>"
+  });

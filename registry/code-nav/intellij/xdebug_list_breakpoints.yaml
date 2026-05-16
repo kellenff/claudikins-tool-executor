@@ -1,0 +1,48 @@
+name: xdebug_list_breakpoints
+server: intellij
+category: code-nav
+description: >-
+  Lists all breakpoints in the project or in a specific file.
+
+  Use this tool to see all currently set breakpoints and their properties.
+
+
+  Tip: Call this before RESUME to confirm there is at least one enabled breakpoint that is expected to be hit next.
+
+
+  Behavior:
+
+  - If `filePath` is provided, returns only breakpoints in that file.
+
+  - Returns rich attributes for each breakpoint (id, type, file, line, enabled, owner, condition, isLogMessage,
+  isLogStack, temporary, suspendPolicy, hitCount).
+
+
+  Next call:
+
+  - If no suitable breakpoint exists, call `xdebug_set_breakpoint`.
+
+  - Then continue execution with `xdebug_control_session(action=RESUME)` and
+  `xdebug_control_session(action=WAIT_FOR_PAUSE)`.
+inputSchema:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: >-
+        Optional file path to filter breakpoints. Path to the file. Supports project-relative paths, paths with '..',
+        absolute paths, archive entries like '/path/lib.jar!/pkg/Foo.class', and URLs such as 'file://', 'jar://', and
+        'jrt://'. Any path returned from the other tools can be passed as is (e.g. paths from 'search_*' tools). If not
+        specified, returns all breakpoints. Default: null.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["xdebug_list_breakpoints"]({
+    filePath: "<filePath>",
+    projectPath: "<projectPath>"
+  });

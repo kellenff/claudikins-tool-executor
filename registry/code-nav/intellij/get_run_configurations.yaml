@@ -1,0 +1,47 @@
+name: get_run_configurations
+server: intellij
+category: code-nav
+description: >-
+  Returns either project run configurations or executable code locations, depending on the input.
+
+
+  Without `filePath`, this tool lists the project's existing run configurations. The result includes configuration
+
+  names and, when available, launch details such as program arguments, working directory, environment variables,
+
+  and `supportsDynamicLaunchOverrides`.
+
+
+  `supportsDynamicLaunchOverrides` is the source-of-truth capability flag for one-time launch overrides
+
+  (`programArguments`, `workingDirectory`, `envs`) in `execute_run_configuration` and `xdebug_start_debugger_session`.
+
+  Only pass those override parameters when this flag is `true` for the selected configuration.
+
+
+  With `filePath`, this tool discovers executable entry points (run points) in that file, such as test methods,
+
+  main methods, or other executable entry points where the IDE shows a Run gutter icon. The result contains `filePath`
+  and
+
+  `runPoints`; use the returned line numbers with `execute_run_configuration` to run from code.
+inputSchema:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: >-
+        Optional file path relative to the project root. When provided, returns run points (executable entry points) in
+        the file instead of project-wide run configurations.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["get_run_configurations"]({
+    filePath: "<filePath>",
+    projectPath: "<projectPath>"
+  });

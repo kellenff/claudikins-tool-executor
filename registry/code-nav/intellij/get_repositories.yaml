@@ -1,0 +1,20 @@
+name: get_repositories
+server: intellij
+category: code-nav
+description: |-
+  Retrieves the list of VCS roots in the project.
+  This is useful to detect all repositories in a multi-repository project.
+inputSchema:
+  type: object
+  properties:
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["get_repositories"]({
+    projectPath: "<projectPath>"
+  });

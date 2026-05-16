@@ -1,0 +1,20 @@
+name: xdebug_stop_server
+server: intellij
+category: code-nav
+description: |-
+  Stops the PHP dev server and the XDebug listener.
+  Use this when you are completely done debugging.
+inputSchema:
+  type: object
+  properties:
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["xdebug_stop_server"]({
+    projectPath: "<projectPath>"
+  });

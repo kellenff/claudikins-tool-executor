@@ -1,0 +1,23 @@
+name: cancel_sql_query
+server: intellij
+category: code-nav
+description: 'Cancels a running query using its unique ID. '
+inputSchema:
+  type: object
+  properties:
+    sessionId:
+      type: integer
+      description: The unique ID of a query session.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - sessionId
+example: |-
+  await intellij["cancel_sql_query"]({
+    sessionId: 0,
+    projectPath: "<projectPath>"
+  });

@@ -1,0 +1,37 @@
+name: get_inspections
+server: intellij
+category: code-nav
+description: |-
+  Analyzes a file using the IDE's inspections.
+  Returns problems with severity, description, location, and available quick fixes.
+  Use this tool after editing files to validate the code.
+
+  Each problem includes available quick fixes that can be applied using apply_quick_fix.
+
+  Note: Lines and columns are 1-based.
+inputSchema:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: Path relative to the project root
+    minSeverity:
+      type: string
+      description: 'Minimum severity level: ERROR, WARNING, WEAK_WARNING, INFORMATION. Default: WEAK_WARNING'
+    timeout:
+      type: integer
+      description: Timeout in milliseconds
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - filePath
+example: |-
+  await intellij["get_inspections"]({
+    filePath: "<filePath>",
+    minSeverity: "<minSeverity>",
+    timeout: 0
+  });

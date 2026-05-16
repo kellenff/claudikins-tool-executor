@@ -1,0 +1,93 @@
+name: execute_run_configuration
+server: intellij
+category: code-nav
+description: >-
+  Run either an existing run configuration by name or a temporary run configuration created from a code location
+
+  (`filePath` + `line`) in the current project, then wait up to specified timeout for it to finish.
+
+  Use this tool with either a configuration name returned by `get_run_configurations`, or with a run point
+
+  (`filePath` + `line`) returned by `get_run_configurations(filePath = ...)`.
+
+
+  Optional launch overrides (`programArguments`, `workingDirectory`, `envs`) are applied only for this run and are not
+  persisted.
+
+  Do not pass these override parameters unless you explicitly need to change the configured launch values for this run.
+
+  Missing/null override parameters keep existing run configuration values unchanged.
+
+  For string overrides (`programArguments`, `workingDirectory`), missing/null or empty string (`""`) keeps the existing
+  value unchanged.
+
+  Pass a whitespace-only string such as `" "` to clear an existing value for this launch.
+
+
+  Pass either `configurationName`, or `filePath` together with `line`. These modes are mutually exclusive.
+
+
+  Behavior:
+
+  - When `waitForExit=true`, waits up to `timeout` milliseconds for process termination. If the timeout expires,
+    the process keeps running in the background and `exitCode` is omitted from the result.
+  - When `waitForExit=false`, waits only for the process to start, then returns immediately without applying `timeout`.
+
+  - `fullOutputPath` points to a temp file with the full raw output and may continue growing while the process is alive.
+
+
+  Returns the execution result including current output snapshot, optional exit code, and optional `fullOutputPath`.
+inputSchema:
+  type: object
+  properties:
+    configurationName:
+      type: string
+      description: Name of the existing run configuration to execute
+    filePath:
+      type: string
+      description: >-
+        File path relative to the project root. Provide together with `line` to create and execute a temporary run
+        configuration from code context.
+    line:
+      type: integer
+      description: >-
+        1-based line number for `filePath`. Provide together with `filePath` and do not combine with
+        `configurationName`.
+    timeout:
+      type: integer
+      description: Timeout in milliseconds
+    waitForExit:
+      type: boolean
+      description: >-
+        Whether to wait for process termination. If false, the tool returns immediately after the process starts and
+        ignores `timeout`.
+    programArguments:
+      type: string
+      description: >-
+        Optional program arguments override for this launch only. Missing/null or empty string keeps the existing value;
+        whitespace-only string clears it.
+    workingDirectory:
+      type: string
+      description: >-
+        Optional working directory override for this launch only. Missing/null or empty string keeps the existing value;
+        whitespace-only string clears it.
+    envs:
+      type: object
+      additionalProperties:
+        type: string
+      description: >-
+        Optional environment variable overrides for this launch only. Missing/null keeps existing env unchanged; when
+        provided, values are merged over existing env.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required: []
+example: |-
+  await intellij["execute_run_configuration"]({
+    configurationName: "<configurationName>",
+    filePath: "<filePath>",
+    line: 0
+  });

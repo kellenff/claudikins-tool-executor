@@ -1,0 +1,42 @@
+name: apply_quick_fix
+server: intellij
+category: code-nav
+description: |-
+  Applies a quick fix to resolve an inspection problem.
+
+  Use the quickFix information from get_inspections result to identify which fix to apply.
+  The tool will re-run the highlighting at the specified location and apply the matching fix.
+
+  Note: Lines and columns are 1-based.
+inputSchema:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: Path relative to the project root
+    line:
+      type: integer
+      description: 1-based line number where the problem is located
+    column:
+      type: integer
+      description: 1-based column number where the problem is located
+    quickFixName:
+      type: string
+      description: The name of the quick fix to apply (from quickFixes[].name in get_inspections result)
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - filePath
+    - line
+    - column
+    - quickFixName
+example: |-
+  await intellij["apply_quick_fix"]({
+    filePath: "<filePath>",
+    line: 0,
+    column: 0
+  });

@@ -1,0 +1,26 @@
+name: open_file_in_editor
+server: intellij
+category: code-nav
+description: |-
+  Opens the specified file in the JetBrains IDE editor.
+  Requires a filePath parameter containing the path to the file to open.
+  The file path can be absolute or relative to the project root.
+inputSchema:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: Path relative to the project root
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - filePath
+example: |-
+  await intellij["open_file_in_editor"]({
+    filePath: "<filePath>",
+    projectPath: "<projectPath>"
+  });

@@ -1,0 +1,29 @@
+name: xdebug_request
+server: intellij
+category: code-nav
+description: |-
+  Makes an HTTP request to the dev server and starts debugging it.
+  Automatically establishes the debug connection and applies all breakpoints.
+  Returns the debugger state: if a breakpoint was hit, the session is paused
+  and you can inspect with xdebug_stack, xdebug_context, or step with
+  xdebug_step_over/xdebug_step_into. If no breakpoint was hit,
+  the script ran to completion.
+inputSchema:
+  type: object
+  properties:
+    url:
+      type: string
+      description: Full URL to request, e.g. http://127.0.0.1:8081/add?a=3&b=5
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - url
+example: |-
+  await intellij["xdebug_request"]({
+    url: "<url>",
+    projectPath: "<projectPath>"
+  });

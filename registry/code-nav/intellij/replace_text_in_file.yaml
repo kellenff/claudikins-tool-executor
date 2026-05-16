@@ -1,0 +1,60 @@
+name: replace_text_in_file
+server: intellij
+category: code-nav
+description: |2-
+          Replaces text in a file with flexible options for find and replace operations.
+          Use this tool to make targeted changes without replacing the entire file content.
+          This is the most efficient tool for file modifications when you know the exact text to replace.
+          
+          Requires three parameters:
+          - pathInProject: The path to the target file, relative to project root
+          - oldTextOrPatte: The text to be replaced (exact match by default)
+          - newText: The replacement text
+          
+          Optional parameters:
+          - replaceAll: Whether to replace all occurrences (default: true)
+          - caseSensitive: Whether the search is case-sensitive (default: true)
+          - regex: Whether to treat oldText as a regular expression (default: false)
+          
+          Returns one of these responses:
+          - "ok" when replacement happened
+          - error "project dir not found" if project directory cannot be determined
+          - error "file not found" if the file doesn't exist
+          - error "could not get document" if the file content cannot be accessed
+          - error "no occurrences found" if the old text was not found in the file
+          
+          Note: Automatically saves the file after modification
+inputSchema:
+  type: object
+  properties:
+    pathInProject:
+      type: string
+      description: Path to target file relative to project root
+    oldText:
+      type: string
+      description: Text to be replaced
+    newText:
+      type: string
+      description: Replacement text
+    replaceAll:
+      type: boolean
+      description: Replace all occurrences
+    caseSensitive:
+      type: boolean
+      description: Case-sensitive search
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - pathInProject
+    - oldText
+    - newText
+example: |-
+  await intellij["replace_text_in_file"]({
+    pathInProject: "<pathInProject>",
+    oldText: "<oldText>",
+    newText: "<newText>"
+  });

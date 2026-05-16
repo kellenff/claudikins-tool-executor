@@ -1,0 +1,23 @@
+name: list_schema_object_kinds
+server: intellij
+category: code-nav
+description: Retrieves supported schema object kinds (e.g., table, view, routine) for the given database connection.
+inputSchema:
+  type: object
+  properties:
+    connectionId:
+      type: string
+      description: The unique ID of a database connection.
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - connectionId
+example: |-
+  await intellij["list_schema_object_kinds"]({
+    connectionId: "<connectionId>",
+    projectPath: "<projectPath>"
+  });

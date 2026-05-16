@@ -1,0 +1,25 @@
+name: reformat_file
+server: intellij
+category: code-nav
+description: |-
+  Reformats a specified file in the JetBrains IDE.
+  Use this tool to apply code formatting rules to a file identified by its path.
+inputSchema:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Path relative to the project root
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - path
+example: |-
+  await intellij["reformat_file"]({
+    path: "<path>",
+    projectPath: "<projectPath>"
+  });

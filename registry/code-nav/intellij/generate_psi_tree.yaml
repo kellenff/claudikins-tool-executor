@@ -1,0 +1,31 @@
+name: generate_psi_tree
+server: intellij
+category: code-nav
+description: |2-
+      Creates a PSI tree for provided Java or Kotlin code and returns it as indented text.
+      Use this tool to understand the PSI structure of code snippets when writing inspections.
+      The output shows element types and their hierarchy, with hints about when node.children() is needed.
+inputSchema:
+  type: object
+  properties:
+    code:
+      type: string
+      description: Source code snippet to parse
+    language:
+      type: string
+      description: 'Programming language: ''Java'' or ''Kotlin'''
+    projectPath:
+      type: string
+      description: |2-
+         The project path. Pass this value ALWAYS if you are aware of it. It reduces numbers of ambiguous calls. 
+         In the case you know only the current working directory you can use it as the project path.
+         If you're not aware about the project path you can ask user about it.
+  required:
+    - code
+    - language
+example: |-
+  await intellij["generate_psi_tree"]({
+    code: "<code>",
+    language: "<language>",
+    projectPath: "<projectPath>"
+  });
