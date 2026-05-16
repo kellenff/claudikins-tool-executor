@@ -11,7 +11,7 @@ inputSchema:
     name_path:
       title: Name Path
       type: string
-      description: Name path of the symbol to rename (definitions in the `find_symbol` tool apply).
+      description: Name path of the symbol to rename.
     relative_path:
       title: Relative Path
       type: string

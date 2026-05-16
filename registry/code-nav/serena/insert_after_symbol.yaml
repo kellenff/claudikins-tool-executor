@@ -10,7 +10,7 @@ inputSchema:
     name_path:
       title: Name Path
       type: string
-      description: Name path of the symbol after which to insert content (definitions in the `find_symbol` tool apply).
+      description: Name path of the symbol after which to insert content.
     relative_path:
       title: Relative Path
       type: string

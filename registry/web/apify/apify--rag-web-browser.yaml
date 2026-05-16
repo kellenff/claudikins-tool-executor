@@ -6,10 +6,10 @@ description: >-
 
   Use this tool instead of the "call-actor" if user requests this specific Actor.
 
-  Actor description: Web browser for OpenAI Assistants, RAG pipelines, or AI agents, similar to a web browser in
-  ChatGPT. It queries Google Search, scrapes the top N pages, and returns their content as Markdown for further
-  processing by an LLM. It can also scrape individual URLs.Use this tool when user wants to GET or RETRIEVE actual data
-  immediately (one-time data retrieval).
+  Actor description: Web search and fetch tool for AI agents and RAG pipelines. It queries Google Search, scrapes the
+  top N pages using a full web browser, and returns their content as clean Markdown for further processing by an LLM.
+  Can also fetch individual URLs.Use this tool when user wants to GET or RETRIEVE actual data immediately (one-time data
+  retrieval).
 
   This tool directly fetches and returns data - it does NOT just find tools.
 

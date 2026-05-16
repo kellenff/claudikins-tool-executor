@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-05-16
+
+### Changed
+
+- Yarn `nodeLinker` switched from default `pnp` to `pnpm`. The MCP server entry points (`dist/index.js`, `dist/cli.js`) are launched directly with `node` by MCP hosts and `npx` consumers, bypassing the PnP loader. Under PnP this broke module resolution for externalised dependencies (`dotenv`, `@modelcontextprotocol/sdk`, ...); under the pnpm linker a real `node_modules/` tree backed by hardlinks is materialised and vanilla `node` resolves the graph with no loader required. `enableScripts: true` added to ensure native postinstalls (esbuild, fsevents, lightningcss, rolldown) still run. No consumer-facing behaviour changes; the published package shape is unchanged.
+
+### Removed
+
+- PnP runtime artefacts: `.pnp.cjs`, `.pnp.loader.mjs`
+- Yarn editor SDKs at `.yarn/sdks/` (the TypeScript shim referenced `pnpapi`, which no longer exists under the pnpm linker; editors fall through to `node_modules/typescript` natively)
+
 ## [1.1.2] - 2026-05-16
 
 ### Fixed
