@@ -147,9 +147,19 @@ const RESERVED_IDENTIFIERS = new Set([
   "arguments",
   "eval",
 ]);
-const RESERVED_GLOBAL_BINDINGS = new Set(["console", "workspace", "clients", "globalThis"]);
+const RESERVED_GLOBAL_BINDINGS = new Set([
+  "console",
+  "workspace",
+  "clients",
+  "globalThis",
+]);
 const SERVER_BINDINGS = new Map<string, string>();
-const usedBindings = new Set<string>(["console", "workspace", "clients", "globalThis"]);
+const usedBindings = new Set<string>([
+  "console",
+  "workspace",
+  "clients",
+  "globalThis",
+]);
 
 /**
  * Connect to an MCP server and extract tool schemas

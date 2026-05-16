@@ -44,13 +44,15 @@ description: >
   needed.
 
 
-  Important limitations: This tool does not return full Actor documentation, input schemas, or detailed usage
-  instructions - only summary information.
+  Important limitations: This tool does not return full Actor documentation or detailed usage instructions - only
+  summary information.
 
-  For complete Actor details, use the fetch-actor-details tool.
+  Each result lists the Actor's input fields with their types (e.g. `url: string, maxResults?: number`) so you can
+  construct an Actor call directly without a separate fetch-actor-details round-trip.
 
-  The search is limited to publicly available Actors and may not include private, rental, or restricted Actors depending
-  on the user's access level.
+  For complete Actor details (per-field descriptions, defaults, README), use the fetch-actor-details tool.
+
+  The search is limited to publicly available Actors and excludes rental and restricted Actors.
 
 
   Returns list of Actor cards with the following info:
@@ -72,6 +74,9 @@ description: >
   - **Stats:** Usage, success rate, bookmarks
 
   - **Rating:** Out of 5 (if available)
+
+  - **Input fields:** Inline list of input field names and types (e.g. `url: string, maxResults?: number`); `?` marks
+  optional fields
 inputSchema:
   type: object
   properties:
@@ -109,10 +114,10 @@ inputSchema:
       type: string
     limit:
       default: 5
-      description: The maximum number of Actors to return (default = 5)
+      description: The maximum number of Actors to return (max = 10, default = 5).
       type: integer
       minimum: 1
-      maximum: 100
+      maximum: 10
     offset:
       default: 0
       description: The number of elements to skip from the start (default = 0)

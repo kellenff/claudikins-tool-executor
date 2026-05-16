@@ -1,11 +1,7 @@
 name: read_file
 server: serena
 category: code-nav
-description: >-
-  Reads the given file or a chunk of it. Generally, symbolic operations
-
-  like find_symbol or find_referencing_symbols should be preferred if you know which symbols you are looking for.
-  Returns the full text of the file at the given relative path.
+description: Reads the given file or a chunk of it. Returns the full text of the file at the given relative path.
 inputSchema:
   type: object
   properties:
