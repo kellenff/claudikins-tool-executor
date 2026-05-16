@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Restore the unstaged changes that pre-commit stashed away for the build.
+
+GIT_DIR=$(git rev-parse --git-dir)
+MARKER="$GIT_DIR/precommit-stash-pending"
+
+[ -f "$MARKER" ] || exit 0
+
+rm -f "$MARKER"
+
+if ! git stash pop --quiet 2>/dev/null; then
+  echo "[post-commit] WARNING: 'git stash pop' failed — your unstaged work is preserved in stash@{0}" >&2
+  exit 0
+fi
+
+echo "[post-commit] restored unstaged changes" >&2
