@@ -1,6 +1,6 @@
 {
   "name": "claudikins-tool-executor",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Configurable MCP wrapper that consolidates your tools into just 3, using semantic search for on-demand discovery and sandboxed TypeScript execution. Ships with 8 example servers (110 tools) - reduces context consumption by 98% (55k tokens down to 1.1k).",
   "author": {
     "name": "elb-pr",

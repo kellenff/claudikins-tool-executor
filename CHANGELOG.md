@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-05-16
+
+### Fixed
+
+- `tsup` entry-point map was missing `config`, `search`, `types`, and `sandbox/{clients,runtime,workspace}`; with `bundle: true` + `splitting: true`, those modules were melted into anonymous shared chunks instead of shipping as first-class `dist/*.js` files. Callers (`te-doctor`, `te-config`, `te-guide`, `tool-executor-guide`) all reference the missing artefacts. Declared each as a named entry so `node --check dist/config.js` and siblings now resolve.
+
 ## [1.1.1] - 2026-05-16
 
 ### Fixed
