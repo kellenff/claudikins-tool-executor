@@ -98,10 +98,7 @@ describe("loadToolDefinition", () => {
     const tool = await loadToolDefinition("/registry/ui/diagram.yaml");
 
     expect(tool).toEqual(toolFixtures["/registry/ui/diagram.yaml"]);
-    expect(mockReadFile).toHaveBeenCalledWith(
-      "/registry/ui/diagram.yaml",
-      "utf-8",
-    );
+    expect(mockReadFile).toHaveBeenCalledWith("/registry/ui/diagram.yaml", "utf-8");
   });
 
   it("returns null for invalid definitions", async () => {
@@ -111,17 +108,13 @@ describe("loadToolDefinition", () => {
       server: "gemini",
     });
 
-    await expect(
-      loadToolDefinition("/registry/ui/invalid.yaml"),
-    ).resolves.toBeNull();
+    await expect(loadToolDefinition("/registry/ui/invalid.yaml")).resolves.toBeNull();
   });
 
   it("returns null when file read fails", async () => {
     mockReadFile.mockRejectedValue(new Error("missing"));
 
-    await expect(
-      loadToolDefinition("/registry/ui/missing.yaml"),
-    ).resolves.toBeNull();
+    await expect(loadToolDefinition("/registry/ui/missing.yaml")).resolves.toBeNull();
   });
 });
 
@@ -148,9 +141,7 @@ describe("searchTools", () => {
     }) as typeof glob);
 
     mockReadFile.mockImplementation(async (path) => {
-      return JSON.stringify(
-        toolFixtures[path as keyof typeof toolFixtures] || {},
-      );
+      return JSON.stringify(toolFixtures[path as keyof typeof toolFixtures] || {});
     });
 
     mockYamlLoad.mockImplementation((content: string) => {
@@ -163,9 +154,7 @@ describe("searchTools", () => {
     const response = await searchTools("diagram");
 
     expect(response.source).toBe("local");
-    expect(response.fallbackReason).toBe(
-      "Serena unavailable - using text search",
-    );
+    expect(response.fallbackReason).toBe("Serena unavailable - using text search");
     expect(response.results).toHaveLength(1);
     expect(response.results[0].tool.name).toBe("diagram-generator");
     expect(response.totalCount).toBe(1);
@@ -199,9 +188,7 @@ describe("searchTools", () => {
         close,
       } as unknown as Client;
     });
-    mockReadFile.mockResolvedValue(
-      JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]),
-    );
+    mockReadFile.mockResolvedValue(JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]));
     mockYamlLoad.mockReturnValue(toolFixtures["/registry/ui/diagram.yaml"]);
 
     const response = await searchTools("generate diagram", 1, 0);
@@ -258,9 +245,7 @@ describe("searchTools", () => {
       }
       return JSON.stringify(toolFixtures["/registry/code-nav/search.yaml"]);
     });
-    mockYamlLoad.mockImplementation(
-      (content: string) => JSON.parse(content) as ToolFixture,
-    );
+    mockYamlLoad.mockImplementation((content: string) => JSON.parse(content) as ToolFixture);
 
     const response = await searchTools("tool", 1, 0);
 
@@ -286,17 +271,13 @@ describe("searchTools", () => {
     mockIsBM25Ready.mockReturnValue(false);
     mockSearchBM25.mockReturnValue([]);
     mockGlob.mockResolvedValue(["/registry/ui/diagram.yaml"] as string[]);
-    mockReadFile.mockResolvedValue(
-      JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]),
-    );
+    mockReadFile.mockResolvedValue(JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]));
     mockYamlLoad.mockReturnValue(toolFixtures["/registry/ui/diagram.yaml"]);
 
     const response = await searchTools("diagram", 5, 0);
 
     expect(response.source).toBe("local");
-    expect(response.fallbackReason).toBe(
-      "No semantic matches - using text search",
-    );
+    expect(response.fallbackReason).toBe("No semantic matches - using text search");
     expect(response.results[0].tool.name).toBe("diagram-generator");
   });
 
@@ -319,9 +300,7 @@ describe("searchTools", () => {
         close: vi.fn().mockResolvedValue(undefined),
       } as unknown as Client;
     });
-    mockReadFile.mockResolvedValue(
-      JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]),
-    );
+    mockReadFile.mockResolvedValue(JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]));
     mockYamlLoad.mockReturnValue(toolFixtures["/registry/ui/diagram.yaml"]);
 
     const response = await searchTools("a+b", 1, 0);
@@ -370,9 +349,7 @@ describe("searchTools", () => {
     mockReadFile.mockImplementation(async (path) => {
       return JSON.stringify(toolFixtures[path as keyof typeof toolFixtures]);
     });
-    mockYamlLoad.mockImplementation(
-      (content: string) => JSON.parse(content) as ToolFixture,
-    );
+    mockYamlLoad.mockImplementation((content: string) => JSON.parse(content) as ToolFixture);
 
     const response = await searchTools("diagram code", 2, 0);
 
@@ -400,9 +377,7 @@ describe("searchTools", () => {
     mockReadFile.mockImplementation(async (path) => {
       return JSON.stringify(toolFixtures[path as keyof typeof toolFixtures]);
     });
-    mockYamlLoad.mockImplementation(
-      (content: string) => JSON.parse(content) as ToolFixture,
-    );
+    mockYamlLoad.mockImplementation((content: string) => JSON.parse(content) as ToolFixture);
 
     const response = await searchTools("diagram code", 1, 1);
 
@@ -430,9 +405,7 @@ describe("searchTools", () => {
 
     expect(response.source).toBe("local");
     expect(response.results).toEqual([]);
-    expect(response.fallbackReason).toBe(
-      "Serena unavailable - using text search",
-    );
+    expect(response.fallbackReason).toBe("Serena unavailable - using text search");
     expect(response.suggestion).toContain("Try broader terms");
     expect(response.totalCount).toBe(0);
   });
@@ -452,9 +425,7 @@ describe("search module helpers", () => {
 
   it("lists tools in a category", async () => {
     mockGlob.mockResolvedValue(["/registry/ui/diagram.yaml"] as string[]);
-    mockReadFile.mockResolvedValue(
-      JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]),
-    );
+    mockReadFile.mockResolvedValue(JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]));
     mockYamlLoad.mockReturnValue(toolFixtures["/registry/ui/diagram.yaml"]);
 
     const tools = await listToolsInCategory("ui");
@@ -475,9 +446,7 @@ describe("search module helpers", () => {
     mockReadFile.mockImplementation(async (path) => {
       return JSON.stringify(toolFixtures[path as keyof typeof toolFixtures]);
     });
-    mockYamlLoad.mockImplementation(
-      (content: string) => JSON.parse(content) as ToolFixture,
-    );
+    mockYamlLoad.mockImplementation((content: string) => JSON.parse(content) as ToolFixture);
 
     const tool = await getToolByName("code-search");
 
