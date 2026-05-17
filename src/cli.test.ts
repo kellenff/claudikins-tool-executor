@@ -1,12 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  chmodSync,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -53,9 +46,7 @@ describe("cli helpers", () => {
   });
 
   it("prints check status with hint text", () => {
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(cli, "isCommandAvailable").mockReturnValue(true);
 
     cli.checkCommand("node", "Node runtime");
@@ -64,9 +55,7 @@ describe("cli helpers", () => {
   });
 
   it("reports missing command with hint", () => {
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(cli, "isCommandAvailable").mockReturnValue(false);
 
     cli.checkCommand("missing", "Missing binary", "Run installer");
@@ -77,9 +66,7 @@ describe("cli helpers", () => {
   });
 
   it("prints config sources and per-source server counts when a user config is loaded", () => {
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(config, "loadConfig").mockReturnValue({
       servers: [
         {
@@ -118,21 +105,13 @@ describe("cli helpers", () => {
 
     cli.checkConfig();
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Config sources (precedence low → high):",
-    );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "  1. /tmp/tool-executor.config.json",
-    );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Resolved 3 server(s) (2 default + 1 user)",
-    );
+    expect(consoleSpy).toHaveBeenCalledWith("Config sources (precedence low → high):");
+    expect(consoleSpy).toHaveBeenCalledWith("  1. /tmp/tool-executor.config.json");
+    expect(consoleSpy).toHaveBeenCalledWith("Resolved 3 server(s) (2 default + 1 user)");
   });
 
   it("reports defaults-only when no user config is found", () => {
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(config, "loadConfig").mockReturnValue(null);
     vi.spyOn(clients, "getServerConfigs").mockReturnValue([
       {
@@ -153,18 +132,12 @@ describe("cli helpers", () => {
 
     cli.checkConfig();
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Config sources: (none, using defaults)",
-    );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Resolved 2 server(s) (2 default + 0 user)",
-    );
+    expect(consoleSpy).toHaveBeenCalledWith("Config sources: (none, using defaults)");
+    expect(consoleSpy).toHaveBeenCalledWith("Resolved 2 server(s) (2 default + 0 user)");
   });
 
   it("checks configured servers using mocked server list", () => {
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(clients, "getServerConfigs").mockReturnValue([
       { name: "probe", displayName: "Probe Server", command: "node", args: [] },
     ]);
@@ -181,9 +154,7 @@ describe("cli helpers", () => {
   });
 
   it("runs the doctor command", async () => {
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(config, "loadConfig").mockReturnValue(null);
     vi.spyOn(clients, "getServerConfigs").mockReturnValue([
       {
@@ -198,15 +169,9 @@ describe("cli helpers", () => {
     await cli.program.parseAsync(["node", "claudikins", "doctor"]);
 
     expect(consoleSpy).toHaveBeenCalledWith("🔍 Checking environment...\n");
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Node.js:"),
-    );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Config sources: (none, using defaults)",
-    );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Resolved 1 server(s) (1 default + 0 user)",
-    );
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Node.js:"));
+    expect(consoleSpy).toHaveBeenCalledWith("Config sources: (none, using defaults)");
+    expect(consoleSpy).toHaveBeenCalledWith("Resolved 1 server(s) (1 default + 0 user)");
     expect(consoleSpy).toHaveBeenCalledWith("Registry: ✅ Found");
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("Probe Server (probe) command: ✅ Found"),
@@ -216,9 +181,7 @@ describe("cli helpers", () => {
 
   it("runs init command without overwriting an existing config", async () => {
     const rootDir = mkdtempSync(join(tmpdir(), "tool-executor-init-"));
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(process, "cwd").mockReturnValue(rootDir);
 
     await cli.program.parseAsync(["node", "claudikins", "init"]);
@@ -235,9 +198,7 @@ describe("cli helpers", () => {
         },
       ],
     });
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "✅ Created tool-executor.config.json",
-    );
+    expect(consoleSpy).toHaveBeenCalledWith("✅ Created tool-executor.config.json");
 
     await cli.program.parseAsync(["node", "claudikins", "init"]);
     expect(consoleSpy).toHaveBeenCalledWith("⚠️ Config file already exists");
@@ -246,9 +207,7 @@ describe("cli helpers", () => {
   });
 
   it("prints extract usage when --all is omitted", async () => {
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     await cli.program.parseAsync(["node", "claudikins", "extract"]);
 
@@ -256,23 +215,17 @@ describe("cli helpers", () => {
     expect(consoleSpy).toHaveBeenCalledWith(
       "\nExtracts tool schemas from all configured MCP servers",
     );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "and generates YAML files in the registry/ directory.",
-    );
+    expect(consoleSpy).toHaveBeenCalledWith("and generates YAML files in the registry/ directory.");
   });
 
   it("reports missing extract script when --all is requested outside the project", async () => {
     const rootDir = mkdtempSync(join(tmpdir(), "tool-executor-extract-"));
     vi.spyOn(process, "cwd").mockReturnValue(rootDir);
     vi.spyOn(console, "log").mockImplementation(() => undefined);
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-    vi.spyOn(process, "exit").mockImplementation(
-      (code?: string | number | null) => {
-        throw new Error(`exit ${code}`);
-      },
-    );
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(process, "exit").mockImplementation((code?: string | number | null) => {
+      throw new Error(`exit ${code}`);
+    });
 
     await expect(
       cli.program.parseAsync(["node", "claudikins", "extract", "--all"]),

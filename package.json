@@ -42,11 +42,11 @@
     "test:unit": "vitest run src",
     "test:unit:mutation": "stryker run",
     "test:integration": "vitest run tests/integration",
-    "lint": "oxlint --type-aware",
-    "lint:fix": "oxlint --type-aware --fix --fix-suggestions",
-    "format": "oxfmt",
-    "format:check": "oxfmt --check",
-    "fix": "oxfmt && oxlint --type-aware --fix && oxfmt"
+    "lint": "oxlint --type-aware src scripts tsup.config.ts vitest.config.ts",
+    "lint:fix": "oxlint --type-aware --fix --fix-suggestions src scripts tsup.config.ts vitest.config.ts",
+    "format": "oxfmt src scripts tsup.config.ts vitest.config.ts",
+    "format:check": "oxfmt --check src scripts tsup.config.ts vitest.config.ts",
+    "fix": "yarn format && yarn lint:fix && yarn format"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",

@@ -74,7 +74,9 @@ describe("tools/search handler", () => {
 
     expect(response.structuredContent.results[0].description).toBe(`${"x".repeat(77)}...`);
     expect(response.structuredContent.has_more).toBe(true);
-    expect(JSON.parse(response.content[0].text).results[0].description).toBe(`${"x".repeat(77)}...`);
+    expect(JSON.parse(response.content[0].text).results[0].description).toBe(
+      `${"x".repeat(77)}...`,
+    );
   });
 
   it("handles empty descriptions without pagination overflow", async () => {

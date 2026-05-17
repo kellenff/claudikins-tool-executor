@@ -14,16 +14,9 @@ import {
   GetToolSchemaInputSchema,
   ExecuteCodeInputSchema,
 } from "./schemas.js";
-import {
-  handleSearchTools,
-  handleGetToolSchema,
-  handleExecuteCode,
-} from "./tools/index.js";
+import { handleSearchTools, handleGetToolSchema, handleExecuteCode } from "./tools/index.js";
 import { startLifecycleManagement } from "./sandbox/clients.js";
-import {
-  getAvailableClientNames,
-  getSandboxClientBindings,
-} from "./sandbox/runtime.js";
+import { getAvailableClientNames, getSandboxClientBindings } from "./sandbox/runtime.js";
 
 const server = new McpServer({
   name: "@claudikins/tool-executor",
@@ -155,9 +148,7 @@ async function main(): Promise<void> {
   await server.connect(transport);
 
   console.error("Claudikins Tool Executor running");
-  console.error(
-    `Available MCP clients: ${getAvailableClientNames().join(", ")}`,
-  );
+  console.error(`Available MCP clients: ${getAvailableClientNames().join(", ")}`);
 }
 
 main().catch((error: unknown) => {

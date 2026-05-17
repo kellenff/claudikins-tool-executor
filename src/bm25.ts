@@ -34,11 +34,14 @@ export function initBM25(tools: ToolDefinition[]): void {
 
   // Index all tools
   tools.forEach((tool, idx) => {
-    bm25Engine!.addDoc({
-      name: tool.name,
-      description: tool.description,
-      server: tool.server,
-    }, idx);
+    bm25Engine!.addDoc(
+      {
+        name: tool.name,
+        description: tool.description,
+        server: tool.server,
+      },
+      idx,
+    );
   });
 
   bm25Engine.consolidate();

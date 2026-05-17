@@ -28,16 +28,24 @@ describe("schemas", () => {
       limit: 50,
       offset: 2,
     });
-    expect(SearchToolsInputSchema.shape.query.description).toBe("Search query for finding relevant tools");
-    expect(SearchToolsInputSchema.shape.limit.description).toBe("Maximum results to return (default: 5)");
-    expect(SearchToolsInputSchema.shape.offset.description).toBe("Number of results to skip for pagination (default: 0)");
+    expect(SearchToolsInputSchema.shape.query.description).toBe(
+      "Search query for finding relevant tools",
+    );
+    expect(SearchToolsInputSchema.shape.limit.description).toBe(
+      "Maximum results to return (default: 5)",
+    );
+    expect(SearchToolsInputSchema.shape.offset.description).toBe(
+      "Number of results to skip for pagination (default: 0)",
+    );
   });
 
   it("validates get tool schema input", () => {
     expect(() => GetToolSchemaInputSchema.parse({ name: "" })).toThrow();
     expect(() => GetToolSchemaInputSchema.parse({ name: "ok" })).not.toThrow();
     expect(() => GetToolSchemaInputSchema.parse({ name: "ok", extra: true })).toThrow();
-    expect(GetToolSchemaInputSchema.shape.name.description).toBe("Tool name (from search_tools results)");
+    expect(GetToolSchemaInputSchema.shape.name.description).toBe(
+      "Tool name (from search_tools results)",
+    );
   });
 
   it("applies defaults and validates execute input", () => {
@@ -47,12 +55,18 @@ describe("schemas", () => {
     expect(() => ExecuteCodeInputSchema.parse({ code: "1+1", timeout: 10 })).toThrow();
     expect(() => ExecuteCodeInputSchema.parse({ code: "1+1", timeout: 600001 })).toThrow();
     expect(() => ExecuteCodeInputSchema.parse({ code: "1+1", timeout: 1000.5 })).toThrow();
-    expect(() => ExecuteCodeInputSchema.parse({ code: "1+1", timeout: 1000, extra: true })).toThrow();
+    expect(() =>
+      ExecuteCodeInputSchema.parse({ code: "1+1", timeout: 1000, extra: true }),
+    ).toThrow();
     expect(ExecuteCodeInputSchema.parse({ code: "1+1", timeout: 1000 })).toEqual({
       code: "1+1",
       timeout: 1000,
     });
-    expect(ExecuteCodeInputSchema.shape.code.description).toBe("TypeScript/JavaScript code to execute");
-    expect(ExecuteCodeInputSchema.shape.timeout.description).toBe("Execution timeout in ms (default: 30000)");
+    expect(ExecuteCodeInputSchema.shape.code.description).toBe(
+      "TypeScript/JavaScript code to execute",
+    );
+    expect(ExecuteCodeInputSchema.shape.timeout.description).toBe(
+      "Execution timeout in ms (default: 30000)",
+    );
   });
 });

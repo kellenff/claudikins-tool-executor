@@ -2,12 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { loadConfig } from "../config.js";
 import { MCP_CLIENT_VERSION } from "../constants.js";
-import {
-  MCPClients,
-  ServerConfig,
-  AuditLogEntry,
-  ClientState,
-} from "../types.js";
+import { MCPClients, ServerConfig, AuditLogEntry, ClientState } from "../types.js";
 
 type DefaultServerConfig = ServerConfig & {
   envKeys?: string[];
@@ -76,22 +71,11 @@ const DEFAULT_CONFIGS: DefaultServerConfig[] = [
     name: "serena",
     displayName: "Serena",
     command: "uvx",
-    args: [
-      "--from",
-      "git+https://github.com/oraios/serena",
-      "serena",
-      "start-mcp-server",
-    ],
+    args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
   },
 ];
 
-const SAFE_SERVER_COMMANDS = new Set([
-  "npx",
-  "uvx",
-  "node",
-  "python",
-  "codebase-memory-mcp",
-]);
+const SAFE_SERVER_COMMANDS = new Set(["npx", "uvx", "node", "python", "codebase-memory-mcp"]);
 
 const DEFAULT_SOURCE = "<default>";
 
@@ -107,9 +91,7 @@ function resolveCommand(config: ServerConfig): string {
  * Resolve envKeys to actual env values at runtime (after dotenv loads).
  * Used only for built-in defaults; user-supplied entries use literal `env`.
  */
-function resolveEnvKeys(
-  envKeys?: string[],
-): Record<string, string> | undefined {
+function resolveEnvKeys(envKeys?: string[]): Record<string, string> | undefined {
   if (!envKeys || envKeys.length === 0) return undefined;
 
   return envKeys.reduce<Record<string, string>>((acc, key) => {
@@ -282,10 +264,7 @@ export async function getClient(name: string): Promise<Client | null> {
 /**
  * Internal connection logic
  */
-async function connectClientInternal(
-  name: string,
-  state: ClientState,
-): Promise<Client | null> {
+async function connectClientInternal(name: string, state: ClientState): Promise<Client | null> {
   const config = SERVER_CONFIGS.find((c) => c.name === name);
   if (!config) {
     return null;

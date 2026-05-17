@@ -19,11 +19,7 @@ vi.mock("./clients.js", () => ({
   logMcpCall: mocks.logMcpCall,
 }));
 
-import {
-  executeCode,
-  getAvailableClientNames,
-  getSandboxClientBindings,
-} from "./runtime.js";
+import { executeCode, getAvailableClientNames, getSandboxClientBindings } from "./runtime.js";
 import { workspace } from "./workspace.js";
 
 describe("sandbox runtime client bindings", () => {
@@ -35,7 +31,13 @@ describe("sandbox runtime client bindings", () => {
   });
 
   it("exposes original client names and JavaScript-safe bindings", () => {
-    expect(getAvailableClientNames()).toEqual(["code-nav", "class", "console", "1start", "code_nav"]);
+    expect(getAvailableClientNames()).toEqual([
+      "code-nav",
+      "class",
+      "console",
+      "1start",
+      "code_nav",
+    ]);
     expect(getSandboxClientBindings()).toEqual([
       "code_nav (server: code-nav)",
       "_class (server: class)",
@@ -54,12 +56,14 @@ describe("sandbox runtime client bindings", () => {
     expect(result.error).toBeUndefined();
     expect(result.logs).toContainEqual({ returned: { ok: true } });
     expect(callTool).toHaveBeenCalledWith({ name: "lookup", arguments: { q: "diagram" } });
-    expect(mocks.logMcpCall).toHaveBeenCalledWith(expect.objectContaining({
-      client: "code-nav",
-      tool: "lookup",
-      args: { q: "diagram" },
-      duration: expect.any(Number),
-    }));
+    expect(mocks.logMcpCall).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client: "code-nav",
+        tool: "lookup",
+        args: { q: "diagram" },
+        duration: expect.any(Number),
+      }),
+    );
   });
 
   it("reports unavailable MCP clients as execution errors", async () => {
@@ -77,7 +81,9 @@ describe("sandbox runtime client bindings", () => {
     mocks.getClient.mockResolvedValue({ callTool });
 
     const result = await executeCode('return await clients["code-nav"].large();');
-    const returned = (result.logs[0] as { returned: { _savedTo: string; _size: number; _preview: string } }).returned;
+    const returned = (
+      result.logs[0] as { returned: { _savedTo: string; _size: number; _preview: string } }
+    ).returned;
 
     expect(returned._savedTo).toMatch(/^mcp-results\/\d+-code-nav-large\.json$/);
     expect(returned._size).toBeGreaterThan(200);
@@ -92,7 +98,9 @@ describe("sandbox runtime client bindings", () => {
     vi.spyOn(workspace, "writeJSON").mockRejectedValueOnce(new Error("disk full"));
 
     const result = await executeCode('return await clients["code-nav"].large();');
-    const returned = (result.logs[0] as { returned: { _warning: string; _size: number; _preview: string } }).returned;
+    const returned = (
+      result.logs[0] as { returned: { _warning: string; _size: number; _preview: string } }
+    ).returned;
 
     expect(returned).toMatchObject({
       _warning: "Result too large to auto-save, returning truncated",

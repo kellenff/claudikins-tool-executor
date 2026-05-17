@@ -97,20 +97,12 @@ export function findConfigFiles(opts: FindConfigOptions = {}): string[] {
   const homedir = opts.homedir ?? os.homedir();
 
   const xdgRaw =
-    opts.xdgConfigHome !== undefined
-      ? opts.xdgConfigHome
-      : process.env.XDG_CONFIG_HOME;
-  const xdg =
-    xdgRaw && xdgRaw.trim().length > 0
-      ? xdgRaw.trim()
-      : resolve(homedir, ".config");
+    opts.xdgConfigHome !== undefined ? opts.xdgConfigHome : process.env.XDG_CONFIG_HOME;
+  const xdg = xdgRaw && xdgRaw.trim().length > 0 ? xdgRaw.trim() : resolve(homedir, ".config");
 
   const explicitRaw =
-    opts.explicitPath !== undefined
-      ? opts.explicitPath
-      : process.env.TOOL_EXECUTOR_CONFIG;
-  const explicit =
-    explicitRaw && explicitRaw.trim().length > 0 ? explicitRaw.trim() : null;
+    opts.explicitPath !== undefined ? opts.explicitPath : process.env.TOOL_EXECUTOR_CONFIG;
+  const explicit = explicitRaw && explicitRaw.trim().length > 0 ? explicitRaw.trim() : null;
 
   const candidates: Array<{ path: string; isExplicit: boolean }> = [
     { path: resolve(pluginDir, FILENAME), isExplicit: false },
@@ -168,10 +160,7 @@ function parseLayer(path: string): ServerConfigFromFile[] | null {
  * Returns null when no layer contributed any servers (no files found, or every file
  * failed to parse).
  */
-export function loadConfig(
-  configPath?: string,
-  opts?: FindConfigOptions,
-): ConfigLoadResult | null {
+export function loadConfig(configPath?: string, opts?: FindConfigOptions): ConfigLoadResult | null {
   let paths: string[];
   if (configPath !== undefined) {
     const resolved = resolve(configPath);

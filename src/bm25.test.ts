@@ -1,10 +1,5 @@
 import { afterEach, describe, expect, it, beforeEach } from "vitest";
-import {
-  initBM25,
-  isBM25Ready,
-  resetBM25,
-  searchBM25,
-} from "./bm25.js";
+import { initBM25, isBM25Ready, resetBM25, searchBM25 } from "./bm25.js";
 import type { ToolDefinition } from "./types.js";
 
 describe("bm25", () => {

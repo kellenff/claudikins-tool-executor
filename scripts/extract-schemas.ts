@@ -77,12 +77,7 @@ const SERVERS: ServerConfig[] = [
     name: "serena",
     displayName: "Serena",
     command: "uvx",
-    args: [
-      "--from",
-      "git+https://github.com/oraios/serena",
-      "serena",
-      "start-mcp-server",
-    ],
+    args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
     category: "code-nav",
   },
 
@@ -147,19 +142,9 @@ const RESERVED_IDENTIFIERS = new Set([
   "arguments",
   "eval",
 ]);
-const RESERVED_GLOBAL_BINDINGS = new Set([
-  "console",
-  "workspace",
-  "clients",
-  "globalThis",
-]);
+const RESERVED_GLOBAL_BINDINGS = new Set(["console", "workspace", "clients", "globalThis"]);
 const SERVER_BINDINGS = new Map<string, string>();
-const usedBindings = new Set<string>([
-  "console",
-  "workspace",
-  "clients",
-  "globalThis",
-]);
+const usedBindings = new Set<string>(["console", "workspace", "clients", "globalThis"]);
 
 /**
  * Connect to an MCP server and extract tool schemas
@@ -236,11 +221,7 @@ async function extractFromServer(config: ServerConfig): Promise<void> {
 /**
  * Generate a basic example for a tool
  */
-function generateExample(
-  serverName: string,
-  toolName: string,
-  inputSchema: unknown,
-): string {
+function generateExample(serverName: string, toolName: string, inputSchema: unknown): string {
   const schema = inputSchema as {
     properties?: Record<string, { type?: string; description?: string }>;
   };

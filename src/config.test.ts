@@ -24,9 +24,7 @@ describe("config", () => {
 
   beforeEach(() => {
     rootDir = mkdtempSync(join(tmpdir(), "tool-executor-config-"));
-    consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -83,12 +81,7 @@ describe("config", () => {
 
     it("finds a ~/.claude-layer config", () => {
       const homedir = join(rootDir, "home");
-      const claudePath = join(
-        homedir,
-        ".claude",
-        "tool-executor",
-        "tool-executor.config.json",
-      );
+      const claudePath = join(homedir, ".claude", "tool-executor", "tool-executor.config.json");
       writeJson(claudePath, { servers: [] });
 
       const result = findConfigFiles({
@@ -118,12 +111,7 @@ describe("config", () => {
 
     it("falls back to <homedir>/.config when XDG_CONFIG_HOME is unset", () => {
       const homedir = join(rootDir, "home");
-      const fallbackPath = join(
-        homedir,
-        ".config",
-        "tool-executor",
-        "tool-executor.config.json",
-      );
+      const fallbackPath = join(homedir, ".config", "tool-executor", "tool-executor.config.json");
       writeJson(fallbackPath, { servers: [] });
 
       const result = findConfigFiles({
@@ -138,12 +126,7 @@ describe("config", () => {
 
     it("treats empty/whitespace XDG_CONFIG_HOME as unset", () => {
       const homedir = join(rootDir, "home");
-      const fallbackPath = join(
-        homedir,
-        ".config",
-        "tool-executor",
-        "tool-executor.config.json",
-      );
+      const fallbackPath = join(homedir, ".config", "tool-executor", "tool-executor.config.json");
       writeJson(fallbackPath, { servers: [] });
 
       const result = findConfigFiles({
@@ -213,12 +196,7 @@ describe("config", () => {
 
       const pluginPath = join(pluginDir, "tool-executor.config.json");
       const cwdPath = join(cwd, "tool-executor.config.json");
-      const claudePath = join(
-        homedir,
-        ".claude",
-        "tool-executor",
-        "tool-executor.config.json",
-      );
+      const claudePath = join(homedir, ".claude", "tool-executor", "tool-executor.config.json");
       const xdgPath = join(xdg, "tool-executor", "tool-executor.config.json");
 
       writeJson(pluginPath, { servers: [] });
@@ -234,13 +212,7 @@ describe("config", () => {
         xdgConfigHome: xdg,
         explicitPath,
       });
-      expect(result).toEqual([
-        pluginPath,
-        cwdPath,
-        claudePath,
-        xdgPath,
-        explicitPath,
-      ]);
+      expect(result).toEqual([pluginPath, cwdPath, claudePath, xdgPath, explicitPath]);
     });
 
     it("deduplicates layers that resolve to the same absolute path", () => {
@@ -378,12 +350,7 @@ describe("config", () => {
         xdg,
         pluginPath: join(pluginDir, "tool-executor.config.json"),
         cwdPath: join(cwd, "tool-executor.config.json"),
-        claudePath: join(
-          homedir,
-          ".claude",
-          "tool-executor",
-          "tool-executor.config.json",
-        ),
+        claudePath: join(homedir, ".claude", "tool-executor", "tool-executor.config.json"),
         xdgPath: join(xdg, "tool-executor", "tool-executor.config.json"),
       };
     }
@@ -606,19 +573,11 @@ describe("config", () => {
 
       expect(ServerConfigSchema.parse(server)).toEqual(server);
       expect(() => ServerConfigSchema.parse({ ...server, name: "" })).toThrow();
-      expect(() =>
-        ServerConfigSchema.parse({ ...server, displayName: "" }),
-      ).toThrow();
-      expect(() =>
-        ServerConfigSchema.parse({ ...server, command: "" }),
-      ).toThrow();
-      expect(() =>
-        ServerConfigSchema.parse({ ...server, args: [1] }),
-      ).toThrow();
+      expect(() => ServerConfigSchema.parse({ ...server, displayName: "" })).toThrow();
+      expect(() => ServerConfigSchema.parse({ ...server, command: "" })).toThrow();
+      expect(() => ServerConfigSchema.parse({ ...server, args: [1] })).toThrow();
       // ServerConfigSchema is not strict — extra fields are stripped, not rejected.
-      expect(() =>
-        ServerConfigSchema.parse({ ...server, extra: true }),
-      ).not.toThrow();
+      expect(() => ServerConfigSchema.parse({ ...server, extra: true })).not.toThrow();
     });
 
     it("ToolExecutorConfigSchema is strict and accepts empty servers", () => {
@@ -641,13 +600,9 @@ describe("config", () => {
         servers: [server],
       });
       // Empty servers list is legal.
-      expect(() =>
-        ToolExecutorConfigSchema.parse({ servers: [] }),
-      ).not.toThrow();
+      expect(() => ToolExecutorConfigSchema.parse({ servers: [] })).not.toThrow();
       // Extra top-level keys still rejected.
-      expect(() =>
-        ToolExecutorConfigSchema.parse({ servers: [server], extra: true }),
-      ).toThrow();
+      expect(() => ToolExecutorConfigSchema.parse({ servers: [server], extra: true })).toThrow();
     });
   });
 });

@@ -16,11 +16,7 @@ const mocks = vi.hoisted(() => {
     StdioClientTransport: vi.fn(),
   };
 
-  state.Client = vi.fn(function (
-    this: unknown,
-    info: unknown,
-    options: unknown,
-  ) {
+  state.Client = vi.fn(function (this: unknown, info: unknown, options: unknown) {
     const instance = {
       connect: state.connect,
       close: state.close,
@@ -30,10 +26,7 @@ const mocks = vi.hoisted(() => {
     return instance;
   });
 
-  state.StdioClientTransport = vi.fn(function (
-    this: unknown,
-    options: unknown,
-  ) {
+  state.StdioClientTransport = vi.fn(function (this: unknown, options: unknown) {
     state.transportOptions.push(options);
     return { options };
   });
@@ -159,12 +152,8 @@ describe("sandbox clients", () => {
       "override",
     ]);
     // Empty + unsafe rejected, with a warning that names the source
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Ignoring server "empty"'),
-    );
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Ignoring server "unsafe"'),
-    );
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Ignoring server "empty"'));
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Ignoring server "unsafe"'));
     expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining("/u/tool-executor.config.json"),
     );
@@ -286,20 +275,13 @@ describe("sandbox clients", () => {
         name: "serena",
         displayName: "Serena",
         command: "uvx",
-        args: [
-          "--from",
-          "git+https://github.com/oraios/serena",
-          "serena",
-          "start-mcp-server",
-        ],
+        args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
         env: undefined,
       },
     ]);
     // All defaults tagged with the synthetic "<default>" source
     expect(configs.every((c) => c.source === "<default>")).toBe(true);
-    expect(console.error).toHaveBeenCalledWith(
-      "No config file found, using default servers",
-    );
+    expect(console.error).toHaveBeenCalledWith("No config file found, using default servers");
   });
 
   it("connects, reuses, and disconnects clients", async () => {
@@ -349,17 +331,12 @@ describe("sandbox clients", () => {
     mocks.close.mockRejectedValueOnce(new Error("close failed"));
     await clients.getClient("safe");
     await clients.disconnectClient("safe");
-    expect(console.error).toHaveBeenCalledWith(
-      "Error disconnecting safe:",
-      expect.any(Error),
-    );
+    expect(console.error).toHaveBeenCalledWith("Error disconnecting safe:", expect.any(Error));
   });
 
   it("returns null for unknown or failed clients", async () => {
     mocks.loadConfig.mockReturnValue(
-      userLayer([
-        { name: "safe", displayName: "Safe", command: "node", args: [] },
-      ]),
+      userLayer([{ name: "safe", displayName: "Safe", command: "node", args: [] }]),
     );
 
     const clients = await importClients();
@@ -371,17 +348,12 @@ describe("sandbox clients", () => {
 
     expect(clients.getConnectedClients()).toEqual([]);
     expect(console.error).toHaveBeenCalledWith("Unknown client: missing");
-    expect(console.error).toHaveBeenCalledWith(
-      "Failed to connect Safe:",
-      expect.any(Error),
-    );
+    expect(console.error).toHaveBeenCalledWith("Failed to connect Safe:", expect.any(Error));
   });
 
   it("deduplicates concurrent connection attempts", async () => {
     mocks.loadConfig.mockReturnValue(
-      userLayer([
-        { name: "safe", displayName: "Safe", command: "node", args: [] },
-      ]),
+      userLayer([{ name: "safe", displayName: "Safe", command: "node", args: [] }]),
     );
     let releaseConnect!: () => void;
     mocks.connect.mockReturnValueOnce(
@@ -427,9 +399,7 @@ describe("sandbox clients", () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     mocks.loadConfig.mockReturnValue(
-      userLayer([
-        { name: "safe", displayName: "Safe", command: "node", args: [] },
-      ]),
+      userLayer([{ name: "safe", displayName: "Safe", command: "node", args: [] }]),
     );
 
     const clients = await importClients();
@@ -456,22 +426,16 @@ describe("sandbox clients", () => {
     const allEntries = clients.getAuditLog(2000);
     expect(allEntries).toHaveLength(1000);
     expect(allEntries[0].timestamp).toBe(5);
-    expect(clients.getAuditLog(2).map((entry) => entry.timestamp)).toEqual([
-      1003, 1004,
-    ]);
+    expect(clients.getAuditLog(2).map((entry) => entry.timestamp)).toEqual([1003, 1004]);
   });
 
   it("starts and stops lifecycle management once", async () => {
     vi.useFakeTimers();
     mocks.loadConfig.mockReturnValue(
-      userLayer([
-        { name: "safe", displayName: "Safe", command: "node", args: [] },
-      ]),
+      userLayer([{ name: "safe", displayName: "Safe", command: "node", args: [] }]),
     );
     const processOn = vi.spyOn(process, "on").mockImplementation(() => process);
-    const exitSpy = vi
-      .spyOn(process, "exit")
-      .mockImplementation(() => undefined as never);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
     const clients = await importClients();
     clients.startLifecycleManagement();

@@ -1,4 +1,12 @@
-import { readFile, writeFile, appendFile, unlink, readdir, mkdir as fsMkdir, stat as fsStat } from "node:fs/promises";
+import {
+  readFile,
+  writeFile,
+  appendFile,
+  unlink,
+  readdir,
+  mkdir as fsMkdir,
+  stat as fsStat,
+} from "node:fs/promises";
 import { join, resolve, normalize, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { glob as globFs } from "glob";

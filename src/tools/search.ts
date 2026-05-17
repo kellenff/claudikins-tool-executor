@@ -43,7 +43,7 @@ export async function handleSearchTools(params: SearchToolsInput): Promise<{
     limit: params.limit,
     offset: params.offset,
     totalCount: response.totalCount,
-    has_more: (params.offset + response.results.length) < (response.totalCount || 0),
+    has_more: params.offset + response.results.length < (response.totalCount || 0),
     // Source info
     source: response.source,
     ...(response.fallbackReason && { fallbackReason: response.fallbackReason }),

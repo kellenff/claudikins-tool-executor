@@ -9,9 +9,9 @@ import { getServerConfigs, DEFAULT_SOURCE_TAG } from "./sandbox/clients.js";
 import { loadConfig } from "./config.js";
 
 const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const packageJson = JSON.parse(
-  readFileSync(resolve(CLI_ROOT, "package.json"), "utf-8"),
-) as { version: string };
+const packageJson = JSON.parse(readFileSync(resolve(CLI_ROOT, "package.json"), "utf-8")) as {
+  version: string;
+};
 
 function hasExecutable(pathToCheck: string): boolean {
   try {
@@ -22,8 +22,7 @@ function hasExecutable(pathToCheck: string): boolean {
 }
 
 function isCommandAvailable(command: string): boolean {
-  const commandHasExtension =
-    process.platform === "win32" && Boolean(extname(command));
+  const commandHasExtension = process.platform === "win32" && Boolean(extname(command));
   const pathExtensions =
     process.platform === "win32" && !commandHasExtension
       ? (process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";")
@@ -74,9 +73,7 @@ function checkUvx(): void {
 function checkConfig(): void {
   const result = loadConfig(undefined, { pluginDir: CLI_ROOT });
   const configs = getServerConfigs();
-  const userCount = configs.filter(
-    (c) => c.source && c.source !== DEFAULT_SOURCE_TAG,
-  ).length;
+  const userCount = configs.filter((c) => c.source && c.source !== DEFAULT_SOURCE_TAG).length;
   const defaultCount = configs.length - userCount;
 
   if (result && result.sources.length > 0) {
@@ -87,9 +84,7 @@ function checkConfig(): void {
   } else {
     console.log("Config sources: (none, using defaults)");
   }
-  console.log(
-    `Resolved ${configs.length} server(s) (${defaultCount} default + ${userCount} user)`,
-  );
+  console.log(`Resolved ${configs.length} server(s) (${defaultCount} default + ${userCount} user)`);
 }
 
 function checkRegistry(): boolean {
@@ -112,9 +107,7 @@ program
     // Check Node version
     const nodeVersion = process.version;
     const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0]);
-    console.log(
-      `Node.js: ${nodeVersion} ${nodeMajor >= 18 ? "✅" : "❌ (need 18+)"}`,
-    );
+    console.log(`Node.js: ${nodeVersion} ${nodeMajor >= 18 ? "✅" : "❌ (need 18+)"}`);
 
     // Check for Python/uv (for uvx servers)
     checkUvx();
@@ -156,9 +149,7 @@ program
 
     writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
     console.log("✅ Created tool-executor.config.json");
-    console.log(
-      "   Edit this file to add your MCP servers, then run: claudikins extract",
-    );
+    console.log("   Edit this file to add your MCP servers, then run: claudikins extract");
   });
 
 program
@@ -178,12 +169,8 @@ program
     // Run the extract script via tsx
     const scriptPath = resolve(process.cwd(), "scripts/extract-schemas.ts");
     if (!existsSync(scriptPath)) {
-      console.error(
-        "❌ Extract script not found at scripts/extract-schemas.ts",
-      );
-      console.error(
-        "   Make sure you're in the claudikins-tool-executor directory",
-      );
+      console.error("❌ Extract script not found at scripts/extract-schemas.ts");
+      console.error("   Make sure you're in the claudikins-tool-executor directory");
       process.exit(1);
     }
 
