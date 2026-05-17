@@ -1,10 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 vi.mock("./config.js", () => ({
-  findConfigFile: vi.fn(),
+  loadConfig: vi.fn(),
 }));
 
 vi.mock("./sandbox/clients.js", () => ({
@@ -45,7 +52,9 @@ describe("cli helpers", () => {
   });
 
   it("prints check status with hint text", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const consoleSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => undefined);
     vi.spyOn(cli, "isCommandAvailable").mockReturnValue(true);
 
     cli.checkCommand("node", "Node runtime");
@@ -54,42 +63,116 @@ describe("cli helpers", () => {
   });
 
   it("reports missing command with hint", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const consoleSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => undefined);
     vi.spyOn(cli, "isCommandAvailable").mockReturnValue(false);
 
     cli.checkCommand("missing", "Missing binary", "Run installer");
 
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Missing binary: ⚠️ Not found (Run installer)"));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Missing binary: ⚠️ Not found (Run installer)"),
+    );
   });
 
-  it("checks config detection result", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    vi.spyOn(config, "findConfigFile").mockReturnValue("/tmp/tool-executor.config.json");
+  it("prints config sources and per-source server counts when a user config is loaded", () => {
+    const consoleSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => undefined);
+    vi.spyOn(config, "loadConfig").mockReturnValue({
+      servers: [
+        {
+          name: "user-server",
+          displayName: "User Server",
+          command: "npx",
+          args: [],
+          source: "/tmp/tool-executor.config.json",
+        },
+      ],
+      sources: ["/tmp/tool-executor.config.json"],
+    });
+    vi.spyOn(clients, "getServerConfigs").mockReturnValue([
+      {
+        name: "default-a",
+        displayName: "A",
+        command: "npx",
+        args: [],
+        source: "<default>",
+      },
+      {
+        name: "default-b",
+        displayName: "B",
+        command: "npx",
+        args: [],
+        source: "<default>",
+      },
+      {
+        name: "user-server",
+        displayName: "User Server",
+        command: "npx",
+        args: [],
+        source: "/tmp/tool-executor.config.json",
+      },
+    ]);
 
     cli.checkConfig();
-    expect(consoleSpy).toHaveBeenCalledWith("Config file: ✅ Found");
-    expect(consoleSpy).toHaveBeenCalledWith("  - /tmp/tool-executor.config.json");
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Config sources (precedence low → high):",
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "  1. /tmp/tool-executor.config.json",
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Resolved 3 server(s) (2 default + 1 user)",
+    );
   });
 
-  it("checks missing config detection result", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    vi.spyOn(config, "findConfigFile").mockReturnValue(null);
+  it("reports defaults-only when no user config is found", () => {
+    const consoleSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => undefined);
+    vi.spyOn(config, "loadConfig").mockReturnValue(null);
+    vi.spyOn(clients, "getServerConfigs").mockReturnValue([
+      {
+        name: "default-a",
+        displayName: "A",
+        command: "npx",
+        args: [],
+        source: "<default>",
+      },
+      {
+        name: "default-b",
+        displayName: "B",
+        command: "npx",
+        args: [],
+        source: "<default>",
+      },
+    ]);
 
     cli.checkConfig();
 
-    expect(consoleSpy).toHaveBeenCalledWith("Config file: ⚠️ Not found (using defaults)");
-    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Config sources: (none, using defaults)",
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Resolved 2 server(s) (2 default + 0 user)",
+    );
   });
 
   it("checks configured servers using mocked server list", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const consoleSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => undefined);
     vi.spyOn(clients, "getServerConfigs").mockReturnValue([
       { name: "probe", displayName: "Probe Server", command: "node", args: [] },
     ]);
 
     cli.checkConfiguredServers();
 
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Probe Server (probe) command: ✅ Found"));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Probe Server (probe) command: ✅ Found"),
+    );
   });
 
   it("checks registry directory presence", () => {
@@ -97,25 +180,44 @@ describe("cli helpers", () => {
   });
 
   it("runs the doctor command", async () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    vi.spyOn(config, "findConfigFile").mockReturnValue(null);
+    const consoleSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => undefined);
+    vi.spyOn(config, "loadConfig").mockReturnValue(null);
     vi.spyOn(clients, "getServerConfigs").mockReturnValue([
-      { name: "probe", displayName: "Probe Server", command: "node", args: [] },
+      {
+        name: "probe",
+        displayName: "Probe Server",
+        command: "node",
+        args: [],
+        source: "<default>",
+      },
     ]);
 
     await cli.program.parseAsync(["node", "claudikins", "doctor"]);
 
     expect(consoleSpy).toHaveBeenCalledWith("🔍 Checking environment...\n");
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Node.js:"));
-    expect(consoleSpy).toHaveBeenCalledWith("Config file: ⚠️ Not found (using defaults)");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Node.js:"),
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Config sources: (none, using defaults)",
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Resolved 1 server(s) (1 default + 0 user)",
+    );
     expect(consoleSpy).toHaveBeenCalledWith("Registry: ✅ Found");
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Probe Server (probe) command: ✅ Found"));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Probe Server (probe) command: ✅ Found"),
+    );
     expect(consoleSpy).toHaveBeenCalledWith("\n✨ Doctor complete");
   });
 
   it("runs init command without overwriting an existing config", async () => {
     const rootDir = mkdtempSync(join(tmpdir(), "tool-executor-init-"));
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const consoleSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => undefined);
     vi.spyOn(process, "cwd").mockReturnValue(rootDir);
 
     await cli.program.parseAsync(["node", "claudikins", "init"]);
@@ -132,7 +234,9 @@ describe("cli helpers", () => {
         },
       ],
     });
-    expect(consoleSpy).toHaveBeenCalledWith("✅ Created tool-executor.config.json");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "✅ Created tool-executor.config.json",
+    );
 
     await cli.program.parseAsync(["node", "claudikins", "init"]);
     expect(consoleSpy).toHaveBeenCalledWith("⚠️ Config file already exists");
@@ -141,28 +245,44 @@ describe("cli helpers", () => {
   });
 
   it("prints extract usage when --all is omitted", async () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const consoleSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => undefined);
 
     await cli.program.parseAsync(["node", "claudikins", "extract"]);
 
     expect(consoleSpy).toHaveBeenCalledWith("Usage: claudikins extract --all");
-    expect(consoleSpy).toHaveBeenCalledWith("\nExtracts tool schemas from all configured MCP servers");
-    expect(consoleSpy).toHaveBeenCalledWith("and generates YAML files in the registry/ directory.");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "\nExtracts tool schemas from all configured MCP servers",
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "and generates YAML files in the registry/ directory.",
+    );
   });
 
   it("reports missing extract script when --all is requested outside the project", async () => {
     const rootDir = mkdtempSync(join(tmpdir(), "tool-executor-extract-"));
     vi.spyOn(process, "cwd").mockReturnValue(rootDir);
     vi.spyOn(console, "log").mockImplementation(() => undefined);
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    vi.spyOn(process, "exit").mockImplementation((code?: string | number | null) => {
-      throw new Error(`exit ${code}`);
-    });
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.spyOn(process, "exit").mockImplementation(
+      (code?: string | number | null) => {
+        throw new Error(`exit ${code}`);
+      },
+    );
 
-    await expect(cli.program.parseAsync(["node", "claudikins", "extract", "--all"])).rejects.toThrow("exit 1");
+    await expect(
+      cli.program.parseAsync(["node", "claudikins", "extract", "--all"]),
+    ).rejects.toThrow("exit 1");
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith("❌ Extract script not found at scripts/extract-schemas.ts");
-    expect(consoleErrorSpy).toHaveBeenCalledWith("   Make sure you're in the claudikins-tool-executor directory");
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "❌ Extract script not found at scripts/extract-schemas.ts",
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "   Make sure you're in the claudikins-tool-executor directory",
+    );
     rmSync(rootDir, { recursive: true, force: true });
   });
 });

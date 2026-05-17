@@ -6,10 +6,12 @@ import { resolve, dirname, isAbsolute, delimiter, join, extname } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import { getServerConfigs } from "./sandbox/clients.js";
-import { findConfigFile } from "./config.js";
+import { loadConfig } from "./config.js";
 
 const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const packageJson = JSON.parse(readFileSync(resolve(CLI_ROOT, "package.json"), "utf-8")) as { version: string };
+const packageJson = JSON.parse(
+  readFileSync(resolve(CLI_ROOT, "package.json"), "utf-8"),
+) as { version: string };
 
 function hasExecutable(pathToCheck: string): boolean {
   try {
@@ -20,10 +22,12 @@ function hasExecutable(pathToCheck: string): boolean {
 }
 
 function isCommandAvailable(command: string): boolean {
-  const commandHasExtension = process.platform === "win32" && Boolean(extname(command));
-  const pathExtensions = process.platform === "win32" && !commandHasExtension
-    ? (process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";")
-    : [""];
+  const commandHasExtension =
+    process.platform === "win32" && Boolean(extname(command));
+  const pathExtensions =
+    process.platform === "win32" && !commandHasExtension
+      ? (process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";")
+      : [""];
   const pathDirs = (process.env.PATH || "").split(delimiter);
 
   if (isAbsolute(command) || command.includes("/") || command.includes("\\")) {
@@ -48,12 +52,18 @@ function isCommandAvailable(command: string): boolean {
 
 function checkCommand(command: string, label: string, hint?: string): void {
   const found = isCommandAvailable(command);
-  console.log(`${label}: ${found ? "✅ Found" : "⚠️ Not found"}${!found && hint ? ` (${hint})` : ""}`);
+  console.log(
+    `${label}: ${found ? "✅ Found" : "⚠️ Not found"}${!found && hint ? ` (${hint})` : ""}`,
+  );
 }
 
 function checkConfiguredServers(): void {
   for (const config of getServerConfigs()) {
-    checkCommand(config.command, `${config.displayName} (${config.name}) command`, "Ensure executable is available in PATH or set an explicit absolute command in config");
+    checkCommand(
+      config.command,
+      `${config.displayName} (${config.name}) command`,
+      "Ensure executable is available in PATH or set an explicit absolute command in config",
+    );
   }
 }
 
@@ -62,13 +72,24 @@ function checkUvx(): void {
 }
 
 function checkConfig(): void {
-  const configPath = findConfigFile(CLI_ROOT);
-  const found = configPath !== null;
+  const result = loadConfig(undefined, { pluginDir: CLI_ROOT });
+  const configs = getServerConfigs();
+  const userCount = configs.filter(
+    (c) => c.source && c.source !== "<default>",
+  ).length;
+  const defaultCount = configs.length - userCount;
 
-  console.log(`Config file: ${found ? "✅ Found" : "⚠️ Not found (using defaults)"}`);
-  if (found) {
-    console.log(`  - ${configPath}`);
+  if (result && result.sources.length > 0) {
+    console.log("Config sources (precedence low → high):");
+    result.sources.forEach((path, i) => {
+      console.log(`  ${i + 1}. ${path}`);
+    });
+  } else {
+    console.log("Config sources: (none, using defaults)");
   }
+  console.log(
+    `Resolved ${configs.length} server(s) (${defaultCount} default + ${userCount} user)`,
+  );
 }
 
 function checkRegistry(): boolean {
@@ -91,7 +112,9 @@ program
     // Check Node version
     const nodeVersion = process.version;
     const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0]);
-    console.log(`Node.js: ${nodeVersion} ${nodeMajor >= 18 ? "✅" : "❌ (need 18+)"}`);
+    console.log(
+      `Node.js: ${nodeVersion} ${nodeMajor >= 18 ? "✅" : "❌ (need 18+)"}`,
+    );
 
     // Check for Python/uv (for uvx servers)
     checkUvx();
@@ -133,7 +156,9 @@ program
 
     writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
     console.log("✅ Created tool-executor.config.json");
-    console.log("   Edit this file to add your MCP servers, then run: claudikins extract");
+    console.log(
+      "   Edit this file to add your MCP servers, then run: claudikins extract",
+    );
   });
 
 program
@@ -153,8 +178,12 @@ program
     // Run the extract script via tsx
     const scriptPath = resolve(process.cwd(), "scripts/extract-schemas.ts");
     if (!existsSync(scriptPath)) {
-      console.error("❌ Extract script not found at scripts/extract-schemas.ts");
-      console.error("   Make sure you're in the claudikins-tool-executor directory");
+      console.error(
+        "❌ Extract script not found at scripts/extract-schemas.ts",
+      );
+      console.error(
+        "   Make sure you're in the claudikins-tool-executor directory",
+      );
       process.exit(1);
     }
 

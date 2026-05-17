@@ -1,0 +1,2 @@
+import {a}from'./chunk-NUQTWFP3.js';async function n(e){let t=await a(e.code,e.timeout);return {content:[{type:"text",text:JSON.stringify(t,null,2)}],structuredContent:{...t},isError:!!t.error}}export{n as a};//# sourceMappingURL=chunk-I6QWBAHF.js.map
+//# sourceMappingURL=chunk-I6QWBAHF.js.map

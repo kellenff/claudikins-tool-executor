@@ -1,7 +1,12 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { loadConfig } from "../config.js";
-import { MCPClients, ServerConfig, AuditLogEntry, ClientState } from "../types.js";
+import {
+  MCPClients,
+  ServerConfig,
+  AuditLogEntry,
+  ClientState,
+} from "../types.js";
 
 type DefaultServerConfig = ServerConfig & {
   envKeys?: string[];
@@ -10,25 +15,84 @@ type DefaultServerConfig = ServerConfig & {
 const IDLE_TIMEOUT = 3 * 60 * 1000; // 3 minutes
 
 /**
- * Default MCP server configurations (used when no config file found)
- * NOTE: env vars are specified as keys, resolved at connect time (not module load time)
- * This ensures dotenv has loaded before we read process.env
+ * Default MCP server configurations.
+ *
+ * Always merged with user-supplied servers (later layers in the resolved config
+ * win by `name`). NOTE: env vars are specified as keys, resolved at connect time
+ * (not module load time) so dotenv has loaded before we read process.env.
  */
 const DEFAULT_CONFIGS: DefaultServerConfig[] = [
   // NPX servers (Node.js)
-  { name: "notebooklm", displayName: "NotebookLM", command: "npx", args: ["-y", "notebooklm-mcp"] },
-  { name: "sequentialThinking", displayName: "Sequential Thinking", command: "npx", args: ["-y", "@modelcontextprotocol/server-sequential-thinking"] },
-  { name: "context7", displayName: "Context7", command: "npx", args: ["-y", "@upstash/context7-mcp"] },
-  { name: "gemini", displayName: "Gemini", command: "npx", args: ["-y", "@rlabs-inc/gemini-mcp"], envKeys: ["GEMINI_API_KEY"] },
-  { name: "shadcn", displayName: "shadcn", command: "npx", args: ["-y", "shadcn-ui-mcp-server"] },
-  { name: "apify", displayName: "Apify", command: "npx", args: ["-y", "@apify/actors-mcp-server"], envKeys: ["APIFY_TOKEN"] },
+  {
+    name: "notebooklm",
+    displayName: "NotebookLM",
+    command: "npx",
+    args: ["-y", "notebooklm-mcp"],
+  },
+  {
+    name: "sequentialThinking",
+    displayName: "Sequential Thinking",
+    command: "npx",
+    args: ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+  },
+  {
+    name: "context7",
+    displayName: "Context7",
+    command: "npx",
+    args: ["-y", "@upstash/context7-mcp"],
+  },
+  {
+    name: "gemini",
+    displayName: "Gemini",
+    command: "npx",
+    args: ["-y", "@rlabs-inc/gemini-mcp"],
+    envKeys: ["GEMINI_API_KEY"],
+  },
+  {
+    name: "shadcn",
+    displayName: "shadcn",
+    command: "npx",
+    args: ["-y", "shadcn-ui-mcp-server"],
+  },
+  {
+    name: "apify",
+    displayName: "Apify",
+    command: "npx",
+    args: ["-y", "@apify/actors-mcp-server"],
+    envKeys: ["APIFY_TOKEN"],
+  },
   // Local binaries
-  { name: "codebase-memory", displayName: "Codebase Memory", command: "codebase-memory-mcp", trusted: true, commandEnvKey: "CODEBASE_MEMORY_MCP_BIN", args: [] },
+  {
+    name: "codebase-memory",
+    displayName: "Codebase Memory",
+    command: "codebase-memory-mcp",
+    trusted: true,
+    commandEnvKey: "CODEBASE_MEMORY_MCP_BIN",
+    args: [],
+  },
   // UVX servers (Python)
-  { name: "serena", displayName: "Serena", command: "uvx", args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"] },
+  {
+    name: "serena",
+    displayName: "Serena",
+    command: "uvx",
+    args: [
+      "--from",
+      "git+https://github.com/oraios/serena",
+      "serena",
+      "start-mcp-server",
+    ],
+  },
 ];
 
-const SAFE_SERVER_COMMANDS = new Set(["npx", "uvx", "node", "python", "codebase-memory-mcp"]);
+const SAFE_SERVER_COMMANDS = new Set([
+  "npx",
+  "uvx",
+  "node",
+  "python",
+  "codebase-memory-mcp",
+]);
+
+const DEFAULT_SOURCE = "<default>";
 
 /**
  * Resolve optional command env override at runtime (after dotenv loads)
@@ -39,9 +103,12 @@ function resolveCommand(config: ServerConfig): string {
 }
 
 /**
- * Resolve envKeys to actual env values at runtime (after dotenv loads)
+ * Resolve envKeys to actual env values at runtime (after dotenv loads).
+ * Used only for built-in defaults; user-supplied entries use literal `env`.
  */
-function resolveEnvKeys(envKeys?: string[]): Record<string, string> | undefined {
+function resolveEnvKeys(
+  envKeys?: string[],
+): Record<string, string> | undefined {
   if (!envKeys || envKeys.length === 0) return undefined;
 
   return envKeys.reduce<Record<string, string>>((acc, key) => {
@@ -68,45 +135,61 @@ function normalizeServerConfig<T extends ServerConfig>(config: T): T {
 }
 
 /**
- * Load server configs from file or use defaults
+ * Load server configs by always starting from DEFAULT_CONFIGS and overlaying any
+ * user-supplied servers (resolved from layered config files) by `name`. User
+ * entries replace defaults of the same name; defaults without a user override
+ * remain. Unsafe entries are filtered post-merge with a warning that names the
+ * provenance source.
  */
 function loadServerConfigs(): ServerConfig[] {
-  const config = loadConfig();
-  if (config) {
-    console.error(`Loaded config with ${config.servers.length} servers`);
-    return config.servers
-      .map(normalizeServerConfig)
-      .filter((server) => {
-        if (isSafeCommand(server)) {
-          return true;
-        }
-        console.error(`Ignoring server "${server.name}" because command "${server.command}" is not in the safe command set. Set "trusted: true" to allow explicit command use.`);
-        return false;
-      })
-      .map(s => ({
-        name: s.name,
-        displayName: s.displayName,
-        command: s.command,
-        args: s.args,
-        env: s.env,
-      }));
+  const result = loadConfig();
+  const byName = new Map<string, ServerConfig>();
+
+  // Layer A: defaults (with commandEnvKey + envKeys resolved at runtime)
+  for (const c of DEFAULT_CONFIGS) {
+    const normalized = normalizeServerConfig(c);
+    byName.set(c.name, {
+      name: normalized.name,
+      displayName: normalized.displayName,
+      command: normalized.command,
+      args: normalized.args,
+      env: resolveEnvKeys(c.envKeys),
+      trusted: normalized.trusted,
+      commandEnvKey: normalized.commandEnvKey,
+      source: DEFAULT_SOURCE,
+    });
   }
 
-  console.error("No config file found, using default servers");
-  // Resolve envKeys to env at runtime (dotenv should be loaded by now)
-  return DEFAULT_CONFIGS.map(normalizeServerConfig).filter((server) => {
-    if (isSafeCommand(server)) {
-      return true;
+  // Layer B: user entries (commandEnvKey honoured via normalizeServerConfig;
+  // env taken literally — ${VAR} was already expanded at parse time).
+  if (result) {
+    for (const s of result.servers) {
+      const normalized = normalizeServerConfig(s);
+      byName.set(s.name, {
+        name: normalized.name,
+        displayName: normalized.displayName,
+        command: normalized.command,
+        args: normalized.args,
+        env: normalized.env,
+        trusted: normalized.trusted,
+        commandEnvKey: normalized.commandEnvKey,
+        source: s.source,
+      });
     }
-    console.error(`Ignoring default server "${server.name}" because command "${server.command}" is not in the safe command set. Set "trusted: true" in DEFAULT_CONFIGS to allow explicit command use.`);
+    console.error(
+      `Loaded config from ${result.sources.length} source(s): ${result.sources.join(", ")}`,
+    );
+  } else {
+    console.error("No config file found, using default servers");
+  }
+
+  return [...byName.values()].filter((server) => {
+    if (isSafeCommand(server)) return true;
+    console.error(
+      `Ignoring server "${server.name}" (from ${server.source ?? "<unknown>"}) because command "${server.command}" is not in the safe command set. Set "trusted: true" to allow explicit command use.`,
+    );
     return false;
-  }).map(c => ({
-    name: c.name,
-    displayName: c.displayName,
-    command: c.command,
-    args: c.args,
-    env: resolveEnvKeys(c.envKeys),
-  }));
+  });
 }
 
 /**
@@ -198,14 +281,20 @@ export async function getClient(name: string): Promise<Client | null> {
 /**
  * Internal connection logic
  */
-async function connectClientInternal(name: string, state: ClientState): Promise<Client | null> {
+async function connectClientInternal(
+  name: string,
+  state: ClientState,
+): Promise<Client | null> {
   const config = SERVER_CONFIGS.find((c) => c.name === name);
   if (!config) {
     return null;
   }
 
   try {
-    const client = new Client({ name: `claudikins-${name}`, version: "1.1.0" }, { capabilities: {} });
+    const client = new Client(
+      { name: `claudikins-${name}`, version: "1.1.0" },
+      { capabilities: {} },
+    );
     const transport = new StdioClientTransport({
       command: config.command,
       args: config.args,
@@ -341,3 +430,5 @@ export function stopLifecycleManagement(): void {
 }
 
 // Client states initialized lazily in startLifecycleManagement()
+
+export const DEFAULT_SOURCE_TAG = DEFAULT_SOURCE;
