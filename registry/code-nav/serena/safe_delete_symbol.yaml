@@ -1,0 +1,26 @@
+name: safe_delete_symbol
+server: serena
+category: code-nav
+description: |-
+  Deletes the symbol if it is safe to do so (i.e., if there are no references to it)
+  or returns a list of references to it.
+inputSchema:
+  type: object
+  properties:
+    name_path_pattern:
+      title: Name Path Pattern
+      type: string
+      description: Name path of the symbol to delete.
+    relative_path:
+      title: Relative Path
+      type: string
+      description: The relative path to the file containing the symbol to delete.
+  required:
+    - name_path_pattern
+    - relative_path
+  title: applyArguments
+example: |-
+  await serena["safe_delete_symbol"]({
+    name_path_pattern: "<name_path_pattern>",
+    relative_path: "<relative_path>"
+  });
