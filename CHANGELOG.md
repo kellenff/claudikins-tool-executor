@@ -26,6 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Existing setups continue to work without changes — except that previously-discarded defaults are now merged into the resolved server set. If you previously omitted a default to disable it, that default will now appear; override its `name` with `"command": ""` and `"trusted": false` to keep it filtered out, or rely on the safe-command filter.
 
+### Tooling
+
+- Added [oxlint](https://oxc.rs) 1.65.0 and [oxfmt](https://oxc.rs/docs/guide/usage/formatter) 0.50.0 (plus `oxlint-tsgolint` 0.22.1 for type-aware rules), pinned to exact versions. Ruleset is tuned for **low required context** code: explicit function return types, semicolons + braces everywhere, sorted imports, no magic numbers, no cryptic single-letter names. Five new yarn scripts: `lint`, `lint:fix`, `format`, `format:check`, `fix`. See README "Development" section.
+- The existing `.githooks/pre-commit` hook now runs `oxfmt --check` and `oxlint --type-aware` on the in-scope tree (`src/`, `scripts/`, `tsup.config.ts`, `vitest.config.ts`) before the existing `yarn build` step. A failed gate prints a `yarn fix` hint and aborts the commit; emergency bypass via `git commit --no-verify` is documented and intentionally unguarded (no CI lint gate today).
+- `tsconfig.json` adds `noImplicitReturns`. `noUncheckedIndexedAccess` was considered but deferred to a follow-up PR (high blast radius).
+- `src/constants.ts` extended with `MCP_CLIENT_VERSION`, `MATCH_CONTEXT_CHARS`, `BM25_RANK_DECAY`, `DEFAULT_SEARCH_SCORE`, plus a block of time-unit primitives and timeout/limit constants used throughout `src/`. Call sites that previously hard-coded `"1.1.0"` (MCP protocol client version), `200` (preview char limit), `0.01` (BM25 score decay), etc. now import from `constants.ts`.
+- `.gitattributes` added to force LF line endings cross-platform — prevents oxfmt vs CRLF conflicts on Windows contributors.
+
+No user-facing behaviour changes; published package shape is unchanged.
+
 ## [1.1.3] - 2026-05-16
 
 ### Changed
