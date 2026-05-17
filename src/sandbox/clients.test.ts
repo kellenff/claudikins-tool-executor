@@ -6,13 +6,21 @@ const mocks = vi.hoisted(() => {
     connect: vi.fn(),
     close: vi.fn(),
     callTool: vi.fn(),
-    clientInstances: [] as Array<{ instance: unknown; info: unknown; options: unknown }>,
+    clientInstances: [] as Array<{
+      instance: unknown;
+      info: unknown;
+      options: unknown;
+    }>,
     transportOptions: [] as unknown[],
     Client: vi.fn(),
     StdioClientTransport: vi.fn(),
   };
 
-  state.Client = vi.fn(function (this: unknown, info: unknown, options: unknown) {
+  state.Client = vi.fn(function (
+    this: unknown,
+    info: unknown,
+    options: unknown,
+  ) {
     const instance = {
       connect: state.connect,
       close: state.close,
@@ -22,7 +30,10 @@ const mocks = vi.hoisted(() => {
     return instance;
   });
 
-  state.StdioClientTransport = vi.fn(function (this: unknown, options: unknown) {
+  state.StdioClientTransport = vi.fn(function (
+    this: unknown,
+    options: unknown,
+  ) {
     state.transportOptions.push(options);
     return { options };
   });
@@ -45,6 +56,17 @@ vi.mock("@modelcontextprotocol/sdk/client/stdio.js", () => ({
 async function importClients() {
   vi.resetModules();
   return import("./clients.js");
+}
+
+/** Build a fake user-config layer in the shape loadConfig now returns. */
+function userLayer(
+  servers: Array<Record<string, unknown> & { name: string }>,
+  source = "/fake/user/tool-executor.config.json",
+) {
+  return {
+    servers: servers.map((s) => ({ ...s, source })),
+    sources: [source],
+  };
 }
 
 describe("sandbox clients", () => {
@@ -79,48 +101,122 @@ describe("sandbox clients", () => {
     }
   });
 
-  it("loads explicit config, resolves command overrides, and filters unsafe commands", async () => {
+  it("merges user config with defaults, applies commandEnvKey, and filters unsafe entries", async () => {
     process.env.TOOL_EXECUTOR_TEST_BIN = "custom-bin";
-    mocks.loadConfig.mockReturnValue({
-      servers: [
-        { name: "safe", displayName: "Safe", command: "npx", args: ["pkg"], env: { TOKEN: "x" } },
-        { name: "empty", displayName: "Empty", command: "", args: [] },
-        { name: "unsafe", displayName: "Unsafe", command: "curl", args: ["http://example.test"] },
-        { name: "trusted", displayName: "Trusted", command: "custom-tool", args: ["--ok"], trusted: true },
-        {
-          name: "override",
-          displayName: "Override",
-          command: "node",
-          commandEnvKey: "TOOL_EXECUTOR_TEST_BIN",
-          args: ["server.js"],
-          trusted: true,
-        },
-      ],
-    });
+    mocks.loadConfig.mockReturnValue(
+      userLayer(
+        [
+          {
+            name: "safe",
+            displayName: "Safe",
+            command: "npx",
+            args: ["pkg"],
+            env: { TOKEN: "x" },
+          },
+          { name: "empty", displayName: "Empty", command: "", args: [] },
+          {
+            name: "unsafe",
+            displayName: "Unsafe",
+            command: "curl",
+            args: ["http://example.test"],
+          },
+          {
+            name: "trusted",
+            displayName: "Trusted",
+            command: "custom-tool",
+            args: ["--ok"],
+            trusted: true,
+          },
+          {
+            name: "override",
+            displayName: "Override",
+            command: "node",
+            commandEnvKey: "TOOL_EXECUTOR_TEST_BIN",
+            args: ["server.js"],
+            trusted: true,
+          },
+        ],
+        "/u/tool-executor.config.json",
+      ),
+    );
 
-    const { getServerConfigs, SERVER_CONFIGS } = await importClients();
+    const { getServerConfigs } = await importClients();
     const configs = getServerConfigs();
 
-    expect(configs.map((config) => config.name)).toEqual(["safe", "trusted", "override"]);
-    expect(configs[0]).toEqual({
-      name: "safe",
-      displayName: "Safe",
-      command: "npx",
-      args: ["pkg"],
-      env: { TOKEN: "x" },
-    });
-    expect(configs[2]).toMatchObject({
-      name: "override",
+    const names = configs.map((c) => c.name);
+    // 8 defaults + 3 user entries that pass the safe filter
+    expect(names).toEqual([
+      "notebooklm",
+      "sequentialThinking",
+      "context7",
+      "gemini",
+      "shadcn",
+      "apify",
+      "codebase-memory",
+      "serena",
+      "safe",
+      "trusted",
+      "override",
+    ]);
+    // Empty + unsafe rejected, with a warning that names the source
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Ignoring server "empty"'),
+    );
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Ignoring server "unsafe"'),
+    );
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("/u/tool-executor.config.json"),
+    );
+    // commandEnvKey honoured for user entries
+    const override = configs.find((c) => c.name === "override");
+    expect(override).toMatchObject({
       command: "custom-bin",
       args: ["server.js"],
     });
-    expect(SERVER_CONFIGS.map((config) => config.displayName)).toEqual(["Safe", "Trusted", "Override"]);
-    expect(console.error).toHaveBeenCalledWith("Loaded config with 5 servers");
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Ignoring server "empty"'));
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Ignoring server "unsafe"'));
+    // Provenance: defaults tagged "<default>", user entries carry their source path
+    const safe = configs.find((c) => c.name === "safe");
+    expect(safe?.source).toBe("/u/tool-executor.config.json");
+    const gemini = configs.find((c) => c.name === "gemini");
+    expect(gemini?.source).toBe("<default>");
+    // "Loaded config from N source(s)" log line
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("Loaded config from 1 source(s)"),
+    );
   });
 
-  it("falls back to default configs and resolves default env keys at runtime", async () => {
+  it("lets a user entry override a default of the same name", async () => {
+    mocks.loadConfig.mockReturnValue(
+      userLayer(
+        [
+          {
+            name: "gemini",
+            displayName: "Gemini (user)",
+            command: "npx",
+            args: ["custom-gemini"],
+            env: { GEMINI_API_KEY: "user-supplied" },
+          },
+        ],
+        "/u/tool-executor.config.json",
+      ),
+    );
+
+    const { getServerConfigs } = await importClients();
+    const configs = getServerConfigs();
+
+    const gemini = configs.find((c) => c.name === "gemini");
+    expect(gemini).toMatchObject({
+      displayName: "Gemini (user)",
+      command: "npx",
+      args: ["custom-gemini"],
+      env: { GEMINI_API_KEY: "user-supplied" },
+      source: "/u/tool-executor.config.json",
+    });
+    // Other 7 defaults still present
+    expect(configs).toHaveLength(8);
+  });
+
+  it("falls back to defaults and resolves default env keys when no user config is found", async () => {
     delete process.env.GEMINI_API_KEY;
     process.env.APIFY_TOKEN = "apify-secret";
     process.env.CODEBASE_MEMORY_MCP_BIN = "/opt/bin/codebase-memory-mcp";
@@ -129,7 +225,14 @@ describe("sandbox clients", () => {
     const { getServerConfigs } = await importClients();
     const configs = getServerConfigs();
 
-    expect(configs).toEqual([
+    const summary = configs.map((c) => ({
+      name: c.name,
+      displayName: c.displayName,
+      command: c.command,
+      args: c.args,
+      env: c.env,
+    }));
+    expect(summary).toEqual([
       {
         name: "notebooklm",
         displayName: "NotebookLM",
@@ -183,19 +286,34 @@ describe("sandbox clients", () => {
         name: "serena",
         displayName: "Serena",
         command: "uvx",
-        args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
+        args: [
+          "--from",
+          "git+https://github.com/oraios/serena",
+          "serena",
+          "start-mcp-server",
+        ],
         env: undefined,
       },
     ]);
-    expect(console.error).toHaveBeenCalledWith("No config file found, using default servers");
+    // All defaults tagged with the synthetic "<default>" source
+    expect(configs.every((c) => c.source === "<default>")).toBe(true);
+    expect(console.error).toHaveBeenCalledWith(
+      "No config file found, using default servers",
+    );
   });
 
   it("connects, reuses, and disconnects clients", async () => {
-    mocks.loadConfig.mockReturnValue({
-      servers: [
-        { name: "safe", displayName: "Safe", command: "node", args: ["server.js"], env: { LOCAL_ENV: "value" } },
-      ],
-    });
+    mocks.loadConfig.mockReturnValue(
+      userLayer([
+        {
+          name: "safe",
+          displayName: "Safe",
+          command: "node",
+          args: ["server.js"],
+          env: { LOCAL_ENV: "value" },
+        },
+      ]),
+    );
 
     const clients = await importClients();
     clients.initClientStates();
@@ -206,13 +324,21 @@ describe("sandbox clients", () => {
     expect(client).toBe(mocks.clientInstances[0].instance);
     expect(reused).toBe(client);
     expect(mocks.Client).toHaveBeenCalledTimes(1);
-    expect(mocks.Client).toHaveBeenCalledWith({ name: "claudikins-safe", version: "1.1.0" }, { capabilities: {} });
-    expect(mocks.StdioClientTransport).toHaveBeenCalledWith(expect.objectContaining({
-      command: "node",
-      args: ["server.js"],
-      env: expect.objectContaining({ LOCAL_ENV: "value" }),
-    }));
-    expect(clients.getAvailableClients()).toEqual(["safe"]);
+    expect(mocks.Client).toHaveBeenCalledWith(
+      { name: "claudikins-safe", version: "1.1.0" },
+      { capabilities: {} },
+    );
+    expect(mocks.StdioClientTransport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: "node",
+        args: ["server.js"],
+        env: expect.objectContaining({ LOCAL_ENV: "value" }),
+      }),
+    );
+    // After merge, available clients include 8 defaults + "safe"
+    expect(clients.getAvailableClients()).toContain("safe");
+    expect(clients.getAvailableClients()).toHaveLength(9);
+    // Only "safe" was actually connected
     expect(clients.getConnectedClients()).toEqual(["safe"]);
 
     await clients.disconnectClient("safe");
@@ -223,15 +349,18 @@ describe("sandbox clients", () => {
     mocks.close.mockRejectedValueOnce(new Error("close failed"));
     await clients.getClient("safe");
     await clients.disconnectClient("safe");
-    expect(console.error).toHaveBeenCalledWith("Error disconnecting safe:", expect.any(Error));
+    expect(console.error).toHaveBeenCalledWith(
+      "Error disconnecting safe:",
+      expect.any(Error),
+    );
   });
 
   it("returns null for unknown or failed clients", async () => {
-    mocks.loadConfig.mockReturnValue({
-      servers: [
+    mocks.loadConfig.mockReturnValue(
+      userLayer([
         { name: "safe", displayName: "Safe", command: "node", args: [] },
-      ],
-    });
+      ]),
+    );
 
     const clients = await importClients();
     clients.initClientStates();
@@ -242,19 +371,24 @@ describe("sandbox clients", () => {
 
     expect(clients.getConnectedClients()).toEqual([]);
     expect(console.error).toHaveBeenCalledWith("Unknown client: missing");
-    expect(console.error).toHaveBeenCalledWith("Failed to connect Safe:", expect.any(Error));
+    expect(console.error).toHaveBeenCalledWith(
+      "Failed to connect Safe:",
+      expect.any(Error),
+    );
   });
 
   it("deduplicates concurrent connection attempts", async () => {
-    mocks.loadConfig.mockReturnValue({
-      servers: [
+    mocks.loadConfig.mockReturnValue(
+      userLayer([
         { name: "safe", displayName: "Safe", command: "node", args: [] },
-      ],
-    });
+      ]),
+    );
     let releaseConnect!: () => void;
-    mocks.connect.mockReturnValueOnce(new Promise<void>((resolve) => {
-      releaseConnect = resolve;
-    }));
+    mocks.connect.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        releaseConnect = resolve;
+      }),
+    );
 
     const clients = await importClients();
     clients.initClientStates();
@@ -270,12 +404,12 @@ describe("sandbox clients", () => {
   });
 
   it("disconnects all connected clients", async () => {
-    mocks.loadConfig.mockReturnValue({
-      servers: [
+    mocks.loadConfig.mockReturnValue(
+      userLayer([
         { name: "first", displayName: "First", command: "node", args: [] },
         { name: "second", displayName: "Second", command: "node", args: [] },
-      ],
-    });
+      ]),
+    );
 
     const clients = await importClients();
     clients.initClientStates();
@@ -292,11 +426,11 @@ describe("sandbox clients", () => {
   it("cleans up idle clients and keeps bounded audit history", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
-    mocks.loadConfig.mockReturnValue({
-      servers: [
+    mocks.loadConfig.mockReturnValue(
+      userLayer([
         { name: "safe", displayName: "Safe", command: "node", args: [] },
-      ],
-    });
+      ]),
+    );
 
     const clients = await importClients();
     clients.initClientStates();
@@ -306,29 +440,38 @@ describe("sandbox clients", () => {
     await clients.cleanupIdleClients();
     expect(mocks.close).toHaveBeenCalledTimes(0);
 
-    vi.setSystemTime((3 * 60 * 1000) + 1);
+    vi.setSystemTime(3 * 60 * 1000 + 1);
     await clients.cleanupIdleClients();
     expect(mocks.close).toHaveBeenCalledTimes(1);
 
     for (let i = 0; i < 1005; i++) {
-      clients.logMcpCall({ timestamp: i, client: "safe", tool: "lookup", args: { i } });
+      clients.logMcpCall({
+        timestamp: i,
+        client: "safe",
+        tool: "lookup",
+        args: { i },
+      });
     }
 
     const allEntries = clients.getAuditLog(2000);
     expect(allEntries).toHaveLength(1000);
     expect(allEntries[0].timestamp).toBe(5);
-    expect(clients.getAuditLog(2).map((entry) => entry.timestamp)).toEqual([1003, 1004]);
+    expect(clients.getAuditLog(2).map((entry) => entry.timestamp)).toEqual([
+      1003, 1004,
+    ]);
   });
 
   it("starts and stops lifecycle management once", async () => {
     vi.useFakeTimers();
-    mocks.loadConfig.mockReturnValue({
-      servers: [
+    mocks.loadConfig.mockReturnValue(
+      userLayer([
         { name: "safe", displayName: "Safe", command: "node", args: [] },
-      ],
-    });
+      ]),
+    );
     const processOn = vi.spyOn(process, "on").mockImplementation(() => process);
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const exitSpy = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
 
     const clients = await importClients();
     clients.startLifecycleManagement();
@@ -336,13 +479,17 @@ describe("sandbox clients", () => {
 
     expect(processOn).toHaveBeenCalledWith("SIGINT", expect.any(Function));
     expect(processOn).toHaveBeenCalledWith("SIGTERM", expect.any(Function));
-    expect(clients.getAvailableClients()).toEqual(["safe"]);
+    // 8 defaults + "safe"
+    expect(clients.getAvailableClients()).toContain("safe");
+    expect(clients.getAvailableClients()).toHaveLength(9);
 
     clients.stopLifecycleManagement();
     clients.startLifecycleManagement();
     expect(processOn).toHaveBeenCalledTimes(4);
 
-    const shutdown = processOn.mock.calls.find((call) => call[0] === "SIGINT")?.[1] as () => Promise<void>;
+    const shutdown = processOn.mock.calls.find(
+      (call) => call[0] === "SIGINT",
+    )?.[1] as () => Promise<void>;
     await shutdown();
     expect(console.error).toHaveBeenCalledWith("Shutting down...");
     expect(exitSpy).toHaveBeenCalledWith(0);

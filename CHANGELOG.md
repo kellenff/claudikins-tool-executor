@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Layered config resolution: Tool Executor now searches 5 locations in precedence order for `tool-executor.config.json` (plugin dir → cwd → `~/.claude/tool-executor/` → `$XDG_CONFIG_HOME/tool-executor/` → `$TOOL_EXECUTOR_CONFIG`). User configs outside the plugin install dir survive plugin updates.
+- User-supplied server entries are **merged with** built-in `DEFAULT_CONFIGS` instead of replacing them. A user entry whose `name` matches a default overrides that default; other defaults remain. Adding one custom server now needs a 1-server config, not an 8-server config.
+- `ServerConfigSchema` accepts `commandEnvKey` on user entries (previously defaults-only) for runtime command-path override via env var.
+- `$TOOL_EXECUTOR_CONFIG` env var lets you point at any config file by absolute path. Set-but-missing logs a warning and continues with the other layers.
+- `claudikins doctor` now prints the list of contributing config sources in precedence order and resolves to `Resolved N server(s) (M default + K user)`.
+- Per-server provenance: every loaded server carries a `source` field (`"<default>"` or the absolute path of the layer that supplied it).
+
+### Changed
+
+- `ToolExecutorConfigSchema.servers` minimum length relaxed from 1 to 0 — placeholder configs (`{ "servers": [] }`) are now legal.
+- `findConfigFile` (singular, returning the first hit) replaced by `findConfigFiles` (plural, returning all hits in precedence order). The previous 3-filename search (`.json`/`.js`/`.tool-executorrc.json`) is dropped in favour of a single canonical filename (`tool-executor.config.json`) at every location.
+- `loadConfig()` now returns `{ servers: LoadedServer[], sources: string[] } | null` instead of `{ servers }`. Callers gain provenance for diagnostics.
+
+### Migration
+
+Existing setups continue to work without changes — except that previously-discarded defaults are now merged into the resolved server set. If you previously omitted a default to disable it, that default will now appear; override its `name` with `"command": ""` and `"trusted": false` to keep it filtered out, or rely on the safe-command filter.
+
 ## [1.1.3] - 2026-05-16
 
 ### Changed

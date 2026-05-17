@@ -1,2 +1,0 @@
-import {a}from'./chunk-S56PZ7RM.js';async function n(e){let t=await a(e.code,e.timeout);return {content:[{type:"text",text:JSON.stringify(t,null,2)}],structuredContent:{...t},isError:!!t.error}}export{n as a};//# sourceMappingURL=chunk-PNODWE5R.js.map
-//# sourceMappingURL=chunk-PNODWE5R.js.map

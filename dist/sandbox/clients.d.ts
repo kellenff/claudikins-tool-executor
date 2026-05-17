@@ -44,5 +44,6 @@ declare function startLifecycleManagement(): void;
  * Stop lifecycle management (for testing)
  */
 declare function stopLifecycleManagement(): void;
+declare const DEFAULT_SOURCE_TAG = "<default>";
 
-export { SERVER_CONFIGS, cleanupIdleClients, disconnectAll, disconnectClient, getAuditLog, getAvailableClients, getClient, getConnectedClients, getServerConfigs, initClientStates, logMcpCall, startLifecycleManagement, stopLifecycleManagement };
+export { DEFAULT_SOURCE_TAG, SERVER_CONFIGS, cleanupIdleClients, disconnectAll, disconnectClient, getAuditLog, getAvailableClients, getClient, getConnectedClients, getServerConfigs, initClientStates, logMcpCall, startLifecycleManagement, stopLifecycleManagement };

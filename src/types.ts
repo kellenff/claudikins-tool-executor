@@ -17,7 +17,12 @@ export interface MCPClients {
 }
 
 /**
- * Configuration for connecting to an MCP server
+ * Configuration for connecting to an MCP server.
+ *
+ * `source` is populated by the config loader to track provenance: the absolute
+ * path of the config layer that supplied this entry, or the synthetic string
+ * `"<default>"` for built-in defaults. Used by `cli status` to report
+ * "N default + M user" counts.
  */
 export interface ServerConfig {
   name: string;
@@ -27,6 +32,7 @@ export interface ServerConfig {
   args: string[];
   env?: Record<string, string>;
   commandEnvKey?: string;
+  source?: string;
 }
 
 /**
