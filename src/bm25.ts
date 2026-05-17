@@ -1,6 +1,6 @@
 import bm25 from "wink-bm25-text-search";
 import nlp from "wink-nlp-utils";
-import { ToolDefinition } from "./types.js";
+import type { ToolDefinition } from "./types.js";
 
 type BM25SearchEngine = {
   defineConfig(config: { fldWeights: Record<string, number> }): void;

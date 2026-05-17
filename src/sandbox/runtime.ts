@@ -1,7 +1,7 @@
 import { getClient, logMcpCall, SERVER_CONFIGS } from "./clients.js";
 import { workspace } from "./workspace.js";
 import { MAX_LOG_CHARS, MAX_LOG_ENTRY_CHARS, MCP_RESULTS_DIR } from "../constants.js";
-import { ExecutionResult } from "../types.js";
+import type { ExecutionResult } from "../types.js";
 
 const DEFAULT_TIMEOUT = 30_000; // 30 seconds
 
@@ -23,7 +23,9 @@ type SandboxGlobals = Record<string, unknown> & {
  * Summarise logs aggressively to minimize context usage
  */
 function summariseLogs(logs: unknown[]): unknown[] {
-  if (logs.length === 0) return [];
+  if (logs.length === 0) {
+    return [];
+  }
 
   const serialised = JSON.stringify(logs);
   if (serialised.length <= MAX_LOG_CHARS) {

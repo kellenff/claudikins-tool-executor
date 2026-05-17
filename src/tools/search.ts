@@ -3,7 +3,9 @@ import type { SearchToolsInput } from "../schemas.js";
 
 /** First line only, max 80 chars */
 function oneLiner(text: string): string {
-  if (!text) return "";
+  if (!text) {
+    return "";
+  }
   const line = text.split("\n")[0].trim();
   return line.length > 80 ? line.slice(0, 77) + "..." : line;
 }

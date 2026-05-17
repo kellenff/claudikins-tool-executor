@@ -3,7 +3,7 @@
  * Quick integration test - verify MCP client connections work
  */
 import "dotenv/config";
-import { getClient, initClientStates, disconnectAll } from "../src/sandbox/clients.js";
+import { disconnectAll, getClient, initClientStates } from "../src/sandbox/clients.js";
 
 async function testClient(name: string) {
   console.log(`\nTesting ${name}...`);

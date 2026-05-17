@@ -2,10 +2,10 @@
 
 import { Command } from "commander";
 import { existsSync, readFileSync, statSync } from "fs";
-import { resolve, dirname, isAbsolute, delimiter, join, extname } from "path";
+import { delimiter, dirname, extname, isAbsolute, join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
-import { getServerConfigs, DEFAULT_SOURCE_TAG } from "./sandbox/clients.js";
+import { DEFAULT_SOURCE_TAG, getServerConfigs } from "./sandbox/clients.js";
 import { loadConfig } from "./config.js";
 
 const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,7 +16,7 @@ const packageJson = JSON.parse(readFileSync(resolve(CLI_ROOT, "package.json"), "
 function hasExecutable(pathToCheck: string): boolean {
   try {
     return statSync(pathToCheck).isFile();
-  } catch (_a) {
+  } catch {
     return false;
   }
 }
@@ -177,7 +177,7 @@ program
     try {
       execSync(`npx tsx ${scriptPath}`, { stdio: "inherit" });
       console.log("\n✨ Extraction complete");
-    } catch (error) {
+    } catch {
       console.error("\n❌ Extraction failed");
       process.exit(1);
     }

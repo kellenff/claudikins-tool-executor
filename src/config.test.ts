@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import {
-  ServerConfigSchema,
-  ToolExecutorConfigSchema,
   findConfigFiles,
   loadConfig,
+  ServerConfigSchema,
+  ToolExecutorConfigSchema,
 } from "./config.js";
 
 const SAVED_TEST_TOKEN_KEY = "TOOL_EXECUTOR_TEST_TOKEN";

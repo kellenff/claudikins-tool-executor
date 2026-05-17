@@ -1,18 +1,18 @@
 import { readFile } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { glob } from "glob";
 import yaml from "js-yaml";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { initBM25, searchBM25, isBM25Ready } from "./bm25.js";
+import { initBM25, isBM25Ready, searchBM25 } from "./bm25.js";
 import {
   BM25_RANK_DECAY,
   DEFAULT_SEARCH_SCORE,
   MATCH_CONTEXT_CHARS,
   MCP_CLIENT_VERSION,
 } from "./constants.js";
-import { ToolDefinition } from "./types.js";
+import type { ToolDefinition } from "./types.js";
 
 /**
  * Search result from tool search
@@ -58,7 +58,9 @@ let connectionPromise: Promise<Client | null> | null = null;
  */
 async function getRegistrySerena(): Promise<Client | null> {
   // Already connected
-  if (registrySerena) return registrySerena;
+  if (registrySerena) {
+    return registrySerena;
+  }
 
   // Connection already in progress - wait for it
   if (connectionPromise) {
@@ -167,7 +169,9 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
     const seenFiles = new Set<string>();
 
     for (const item of result.content) {
-      if (item.type !== "text") continue;
+      if (item.type !== "text") {
+        continue;
+      }
 
       // Extract file paths from Serena output (relative to registry root)
       const text = item.text;
@@ -178,7 +182,9 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
 
       if (fileMatches) {
         for (const match of fileMatches) {
-          if (seenFiles.has(match)) continue;
+          if (seenFiles.has(match)) {
+            continue;
+          }
           seenFiles.add(match);
 
           const fullPath = resolve(REGISTRY_ROOT, match);
@@ -191,7 +197,9 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
             });
           }
 
-          if (results.length >= limit) break;
+          if (results.length >= limit) {
+            break;
+          }
         }
       }
     }
@@ -215,7 +223,9 @@ async function loadAllTools(): Promise<ToolDefinition[]> {
   const tools: ToolDefinition[] = [];
   for (const file of files) {
     const tool = await loadToolDefinition(file);
-    if (tool) tools.push(tool);
+    if (tool) {
+      tools.push(tool);
+    }
   }
   return tools;
 }
@@ -257,7 +267,9 @@ async function searchLocally(query: string, limit: number): Promise<SearchResult
 
   for (const file of files) {
     const tool = await loadToolDefinition(file);
-    if (!tool) continue;
+    if (!tool) {
+      continue;
+    }
 
     // Score based on term matches
     const searchText =
@@ -268,8 +280,12 @@ async function searchLocally(query: string, limit: number): Promise<SearchResult
       if (searchText.includes(term)) {
         score += 1;
         // Bonus for name/category match
-        if (tool.name.toLowerCase().includes(term)) score += 2;
-        if (tool.category?.toLowerCase().includes(term)) score += 1;
+        if (tool.name.toLowerCase().includes(term)) {
+          score += 2;
+        }
+        if (tool.category?.toLowerCase().includes(term)) {
+          score += 1;
+        }
       }
     }
 
@@ -356,7 +372,9 @@ export async function listToolsInCategory(category: string): Promise<ToolDefinit
   const tools: ToolDefinition[] = [];
   for (const file of files) {
     const tool = await loadToolDefinition(file);
-    if (tool) tools.push(tool);
+    if (tool) {
+      tools.push(tool);
+    }
   }
   return tools;
 }

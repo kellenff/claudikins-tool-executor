@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  SearchToolsInputSchema,
-  GetToolSchemaInputSchema,
   ExecuteCodeInputSchema,
+  GetToolSchemaInputSchema,
+  SearchToolsInputSchema,
 } from "./schemas.js";
 
 describe("schemas", () => {

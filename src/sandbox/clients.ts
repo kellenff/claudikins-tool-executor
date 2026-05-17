@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { loadConfig } from "../config.js";
 import { MCP_CLIENT_VERSION } from "../constants.js";
-import { MCPClients, ServerConfig, AuditLogEntry, ClientState } from "../types.js";
+import type { AuditLogEntry, ClientState, ServerConfig } from "../types.js";
 
 type DefaultServerConfig = ServerConfig & {
   envKeys?: string[];
@@ -83,7 +83,9 @@ const DEFAULT_SOURCE = "<default>";
  * Resolve optional command env override at runtime (after dotenv loads)
  */
 function resolveCommand(config: ServerConfig): string {
-  if (!config.commandEnvKey) return config.command;
+  if (!config.commandEnvKey) {
+    return config.command;
+  }
   return process.env[config.commandEnvKey] || config.command;
 }
 
@@ -92,7 +94,9 @@ function resolveCommand(config: ServerConfig): string {
  * Used only for built-in defaults; user-supplied entries use literal `env`.
  */
 function resolveEnvKeys(envKeys?: string[]): Record<string, string> | undefined {
-  if (!envKeys || envKeys.length === 0) return undefined;
+  if (!envKeys || envKeys.length === 0) {
+    return undefined;
+  }
 
   return envKeys.reduce<Record<string, string>>((acc, key) => {
     acc[key] = process.env[key] || "";
@@ -105,8 +109,12 @@ function resolveEnvKeys(envKeys?: string[]): Record<string, string> | undefined 
  */
 function isSafeCommand(config: ServerConfig): boolean {
   const command = config.command;
-  if (command === "") return false;
-  if (SAFE_SERVER_COMMANDS.has(command)) return true;
+  if (command === "") {
+    return false;
+  }
+  if (SAFE_SERVER_COMMANDS.has(command)) {
+    return true;
+  }
   return Boolean(config.trusted);
 }
 
@@ -167,7 +175,9 @@ function loadServerConfigs(): ServerConfig[] {
   }
 
   return [...byName.values()].filter((server) => {
-    if (isSafeCommand(server)) return true;
+    if (isSafeCommand(server)) {
+      return true;
+    }
     console.error(
       `Ignoring server "${server.name}" (from ${server.source ?? "<unknown>"}) because command "${server.command}" is not in the safe command set. Set "trusted: true" to allow explicit command use.`,
     );
@@ -298,7 +308,9 @@ async function connectClientInternal(name: string, state: ClientState): Promise<
  */
 export async function disconnectClient(name: string): Promise<void> {
   const state = clientStates.get(name);
-  if (!state?.client) return;
+  if (!state?.client) {
+    return;
+  }
 
   try {
     await state.client.close();
@@ -376,7 +388,9 @@ export function getAuditLog(limit = 100): AuditLogEntry[] {
 let cleanupInterval: NodeJS.Timeout | null = null;
 
 export function startLifecycleManagement(): void {
-  if (cleanupInterval) return;
+  if (cleanupInterval) {
+    return;
+  }
 
   // Initialize client states (deferred to ensure dotenv has loaded)
   initClientStates();

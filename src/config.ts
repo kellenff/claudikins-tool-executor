@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { readFileSync, existsSync } from "fs";
-import { resolve, dirname } from "path";
+import { existsSync, readFileSync } from "fs";
+import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import os from "node:os";
 
@@ -168,14 +168,18 @@ export function loadConfig(configPath?: string, opts?: FindConfigOptions): Confi
   } else {
     paths = findConfigFiles(opts);
   }
-  if (paths.length === 0) return null;
+  if (paths.length === 0) {
+    return null;
+  }
 
   const byName = new Map<string, LoadedServer>();
   const sources: string[] = [];
 
   for (const path of paths) {
     const servers = parseLayer(path);
-    if (servers === null) continue; // malformed; already logged
+    if (servers === null) {
+      continue;
+    } // malformed; already logged
     for (const server of servers) {
       byName.set(server.name, { ...server, source: path });
     }
