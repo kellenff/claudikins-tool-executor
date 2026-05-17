@@ -75,11 +75,22 @@ const DEFAULT_CONFIGS: DefaultServerConfig[] = [
     name: "serena",
     displayName: "Serena",
     command: "uvx",
-    args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
+    args: [
+      "--from",
+      "git+https://github.com/oraios/serena",
+      "serena",
+      "start-mcp-server",
+    ],
   },
 ];
 
-const SAFE_SERVER_COMMANDS = new Set(["npx", "uvx", "node", "python", "codebase-memory-mcp"]);
+const SAFE_SERVER_COMMANDS = new Set([
+  "npx",
+  "uvx",
+  "node",
+  "python",
+  "codebase-memory-mcp",
+]);
 
 const DEFAULT_SOURCE = "<default>";
 
@@ -97,7 +108,9 @@ function resolveCommand(config: ServerConfig): string {
  * Resolve envKeys to actual env values at runtime (after dotenv loads).
  * Used only for built-in defaults; user-supplied entries use literal `env`.
  */
-function resolveEnvKeys(envKeys?: string[]): Record<string, string> | undefined {
+function resolveEnvKeys(
+  envKeys?: string[],
+): Record<string, string> | undefined {
   if (!envKeys || envKeys.length === 0) {
     return undefined;
   }
@@ -205,7 +218,9 @@ export function getServerConfigs(): ServerConfig[] {
 export const SERVER_CONFIGS = new Proxy([] as ServerConfig[], {
   get(_, prop) {
     const configs = getServerConfigs();
-    const value = (configs as unknown as Record<string | symbol, unknown>)[prop];
+    const value = (configs as unknown as Record<string | symbol, unknown>)[
+      prop
+    ];
     // Bind methods to the actual configs array
     if (typeof value === "function") {
       return (value as (...args: unknown[]) => unknown).bind(configs);
@@ -278,8 +293,11 @@ export async function getClient(name: string): Promise<Client | null> {
 /**
  * Internal connection logic
  */
-async function connectClientInternal(name: string, state: ClientState): Promise<Client | null> {
-  const config = SERVER_CONFIGS.find((cfg) => cfg.name === name);
+async function connectClientInternal(
+  name: string,
+  state: ClientState,
+): Promise<Client | null> {
+  const config = SERVER_CONFIGS.find((candidate) => candidate.name === name);
   if (!config) {
     return null;
   }
