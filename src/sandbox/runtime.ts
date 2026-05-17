@@ -295,7 +295,6 @@ export async function executeCode(
 
   try {
     // Create async function with globals as parameters
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
     const AsyncFunction = Object.getPrototypeOf(async function () {})
       .constructor as new (
       ...args: string[]

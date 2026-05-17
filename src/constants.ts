@@ -4,7 +4,12 @@
 // Maximum characters to return in console.log output (keep minimal!)
 export const MAX_LOG_CHARS = 500;
 
-// Maximum characters per individual log entry
+// Per-log-entry display budget AND the threshold at which an MCP response is
+// considered large enough to spill to the workspace as a `_savedTo` file. The
+// two uses share this value deliberately — both answer "what's the cutoff
+// between 'small enough to keep inline' and 'too large to inline'?". If the
+// display budget and the spill threshold ever need to diverge, split this into
+// two named constants rather than introducing a second magic 200 anywhere.
 export const MAX_LOG_ENTRY_CHARS = 200;
 
 // Directory for auto-saved MCP responses
