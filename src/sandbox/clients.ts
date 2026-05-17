@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { loadConfig } from "../config.js";
+import { MCP_CLIENT_VERSION } from "../constants.js";
 import {
   MCPClients,
   ServerConfig,
@@ -292,7 +293,7 @@ async function connectClientInternal(
 
   try {
     const client = new Client(
-      { name: `claudikins-${name}`, version: "1.1.0" },
+      { name: `claudikins-${name}`, version: MCP_CLIENT_VERSION },
       { capabilities: {} },
     );
     const transport = new StdioClientTransport({

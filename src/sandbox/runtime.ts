@@ -1,11 +1,18 @@
 import { getClient, logMcpCall, SERVER_CONFIGS } from "./clients.js";
 import { workspace } from "./workspace.js";
-import { MAX_LOG_CHARS, MAX_LOG_ENTRY_CHARS, MCP_RESULTS_DIR } from "../constants.js";
+import {
+  MAX_LOG_CHARS,
+  MAX_LOG_ENTRY_CHARS,
+  MCP_RESULTS_DIR,
+} from "../constants.js";
 import { ExecutionResult } from "../types.js";
 
 const DEFAULT_TIMEOUT = 30_000; // 30 seconds
 
-type ClientProxy = Record<string, (args?: Record<string, unknown>) => Promise<unknown>>;
+type ClientProxy = Record<
+  string,
+  (args?: Record<string, unknown>) => Promise<unknown>
+>;
 type MockConsole = {
   log: (...args: unknown[]) => void;
   info: (...args: unknown[]) => void;
@@ -31,7 +38,9 @@ function summariseLogs(logs: unknown[]): unknown[] {
   }
 
   // Ultra-minimal summary - just confirmation + size
-  return [`Output truncated (${serialised.length} chars). Check workspace for full results.`];
+  return [
+    `Output truncated (${serialised.length} chars). Check workspace for full results.`,
+  ];
 }
 
 /**
@@ -57,7 +66,10 @@ function createClientProxy(name: string): ClientProxy {
 
         const startTime = Date.now();
         try {
-          const result = await client.callTool({ name: toolName, arguments: args });
+          const result = await client.callTool({
+            name: toolName,
+            arguments: args,
+          });
 
           logMcpCall({
             timestamp: startTime,
@@ -81,7 +93,7 @@ function createClientProxy(name: string): ClientProxy {
               return {
                 _savedTo: filepath,
                 _size: serialised.length,
-                _preview: serialised.slice(0, 200) + "...",
+                _preview: serialised.slice(0, MAX_LOG_ENTRY_CHARS) + "...",
                 _hint: `Full result saved to workspace. Use workspace.readJSON("${filepath}") to access.`,
               };
             } catch (saveErr) {
@@ -97,7 +109,8 @@ function createClientProxy(name: string): ClientProxy {
 
           return result;
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           logMcpCall({
             timestamp: startTime,
             client: name,
@@ -172,9 +185,17 @@ const RESERVED_IDENTIFIERS = new Set([
   "eval",
 ]);
 
-const RESERVED_GLOBAL_BINDINGS = new Set(["console", "workspace", "clients", "globalThis"]);
+const RESERVED_GLOBAL_BINDINGS = new Set([
+  "console",
+  "workspace",
+  "clients",
+  "globalThis",
+]);
 
-function toGlobalIdentifier(name: string, usedIdentifiers: Set<string>): string {
+function toGlobalIdentifier(
+  name: string,
+  usedIdentifiers: Set<string>,
+): string {
   let identifier = toSandboxIdentifier(name);
   if (RESERVED_IDENTIFIERS.has(identifier)) {
     identifier = `_${identifier}`;
@@ -213,11 +234,21 @@ function buildServerBindingMap(): Map<string, string> {
 function createMockConsole(): { console: MockConsole; logs: unknown[] } {
   const logs: unknown[] = [];
   const mockConsole = {
-    log: (...args: unknown[]) => { logs.push(args.length === 1 ? args[0] : args); },
-    info: (...args: unknown[]) => { logs.push({ level: "info", data: args }); },
-    warn: (...args: unknown[]) => { logs.push({ level: "warn", data: args }); },
-    error: (...args: unknown[]) => { logs.push({ level: "error", data: args }); },
-    debug: (...args: unknown[]) => { logs.push({ level: "debug", data: args }); },
+    log: (...args: unknown[]) => {
+      logs.push(args.length === 1 ? args[0] : args);
+    },
+    info: (...args: unknown[]) => {
+      logs.push({ level: "info", data: args });
+    },
+    warn: (...args: unknown[]) => {
+      logs.push({ level: "warn", data: args });
+    },
+    error: (...args: unknown[]) => {
+      logs.push({ level: "error", data: args });
+    },
+    debug: (...args: unknown[]) => {
+      logs.push({ level: "debug", data: args });
+    },
   };
   return { console: mockConsole, logs };
 }
@@ -238,7 +269,8 @@ function buildSandboxGlobals(mockConsole: MockConsole): SandboxGlobals {
   for (const config of SERVER_CONFIGS) {
     const proxy = createClientProxy(config.name);
     clients[config.name] = proxy;
-    const identifier = bindingMap.get(config.name) || toSandboxIdentifier(config.name);
+    const identifier =
+      bindingMap.get(config.name) || toSandboxIdentifier(config.name);
     if (!Object.prototype.hasOwnProperty.call(globals, identifier)) {
       globals[identifier] = proxy;
     }
@@ -250,7 +282,10 @@ function buildSandboxGlobals(mockConsole: MockConsole): SandboxGlobals {
 /**
  * Execute TypeScript/JavaScript code in a sandboxed environment
  */
-export async function executeCode(code: string, timeout = DEFAULT_TIMEOUT): Promise<ExecutionResult> {
+export async function executeCode(
+  code: string,
+  timeout = DEFAULT_TIMEOUT,
+): Promise<ExecutionResult> {
   const { console: mockConsole, logs } = createMockConsole();
   const globals = buildSandboxGlobals(mockConsole);
 
@@ -261,13 +296,21 @@ export async function executeCode(code: string, timeout = DEFAULT_TIMEOUT): Prom
   try {
     // Create async function with globals as parameters
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor as new (...args: string[]) => (...args: unknown[]) => Promise<unknown>;
+    const AsyncFunction = Object.getPrototypeOf(async function () {})
+      .constructor as new (
+      ...args: string[]
+    ) => (...args: unknown[]) => Promise<unknown>;
     const fn = new AsyncFunction(...globalNames, code);
 
     // Execute with timeout
     const result = await Promise.race([
       fn(...globalValues),
-      new Promise((_, reject) => setTimeout(() => reject(new Error(`Execution timed out after ${timeout}ms`)), timeout)),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Execution timed out after ${timeout}ms`)),
+          timeout,
+        ),
+      ),
     ]);
 
     // If the code returned something, add it to logs
@@ -300,7 +343,8 @@ export function getAvailableClientNames(): string[] {
  */
 export function getSandboxClientBindings(): string[] {
   return SERVER_CONFIGS.map((c) => {
-    const identifier = buildServerBindingMap().get(c.name) || toSandboxIdentifier(c.name);
+    const identifier =
+      buildServerBindingMap().get(c.name) || toSandboxIdentifier(c.name);
     return identifier === c.name ? c.name : `${identifier} (server: ${c.name})`;
   });
 }

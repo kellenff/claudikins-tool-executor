@@ -1,4 +1,4 @@
-import {a as a$2}from'./chunk-I6QWBAHF.js';import {a as a$1}from'./chunk-RIGQS2JD.js';import {a}from'./chunk-KS25HVOI.js';import'./chunk-GQTRWYMT.js';import {c,b}from'./chunk-NUQTWFP3.js';import {l as l$1}from'./chunk-IJRCIVXP.js';import'./chunk-T5HJYY4S.js';import'./chunk-JBEMGNZ7.js';import d from'dotenv';import {dirname,resolve}from'path';import {fileURLToPath}from'url';import {McpServer}from'@modelcontextprotocol/sdk/server/mcp.js';import {StdioServerTransport}from'@modelcontextprotocol/sdk/server/stdio.js';import {z}from'zod';var l=z.object({query:z.string().min(1,"Query cannot be empty").describe("Search query for finding relevant tools"),limit:z.number().int().min(1).max(50).default(5).describe("Maximum results to return (default: 5)"),offset:z.number().int().min(0).default(0).describe("Number of results to skip for pagination (default: 0)")}).strict(),m=z.object({name:z.string().min(1,"Tool name cannot be empty").describe("Tool name (from search_tools results)")}).strict(),p=z.object({code:z.string().min(1,"Code cannot be empty").describe("TypeScript/JavaScript code to execute"),timeout:z.number().int().min(1e3).max(6e5).default(3e4).describe("Execution timeout in ms (default: 30000)")}).strict();var S=dirname(fileURLToPath(import.meta.url));d.config({path:resolve(S,"..",".env")});var o=new McpServer({name:"@claudikins/tool-executor",version:"1.1.0"});o.registerTool("search_tools",{title:"Search MCP Tools",description:`Search for MCP tools across all wrapped servers. Returns slim results (name, server, description, example) for discovery.
+import {a as a$2}from'./chunk-X5F7JZBA.js';import {a as a$1}from'./chunk-26UFSFMI.js';import {a}from'./chunk-YGDQPKBH.js';import'./chunk-QZSIBIRH.js';import {c,b as b$1}from'./chunk-NKVT7GR5.js';import {l}from'./chunk-K63FW3IZ.js';import'./chunk-T5HJYY4S.js';import'./chunk-GIZ5Q56L.js';import {b}from'./chunk-LN6OPRPU.js';import h from'dotenv';import {dirname,resolve}from'path';import {fileURLToPath}from'url';import {McpServer}from'@modelcontextprotocol/sdk/server/mcp.js';import {StdioServerTransport}from'@modelcontextprotocol/sdk/server/stdio.js';import {z}from'zod';var m=z.object({query:z.string().min(1,"Query cannot be empty").describe("Search query for finding relevant tools"),limit:z.number().int().min(1).max(50).default(5).describe("Maximum results to return (default: 5)"),offset:z.number().int().min(0).default(0).describe("Number of results to skip for pagination (default: 0)")}).strict(),p=z.object({name:z.string().min(1,"Tool name cannot be empty").describe("Tool name (from search_tools results)")}).strict(),u=z.object({code:z.string().min(1,"Code cannot be empty").describe("TypeScript/JavaScript code to execute"),timeout:z.number().int().min(1e3).max(6e5).default(3e4).describe("Execution timeout in ms (default: 30000)")}).strict();var y=dirname(fileURLToPath(import.meta.url));h.config({path:resolve(y,"..",".env")});var o=new McpServer({name:"@claudikins/tool-executor",version:b});o.registerTool("search_tools",{title:"Search MCP Tools",description:`Search for MCP tools across all wrapped servers. Returns slim results (name, server, description, example) for discovery.
 
 Use get_tool_schema(name) to get the full inputSchema when you're ready to call a specific tool.
 
@@ -8,9 +8,9 @@ Example queries:
 - "semantic code search" - Serena code navigation
 - "impact analysis" - codebase-memory graph analysis
 - "generate diagram" - Gemini image/diagram generation
-- "fetch webpage" - HTTP fetch tools`,inputSchema:l,annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},a);o.registerTool("get_tool_schema",{title:"Get Tool Schema",description:`Get the full inputSchema for a specific tool. Use after search_tools to get parameter details before calling execute_code.
+- "fetch webpage" - HTTP fetch tools`,inputSchema:m,annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},a);o.registerTool("get_tool_schema",{title:"Get Tool Schema",description:`Get the full inputSchema for a specific tool. Use after search_tools to get parameter details before calling execute_code.
 
-Example: get_tool_schema("gemini-generate-image") - returns full schema with all parameters, types, enums, etc.`,inputSchema:m,annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},a$1);var v=c().map(t=>`- ${t}`).join(`
+Example: get_tool_schema("gemini-generate-image") - returns full schema with all parameters, types, enums, etc.`,inputSchema:p,annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}},a$1);var w=c().map(t=>`- ${t}`).join(`
 `);o.registerTool("execute_code",{title:"Execute Code",description:`Execute TypeScript/JavaScript code with access to MCP clients and workspace.
 
 **WORKFLOW** (follow this order):
@@ -29,7 +29,7 @@ const result = await gemini["gemini-generate-image"]({...});
 \`\`\`
 
 **Available MCP clients:**
-${v}
+${w}
 Hyphenated server names are exposed as safe identifiers, e.g. codebase_memory for server codebase-memory.
 All clients are also available by original server name through clients["server-name"].
 
@@ -44,5 +44,5 @@ await workspace.writeJSON("analysis.json", results);
 console.log("Saved analysis.json");  // Minimal context cost
 \`\`\`
 
-Results are summarised if console.log output exceeds ${500} chars.`,inputSchema:p,annotations:{readOnlyHint:false,destructiveHint:true,idempotentHint:false,openWorldHint:true}},a$2);async function w(){l$1(),process.stdin.on("close",()=>{console.error("Client disconnected, shutting down"),process.exit(0);});let t=new StdioServerTransport;await o.connect(t),console.error("Claudikins Tool Executor running"),console.error(`Available MCP clients: ${b().join(", ")}`);}w().catch(t=>{console.error("Fatal error:",t),process.exit(1);});//# sourceMappingURL=index.js.map
+Results are summarised if console.log output exceeds ${500} chars.`,inputSchema:u,annotations:{readOnlyHint:false,destructiveHint:true,idempotentHint:false,openWorldHint:true}},a$2);async function T(){l(),process.stdin.on("close",()=>{console.error("Client disconnected, shutting down"),process.exit(0);});let t=new StdioServerTransport;await o.connect(t),console.error("Claudikins Tool Executor running"),console.error(`Available MCP clients: ${b$1().join(", ")}`);}T().catch(t=>{console.error("Fatal error:",t),process.exit(1);});//# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

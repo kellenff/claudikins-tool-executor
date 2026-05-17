@@ -371,6 +371,32 @@ Tool Executor optimises for breadth across many servers. Skip it if:
 
 ---
 
+## Development
+
+This repo uses [oxlint](https://oxc.rs) (Rust-based linter) and [oxfmt](https://oxc.rs/docs/guide/usage/formatter) (Rust-based formatter), both pinned to exact versions. Rules are tuned for **low required context**: explicit return types, semicolons + braces everywhere, sorted imports with `.js` extensions, no magic numbers or cryptic single-letter names.
+
+| Script              | What it does                                                                           |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| `yarn lint`         | Type-aware lint (runs `oxlint --type-aware`). Reports errors; no fixes.                |
+| `yarn lint:fix`     | Auto-fix what's safely fixable (`oxlint --type-aware --fix --fix-suggestions`).        |
+| `yarn format`       | Format all in-scope files (rewrites in place).                                         |
+| `yarn format:check` | Check formatting without writing (CI/hook-friendly; non-zero exit on drift).           |
+| `yarn fix`          | One-shot: `format` → `lint --fix` → `format` again (the second format settles output). |
+
+### Pre-commit gate
+
+The `.githooks/pre-commit` hook runs `oxfmt --check` and `oxlint --type-aware` on staged in-scope files. A failed hook prints a `yarn fix` hint and aborts the commit — re-stage the fixes, then re-commit.
+
+**Emergency bypass:** `git commit --no-verify` skips the hook entirely. Use sparingly — there is no CI lint gate today, so anything that lands via `--no-verify` won't be caught until the next dev runs a local lint.
+
+**Out-of-scope files** (registry YAML, docs, `dist/`, `tests/integration/`) skip lint/format entirely.
+
+### Adding new source files
+
+Run `yarn fix` after creating a new `.ts` file in `src/` or `scripts/` to align with the rule set. The formatter and linter agree on shape; if they disagree, run `yarn fix` twice and it converges.
+
+---
+
 ## Part of Claudikins
 
 Tool Executor is the execution layer of the Claudikins framework — a set of Claude Code plugins designed to work together.

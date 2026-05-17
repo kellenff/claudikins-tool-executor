@@ -11,6 +11,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import yaml from "js-yaml";
+import { MCP_CLIENT_VERSION } from "../src/constants.js";
 
 /**
  * Server configuration with category mapping
@@ -23,7 +24,6 @@ interface ServerConfig {
   category: string;
   env?: Record<string, string>;
 }
-const MCP_CLIENT_VERSION = "1.1.0";
 
 const SERVERS: ServerConfig[] = [
   // NPX servers (Node.js)

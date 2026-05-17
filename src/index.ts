@@ -8,7 +8,7 @@ dotenv.config({ path: resolve(__dirname, "..", ".env") });
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { MAX_LOG_CHARS } from "./constants.js";
+import { MAX_LOG_CHARS, MCP_CLIENT_VERSION } from "./constants.js";
 import {
   SearchToolsInputSchema,
   GetToolSchemaInputSchema,
@@ -20,20 +20,25 @@ import {
   handleExecuteCode,
 } from "./tools/index.js";
 import { startLifecycleManagement } from "./sandbox/clients.js";
-import { getAvailableClientNames, getSandboxClientBindings } from "./sandbox/runtime.js";
+import {
+  getAvailableClientNames,
+  getSandboxClientBindings,
+} from "./sandbox/runtime.js";
 
 const server = new McpServer({
   name: "@claudikins/tool-executor",
-  version: "1.1.0",
+  version: MCP_CLIENT_VERSION,
 });
 
 /**
  * Tool: search_tools
  * Search for MCP tools across all wrapped servers
  */
-server.registerTool("search_tools", {
-  title: "Search MCP Tools",
-  description: `Search for MCP tools across all wrapped servers. Returns slim results (name, server, description, example) for discovery.
+server.registerTool(
+  "search_tools",
+  {
+    title: "Search MCP Tools",
+    description: `Search for MCP tools across all wrapped servers. Returns slim results (name, server, description, example) for discovery.
 
 Use get_tool_schema(name) to get the full inputSchema when you're ready to call a specific tool.
 
@@ -44,42 +49,52 @@ Example queries:
 - "impact analysis" - codebase-memory graph analysis
 - "generate diagram" - Gemini image/diagram generation
 - "fetch webpage" - HTTP fetch tools`,
-  inputSchema: SearchToolsInputSchema,
-  annotations: {
-    readOnlyHint: true,
-    destructiveHint: false,
-    idempotentHint: true,
-    openWorldHint: false,
+    inputSchema: SearchToolsInputSchema,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
-}, handleSearchTools);
+  handleSearchTools,
+);
 
 /**
  * Tool: get_tool_schema
  * Get full inputSchema for a specific tool
  */
-server.registerTool("get_tool_schema", {
-  title: "Get Tool Schema",
-  description: `Get the full inputSchema for a specific tool. Use after search_tools to get parameter details before calling execute_code.
+server.registerTool(
+  "get_tool_schema",
+  {
+    title: "Get Tool Schema",
+    description: `Get the full inputSchema for a specific tool. Use after search_tools to get parameter details before calling execute_code.
 
 Example: get_tool_schema("gemini-generate-image") - returns full schema with all parameters, types, enums, etc.`,
-  inputSchema: GetToolSchemaInputSchema,
-  annotations: {
-    readOnlyHint: true,
-    destructiveHint: false,
-    idempotentHint: true,
-    openWorldHint: false,
+    inputSchema: GetToolSchemaInputSchema,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
-}, handleGetToolSchema);
+  handleGetToolSchema,
+);
 
 /**
  * Tool: execute_code
  * Execute TypeScript/JavaScript code in sandbox
  */
-const clientList = getSandboxClientBindings().map((n) => `- ${n}`).join("\n");
+const clientList = getSandboxClientBindings()
+  .map((n) => `- ${n}`)
+  .join("\n");
 
-server.registerTool("execute_code", {
-  title: "Execute Code",
-  description: `Execute TypeScript/JavaScript code with access to MCP clients and workspace.
+server.registerTool(
+  "execute_code",
+  {
+    title: "Execute Code",
+    description: `Execute TypeScript/JavaScript code with access to MCP clients and workspace.
 
 **WORKFLOW** (follow this order):
 1. Use search_tools("your query") to find relevant tools
@@ -113,14 +128,16 @@ console.log("Saved analysis.json");  // Minimal context cost
 \`\`\`
 
 Results are summarised if console.log output exceeds ${MAX_LOG_CHARS} chars.`,
-  inputSchema: ExecuteCodeInputSchema,
-  annotations: {
-    readOnlyHint: false,
-    destructiveHint: true,
-    idempotentHint: false,
-    openWorldHint: true,
+    inputSchema: ExecuteCodeInputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
   },
-}, handleExecuteCode as any);
+  handleExecuteCode as any,
+);
 
 /**
  * Main entry point
@@ -138,7 +155,9 @@ async function main(): Promise<void> {
   await server.connect(transport);
 
   console.error("Claudikins Tool Executor running");
-  console.error(`Available MCP clients: ${getAvailableClientNames().join(", ")}`);
+  console.error(
+    `Available MCP clients: ${getAvailableClientNames().join(", ")}`,
+  );
 }
 
 main().catch((error: unknown) => {

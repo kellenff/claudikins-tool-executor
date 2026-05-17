@@ -41,7 +41,12 @@
     "test": "vitest",
     "test:unit": "vitest run src",
     "test:unit:mutation": "stryker run",
-    "test:integration": "vitest run tests/integration"
+    "test:integration": "vitest run tests/integration",
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix --fix-suggestions",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "fix": "oxfmt && oxlint --type-aware --fix && oxfmt"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",
@@ -59,6 +64,9 @@
     "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
+    "oxfmt": "0.50.0",
+    "oxlint": "1.65.0",
+    "oxlint-tsgolint": "0.22.1",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",

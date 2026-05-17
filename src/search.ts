@@ -6,6 +6,12 @@ import yaml from "js-yaml";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { initBM25, searchBM25, isBM25Ready } from "./bm25.js";
+import {
+  BM25_RANK_DECAY,
+  DEFAULT_SEARCH_SCORE,
+  MATCH_CONTEXT_CHARS,
+  MCP_CLIENT_VERSION,
+} from "./constants.js";
 import { ToolDefinition } from "./types.js";
 
 /**
@@ -73,10 +79,18 @@ async function getRegistrySerena(): Promise<Client | null> {
  */
 async function connectRegistrySerena(): Promise<Client | null> {
   try {
-    const client = new Client({ name: "claudikins-registry-search", version: "1.1.0" }, { capabilities: {} });
+    const client = new Client(
+      { name: "claudikins-registry-search", version: MCP_CLIENT_VERSION },
+      { capabilities: {} },
+    );
     const transport = new StdioClientTransport({
       command: "uvx",
-      args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
+      args: [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+      ],
       env: process.env as Record<string, string>,
     });
 
@@ -100,7 +114,9 @@ async function connectRegistrySerena(): Promise<Client | null> {
 /**
  * Load a tool definition from a YAML file
  */
-export async function loadToolDefinition(filePath: string): Promise<ToolDefinition | null> {
+export async function loadToolDefinition(
+  filePath: string,
+): Promise<ToolDefinition | null> {
   try {
     const content = await readFile(filePath, "utf-8");
     const parsed = yaml.load(content) as ToolDefinition;
@@ -121,7 +137,10 @@ export async function loadToolDefinition(filePath: string): Promise<ToolDefiniti
 /**
  * Search tools using Registry Serena (dedicated instance for tool search)
  */
-async function searchWithSerena(query: string, limit: number): Promise<SearchResult[] | null> {
+async function searchWithSerena(
+  query: string,
+  limit: number,
+): Promise<SearchResult[] | null> {
   try {
     const serena = await getRegistrySerena();
     if (!serena) {
@@ -133,17 +152,18 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
     // This matches files containing ALL terms regardless of order
     const terms = query
       .split(/\s+/)
-      .map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); // escape regex chars
+      .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")); // escape regex chars
 
     // Use lookaheads so terms can appear in any order
     // Single term: just use it directly. Multiple terms: use lookaheads
-    const pattern = terms.length === 1
-      ? terms[0]
-      : terms.map(t => `(?=.*${t})`).join('') + '.*';
+    const pattern =
+      terms.length === 1
+        ? terms[0]
+        : terms.map((t) => `(?=.*${t})`).join("") + ".*";
 
     // Use Serena's search_for_pattern to find matches in registry
     // relative_path is "." since registry project is already activated
-    const result = await serena.callTool({
+    const result = (await serena.callTool({
       name: "search_for_pattern",
       arguments: {
         substring_pattern: pattern,
@@ -151,7 +171,7 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
         context_lines_before: 2,
         context_lines_after: 2,
       },
-    }) as { content?: SerenaContentItem[] };
+    })) as { content?: SerenaContentItem[] };
 
     if (!result.content || !Array.isArray(result.content)) {
       return null;
@@ -169,7 +189,9 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
 
       // Match paths like "ui/mermaid/generate_diagram.yaml", "knowledge/context7/query-docs.yaml", or
       // "reasoning/sequentialThinking/sequentialthinking.yaml"
-      const fileMatches = text.match(/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/[^\s:]+\.ya?ml/gi);
+      const fileMatches = text.match(
+        /[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/[^\s:]+\.ya?ml/gi,
+      );
 
       if (fileMatches) {
         for (const match of fileMatches) {
@@ -181,8 +203,8 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
           if (tool) {
             results.push({
               tool,
-              score: 1.0, // Serena doesn't provide scores
-              matchContext: text.slice(0, 200),
+              score: DEFAULT_SEARCH_SCORE,
+              matchContext: text.slice(0, MATCH_CONTEXT_CHARS),
             });
           }
 
@@ -218,7 +240,10 @@ async function loadAllTools(): Promise<ToolDefinition[]> {
 /**
  * Search tools using local glob + text matching (fallback)
  */
-async function searchLocally(query: string, limit: number): Promise<SearchResult[]> {
+async function searchLocally(
+  query: string,
+  limit: number,
+): Promise<SearchResult[]> {
   // Try BM25 first (better ranking)
   if (!isBM25Ready()) {
     try {
@@ -235,7 +260,7 @@ async function searchLocally(query: string, limit: number): Promise<SearchResult
     if (bm25Results.length > 0) {
       return bm25Results.map((tool, idx) => ({
         tool,
-        score: 1 - (idx * 0.01), // Decreasing score for ranking
+        score: 1 - idx * BM25_RANK_DECAY,
       }));
     }
   }
@@ -255,7 +280,8 @@ async function searchLocally(query: string, limit: number): Promise<SearchResult
     if (!tool) continue;
 
     // Score based on term matches
-    const searchText = `${tool.name} ${tool.description} ${tool.category || ""} ${tool.server}`.toLowerCase();
+    const searchText =
+      `${tool.name} ${tool.description} ${tool.category || ""} ${tool.server}`.toLowerCase();
     let score = 0;
 
     for (const term of queryTerms) {
@@ -283,7 +309,11 @@ async function searchLocally(query: string, limit: number): Promise<SearchResult
 /**
  * Search for tools matching a query
  */
-export async function searchTools(query: string, limit = 10, offset = 0): Promise<SearchResponse> {
+export async function searchTools(
+  query: string,
+  limit = 10,
+  offset = 0,
+): Promise<SearchResponse> {
   // Request more results to support pagination
   const fetchLimit = offset + limit;
 
@@ -300,9 +330,10 @@ export async function searchTools(query: string, limit = 10, offset = 0): Promis
 
   // Fall back to local search
   const localResults = await searchLocally(query, fetchLimit);
-  const fallbackReason = serenaResults === null
-    ? "Serena unavailable - using text search"
-    : "No semantic matches - using text search";
+  const fallbackReason =
+    serenaResults === null
+      ? "Serena unavailable - using text search"
+      : "No semantic matches - using text search";
 
   if (localResults.length === 0) {
     return {
@@ -310,7 +341,8 @@ export async function searchTools(query: string, limit = 10, offset = 0): Promis
       source: "local",
       totalCount: 0,
       fallbackReason,
-      suggestion: "Try broader terms like 'image', 'code search', 'graph analysis', 'diagram', or browse categories: code-nav, graph-analysis, knowledge, ai-models, web, ui",
+      suggestion:
+        "Try broader terms like 'image', 'code search', 'graph analysis', 'diagram', or browse categories: code-nav, graph-analysis, knowledge, ai-models, web, ui",
     };
   }
 
@@ -338,7 +370,9 @@ export async function getCategories(): Promise<string[]> {
 /**
  * List all tools in a category
  */
-export async function listToolsInCategory(category: string): Promise<ToolDefinition[]> {
+export async function listToolsInCategory(
+  category: string,
+): Promise<ToolDefinition[]> {
   const categoryPath = resolve(REGISTRY_ROOT, category);
   const files = await glob("**/*.{yaml,yml}", {
     cwd: categoryPath,
@@ -356,7 +390,9 @@ export async function listToolsInCategory(category: string): Promise<ToolDefinit
 /**
  * Get a specific tool by name (for full schema retrieval)
  */
-export async function getToolByName(toolName: string): Promise<ToolDefinition | null> {
+export async function getToolByName(
+  toolName: string,
+): Promise<ToolDefinition | null> {
   // Search all YAML files in registry
   const files = await glob("**/*.{yaml,yml}", {
     cwd: REGISTRY_ROOT,
