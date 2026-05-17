@@ -25,14 +25,14 @@
       "error",
       {
         "ignoreCase": true,
-        "ignoreDeclarationSort": false,
+        "ignoreDeclarationSort": true,
         "ignoreMemberSort": false,
         "allowSeparatedGroups": true
       }
     ],
     "eslint/id-length": [
       "error",
-      { "min": 2, "exceptions": ["i", "j", "k", "_", "e"] }
+      { "min": 2, "exceptions": ["i", "j", "k", "_", "e", "T", "a", "b"] }
     ],
     "eslint/no-magic-numbers": [
       "error",
@@ -43,7 +43,7 @@
       }
     ],
     "import/no-default-export": "error",
-    "import/extensions": ["error", "always"]
+    "import/extensions": "off"
   },
   "overrides": [
     {
