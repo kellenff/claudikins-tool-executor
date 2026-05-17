@@ -30,9 +30,17 @@ fi
 
 # On failure only: pop the stash so the user's working tree isn't left empty.
 # On success: leave the stash for post-commit to restore.
+#
+# Before popping, reset dist/ to HEAD. The stash captured dist/ as it was
+# pre-hook; if `yarn build` ran (or partially ran) since then, the current
+# dist/ has diverged and `git stash pop` would produce merge conflicts.
+# Lint/format failures happen BEFORE yarn build, so this is mostly defensive
+# for the rare case where build itself fails after touching dist/.
 rollback_on_failure() {
   local ec=$?
   if [ "$ec" -ne 0 ] && [ "$NEEDS_STASH" -eq 1 ]; then
+    git checkout -- dist/ 2>/dev/null || true
+    git clean -fd dist/ --quiet 2>/dev/null || true
     git stash pop --quiet 2>/dev/null || \
       echo "[pre-commit] WARNING: rollback pop failed — unstaged work is in stash@{0}" >&2
     rm -f "$MARKER"
