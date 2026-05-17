@@ -27,7 +27,12 @@ Create `tool-executor.config.json` in the project root:
       "name": "serena",
       "displayName": "Serena",
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server"
+      ],
       "trusted": true
     },
     {
@@ -43,10 +48,23 @@ Create `tool-executor.config.json` in the project root:
 }
 ```
 
-### Config File Locations (checked in order)
-1. `tool-executor.config.json`
-2. `tool-executor.config.js`
-3. `.tool-executorrc.json`
+### Config File Locations (checked in precedence order, lowest → highest)
+
+User entries are **merged with** built-in `DEFAULT_CONFIGS` — write only the servers you're adding or overriding. A user entry whose `name` matches a default replaces that default.
+
+| #   | Path                                                                                                | Notes                                                      |
+| --- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 1   | `<plugin>/tool-executor.config.json`                                                                | Plugin install dir (purged on update — avoid)              |
+| 2   | `<cwd>/tool-executor.config.json`                                                                   | Per-project override                                       |
+| 3   | `~/.claude/tool-executor/tool-executor.config.json`                                                 | **Recommended for personal use** — survives plugin updates |
+| 4   | `$XDG_CONFIG_HOME/tool-executor/tool-executor.config.json` (fallback `~/.config/tool-executor/...`) | XDG-compliant systems                                      |
+| 5   | `$TOOL_EXECUTOR_CONFIG` (literal path; no `${VAR}` expansion of the path itself)                    | Explicit override                                          |
+
+Later layers override earlier ones by `name`. If multiple rules resolve to the same absolute path the file is loaded once.
+
+If `$TOOL_EXECUTOR_CONFIG` is set but points to a missing file, the loader warns and continues. Other layers are silent when absent. Malformed layers (invalid JSON or schema failures) are loud and skipped — other layers still load.
+
+Run `claudikins doctor` to see which files contributed and the resolved server count.
 
 ## Adding a New MCP Server
 
@@ -125,15 +143,16 @@ Environment variables use `${VAR_NAME}` syntax in config:
 
 ### Required Environment Variables
 
-| Server | Variable | Purpose |
-|--------|----------|---------|
-| gemini | `GEMINI_API_KEY` | Google AI API key |
-| apify | `APIFY_TOKEN` | Apify platform token |
+| Server          | Variable                  | Purpose                                          |
+| --------------- | ------------------------- | ------------------------------------------------ |
+| gemini          | `GEMINI_API_KEY`          | Google AI API key                                |
+| apify           | `APIFY_TOKEN`             | Apify platform token                             |
 | codebase-memory | `CODEBASE_MEMORY_MCP_BIN` | Optional path override for `codebase-memory-mcp` |
 
 ### Setting Variables
 
 **In Claude Code config (~/.claude.json):**
+
 ```json
 {
   "mcpServers": {
@@ -148,6 +167,7 @@ Environment variables use `${VAR_NAME}` syntax in config:
 ```
 
 **Or in shell:**
+
 ```bash
 export GEMINI_API_KEY="your-key-here"
 ```
@@ -220,16 +240,16 @@ npm run extract
 
 These are the built-in defaults if no config file exists:
 
-| Name | Command | Package |
-|------|---------|---------|
-| serena | uvx | git+https://github.com/oraios/serena |
-| context7 | npx | @upstash/context7-mcp |
-| gemini | npx | @rlabs-inc/gemini-mcp |
-| notebooklm | npx | notebooklm-mcp |
-| shadcn | npx | shadcn-ui-mcp-server |
-| apify | npx | @apify/actors-mcp-server |
-| codebase-memory | codebase-memory-mcp | Override with CODEBASE_MEMORY_MCP_BIN |
-| sequentialThinking | npx | @modelcontextprotocol/server-sequential-thinking |
+| Name               | Command             | Package                                          |
+| ------------------ | ------------------- | ------------------------------------------------ |
+| serena             | uvx                 | git+https://github.com/oraios/serena             |
+| context7           | npx                 | @upstash/context7-mcp                            |
+| gemini             | npx                 | @rlabs-inc/gemini-mcp                            |
+| notebooklm         | npx                 | notebooklm-mcp                                   |
+| shadcn             | npx                 | shadcn-ui-mcp-server                             |
+| apify              | npx                 | @apify/actors-mcp-server                         |
+| codebase-memory    | codebase-memory-mcp | Override with CODEBASE_MEMORY_MCP_BIN            |
+| sequentialThinking | npx                 | @modelcontextprotocol/server-sequential-thinking |
 
 > If `codebase-memory` is expected, install `codebase-memory-mcp` and set `CODEBASE_MEMORY_MCP_BIN` when it is not on your shell `PATH`.
 

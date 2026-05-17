@@ -121,6 +121,7 @@ The session hook injects a standard MCP-first workflow for each prompt:
 ```
 Identify if MCP helps → if so, run search_tools first
 ```
+
 This keeps MCP usage discoverable while still allowing Claude to proceed when MCP is not the right fit.
 
 ---
@@ -200,7 +201,7 @@ In `execute_code`, `codebase-memory` is exposed as `codebase_memory` because Jav
 
 ### Add Your Own
 
-Any MCP server can be wrapped. Create `tool-executor.config.json`:
+Any MCP server can be wrapped. Drop a `tool-executor.config.json` with **just the servers you're adding** — defaults are merged in automatically.
 
 ```json
 {
@@ -220,6 +221,24 @@ Any MCP server can be wrapped. Create `tool-executor.config.json`:
 Tip: For custom command wrappers, include `"trusted": true` when `command` is not one of the built-in launcher patterns (`npx`, `uvx`, `node`, `python`, `codebase-memory-mcp`) or an explicit path.
 
 Run `npm run extract` to generate registry entries. Your tools are now searchable.
+
+#### Where to Put It
+
+Tool Executor searches **5 locations** in precedence order (lowest → highest; later layers override earlier ones by `name`):
+
+| #   | Location                                                                                      | Use case                                                             |
+| --- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 1   | `<plugin>/tool-executor.config.json`                                                          | Plugin install dir (purged on update — avoid)                        |
+| 2   | `<cwd>/tool-executor.config.json`                                                             | Per-project override                                                 |
+| 3   | `~/.claude/tool-executor/tool-executor.config.json`                                           | **Recommended for personal customisation** — survives plugin updates |
+| 4   | `$XDG_CONFIG_HOME/tool-executor/tool-executor.config.json` (or `~/.config/tool-executor/...`) | XDG-compliant systems                                                |
+| 5   | `$TOOL_EXECUTOR_CONFIG` (full path)                                                           | Explicit override for testing / one-off configs                      |
+
+User entries are **merged with** built-in defaults rather than replacing them — to add one server you write a 1-server config, not an 8-server config. A user entry whose `name` matches a default overrides that default; defaults you don't mention stay as they are.
+
+If `$TOOL_EXECUTOR_CONFIG` is set but points to a missing file, the loader warns and continues with the other layers.
+
+Check what's loaded with `claudikins doctor` — it lists every contributing source path and reports `Resolved N server(s) (M default + K user)`.
 
 ---
 
@@ -286,7 +305,7 @@ const routes = await codebase_memory["query_graph"]({
 | `get_code_snippet` | Fetch source by qualified name — cheaper than grep for known symbols |
 | `trace_path`       | BFS traversal: callers, callees, data flow, cross-service            |
 | `query_graph`      | Cypher-subset queries for multi-hop relationship patterns            |
-| `detect_changes`   | Git diff → affected symbols + impact/ blast-radius analysis            |
+| `detect_changes`   | Git diff → affected symbols + impact/ blast-radius analysis          |
 | `search_code`      | Graph-augmented grep: deduplicates matches into containing functions |
 | `get_graph_schema` | Discover the graph schema before composing queries                   |
 | `manage_adr`       | Architecture Decision Records stored in the graph                    |
@@ -298,12 +317,12 @@ const routes = await codebase_memory["query_graph"]({
 
 Both `serena` and `codebase-memory` navigate code. They do different things:
 
-|               | Serena                         | codebase-memory                       |
-| ------------- | ------------------------------ | ------------------------------------- |
-| Approach      | LSP — asks the language server | Graph — pre-indexed knowledge graph   |
+|               | Serena                         | codebase-memory                          |
+| ------------- | ------------------------------ | ---------------------------------------- |
+| Approach      | LSP — asks the language server | Graph — pre-indexed knowledge graph      |
 | Best for      | Find symbol, rename, refactor  | Multi-hop queries, impact analysis, ADRs |
-| Startup       | Instant                        | Requires one-time indexing            |
-| Cross-service | No                             | Yes                                   |
+| Startup       | Instant                        | Requires one-time indexing               |
+| Cross-service | No                             | Yes                                      |
 
 ---
 
