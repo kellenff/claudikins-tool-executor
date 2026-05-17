@@ -16,6 +16,7 @@ vi.mock("./config.js", () => ({
 
 vi.mock("./sandbox/clients.js", () => ({
   getServerConfigs: vi.fn(),
+  DEFAULT_SOURCE_TAG: "<default>",
 }));
 
 import * as cli from "./cli.js";

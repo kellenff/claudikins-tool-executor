@@ -5,7 +5,7 @@ import { existsSync, readFileSync, statSync } from "fs";
 import { resolve, dirname, isAbsolute, delimiter, join, extname } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
-import { getServerConfigs } from "./sandbox/clients.js";
+import { getServerConfigs, DEFAULT_SOURCE_TAG } from "./sandbox/clients.js";
 import { loadConfig } from "./config.js";
 
 const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -75,7 +75,7 @@ function checkConfig(): void {
   const result = loadConfig(undefined, { pluginDir: CLI_ROOT });
   const configs = getServerConfigs();
   const userCount = configs.filter(
-    (c) => c.source && c.source !== "<default>",
+    (c) => c.source && c.source !== DEFAULT_SOURCE_TAG,
   ).length;
   const defaultCount = configs.length - userCount;
 
