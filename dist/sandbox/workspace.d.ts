@@ -1,6 +1,6 @@
 /**
  * Clean up old MCP results (older than maxAge ms)
- * Default: 1 hour (3600000ms)
+ * Default: 1 hour (DEFAULT_MCP_RESULTS_MAX_AGE_MS)
  */
 declare function cleanupMcpResults(maxAgeMs?: number): Promise<number>;
 /**

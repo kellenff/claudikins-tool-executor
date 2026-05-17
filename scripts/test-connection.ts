@@ -5,9 +5,9 @@
 import "dotenv/config";
 import { disconnectAll, getClient, initClientStates } from "../src/sandbox/clients.js";
 
-async function testClient(name: string) {
+async function testClient(name: string): Promise<boolean> {
   console.log(`\nTesting ${name}...`);
-  const client = await getClient(name as any);
+  const client = await getClient(name);
 
   if (client) {
     const tools = await client.listTools();
@@ -19,7 +19,7 @@ async function testClient(name: string) {
   }
 }
 
-async function main() {
+async function main(): Promise<void> {
   initClientStates();
 
   await testClient("context7");

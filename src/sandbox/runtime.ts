@@ -1,6 +1,11 @@
 import { getClient, logMcpCall, SERVER_CONFIGS } from "./clients.js";
 import { workspace } from "./workspace.js";
-import { MAX_LOG_CHARS, MAX_LOG_ENTRY_CHARS, MCP_RESULTS_DIR } from "../constants.js";
+import {
+  MAX_LOG_CHARS,
+  MAX_LOG_ENTRY_CHARS,
+  MAX_PREVIEW_FALLBACK_CHARS,
+  MCP_RESULTS_DIR,
+} from "../constants.js";
 import type { ExecutionResult } from "../types.js";
 
 const DEFAULT_TIMEOUT = 30_000; // 30 seconds
@@ -91,11 +96,12 @@ function createClientProxy(name: string): ClientProxy {
               };
             } catch (saveErr) {
               // If save fails, return truncated result with warning
-              console.error(`Failed to auto-save large result: ${saveErr}`);
+              const saveErrMessage = saveErr instanceof Error ? saveErr.message : String(saveErr);
+              console.error(`Failed to auto-save large result: ${saveErrMessage}`);
               return {
                 _warning: "Result too large to auto-save, returning truncated",
                 _size: serialised.length,
-                _preview: serialised.slice(0, 1000),
+                _preview: serialised.slice(0, MAX_PREVIEW_FALLBACK_CHARS),
               };
             }
           }
@@ -313,15 +319,15 @@ export async function executeCode(
  * Get a list of available MCP clients (for error messages)
  */
 export function getAvailableClientNames(): string[] {
-  return SERVER_CONFIGS.map((c) => c.name);
+  return SERVER_CONFIGS.map((config) => config.name);
 }
 
 /**
  * Get available MCP client bindings as exposed inside execute_code.
  */
 export function getSandboxClientBindings(): string[] {
-  return SERVER_CONFIGS.map((c) => {
-    const identifier = buildServerBindingMap().get(c.name) || toSandboxIdentifier(c.name);
-    return identifier === c.name ? c.name : `${identifier} (server: ${c.name})`;
+  return SERVER_CONFIGS.map((config) => {
+    const identifier = buildServerBindingMap().get(config.name) || toSandboxIdentifier(config.name);
+    return identifier === config.name ? config.name : `${identifier} (server: ${config.name})`;
   });
 }

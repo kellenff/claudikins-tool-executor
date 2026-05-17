@@ -8,6 +8,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { initBM25, isBM25Ready, searchBM25 } from "./bm25.js";
 import {
   BM25_RANK_DECAY,
+  DEFAULT_SEARCH_LIMIT,
   DEFAULT_SEARCH_SCORE,
   MATCH_CONTEXT_CHARS,
   MCP_CLIENT_VERSION,
@@ -146,7 +147,8 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
 
     // Use lookaheads so terms can appear in any order
     // Single term: just use it directly. Multiple terms: use lookaheads
-    const pattern = terms.length === 1 ? terms[0] : terms.map((t) => `(?=.*${t})`).join("") + ".*";
+    const pattern =
+      terms.length === 1 ? terms[0] : terms.map((term) => `(?=.*${term})`).join("") + ".*";
 
     // Use Serena's search_for_pattern to find matches in registry
     // relative_path is "." since registry project is already activated
@@ -305,7 +307,11 @@ async function searchLocally(query: string, limit: number): Promise<SearchResult
 /**
  * Search for tools matching a query
  */
-export async function searchTools(query: string, limit = 10, offset = 0): Promise<SearchResponse> {
+export async function searchTools(
+  query: string,
+  limit = DEFAULT_SEARCH_LIMIT,
+  offset = 0,
+): Promise<SearchResponse> {
   // Request more results to support pagination
   const fetchLimit = offset + limit;
 
@@ -356,7 +362,7 @@ export async function getCategories(): Promise<string[]> {
   });
 
   // Remove trailing slashes
-  return files.map((f) => f.replace(/\/$/, ""));
+  return files.map((file) => file.replace(/\/$/, ""));
 }
 
 /**

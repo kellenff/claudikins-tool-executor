@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import { DEFAULT_SOURCE_TAG, getServerConfigs } from "./sandbox/clients.js";
 import { loadConfig } from "./config.js";
+import { MIN_NODE_MAJOR_VERSION } from "./constants.js";
 
 const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const packageJson = JSON.parse(readFileSync(resolve(CLI_ROOT, "package.json"), "utf-8")) as {
@@ -73,7 +74,9 @@ function checkUvx(): void {
 function checkConfig(): void {
   const result = loadConfig(undefined, { pluginDir: CLI_ROOT });
   const configs = getServerConfigs();
-  const userCount = configs.filter((c) => c.source && c.source !== DEFAULT_SOURCE_TAG).length;
+  const userCount = configs.filter(
+    (config) => config.source && config.source !== DEFAULT_SOURCE_TAG,
+  ).length;
   const defaultCount = configs.length - userCount;
 
   if (result && result.sources.length > 0) {
@@ -107,7 +110,9 @@ program
     // Check Node version
     const nodeVersion = process.version;
     const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0]);
-    console.log(`Node.js: ${nodeVersion} ${nodeMajor >= 18 ? "✅" : "❌ (need 18+)"}`);
+    console.log(
+      `Node.js: ${nodeVersion} ${nodeMajor >= MIN_NODE_MAJOR_VERSION ? "✅" : `❌ (need ${MIN_NODE_MAJOR_VERSION}+)`}`,
+    );
 
     // Check for Python/uv (for uvx servers)
     checkUvx();

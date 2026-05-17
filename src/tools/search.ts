@@ -1,13 +1,16 @@
 import { searchTools } from "../search.js";
+import { MAX_ONE_LINER_CHARS, ONE_LINER_ELLIPSIS_RESERVE } from "../constants.js";
 import type { SearchToolsInput } from "../schemas.js";
 
-/** First line only, max 80 chars */
+/** First line only, max MAX_ONE_LINER_CHARS chars */
 function oneLiner(text: string): string {
   if (!text) {
     return "";
   }
   const line = text.split("\n")[0].trim();
-  return line.length > 80 ? line.slice(0, 77) + "..." : line;
+  return line.length > MAX_ONE_LINER_CHARS
+    ? line.slice(0, MAX_ONE_LINER_CHARS - ONE_LINER_ELLIPSIS_RESERVE) + "..."
+    : line;
 }
 
 /**
@@ -35,10 +38,10 @@ export async function handleSearchTools(params: SearchToolsInput): Promise<{
   const response = await searchTools(params.query, params.limit, params.offset);
 
   const output = {
-    results: response.results.map((r) => ({
-      name: r.tool.name,
-      server: r.tool.server,
-      description: oneLiner(r.tool.description),
+    results: response.results.map((result) => ({
+      name: result.tool.name,
+      server: result.tool.server,
+      description: oneLiner(result.tool.description),
     })),
     // Pagination metadata (MCP best practice)
     count: response.results.length,

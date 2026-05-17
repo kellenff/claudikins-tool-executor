@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  EXECUTE_CODE_DEFAULT_TIMEOUT_MS,
+  EXECUTE_CODE_MAX_TIMEOUT_MS,
+  EXECUTE_CODE_MIN_TIMEOUT_MS,
+  SEARCH_TOOLS_DEFAULT_LIMIT,
+  SEARCH_TOOLS_MAX_LIMIT,
+} from "./constants.js";
 
 /**
  * Input schema for search_tools
@@ -13,9 +20,9 @@ export const SearchToolsInputSchema = z
       .number()
       .int()
       .min(1)
-      .max(50)
-      .default(5)
-      .describe("Maximum results to return (default: 5)"),
+      .max(SEARCH_TOOLS_MAX_LIMIT)
+      .default(SEARCH_TOOLS_DEFAULT_LIMIT)
+      .describe(`Maximum results to return (default: ${SEARCH_TOOLS_DEFAULT_LIMIT})`),
     offset: z
       .number()
       .int()
@@ -53,10 +60,10 @@ export const ExecuteCodeInputSchema = z
     timeout: z
       .number()
       .int()
-      .min(1000)
-      .max(600000)
-      .default(30000)
-      .describe("Execution timeout in ms (default: 30000)"),
+      .min(EXECUTE_CODE_MIN_TIMEOUT_MS)
+      .max(EXECUTE_CODE_MAX_TIMEOUT_MS)
+      .default(EXECUTE_CODE_DEFAULT_TIMEOUT_MS)
+      .describe(`Execution timeout in ms (default: ${EXECUTE_CODE_DEFAULT_TIMEOUT_MS})`),
   })
   .strict();
 

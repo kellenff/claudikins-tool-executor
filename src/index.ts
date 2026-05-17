@@ -80,7 +80,7 @@ Example: get_tool_schema("gemini-generate-image") - returns full schema with all
  * Execute TypeScript/JavaScript code in sandbox
  */
 const clientList = getSandboxClientBindings()
-  .map((n) => `- ${n}`)
+  .map((binding) => `- ${binding}`)
   .join("\n");
 
 server.registerTool(
@@ -129,7 +129,7 @@ Results are summarised if console.log output exceeds ${MAX_LOG_CHARS} chars.`,
       openWorldHint: true,
     },
   },
-  handleExecuteCode as any,
+  handleExecuteCode as unknown as Parameters<typeof server.registerTool>[2],
 );
 
 /**

@@ -10,7 +10,7 @@ import {
 import { dirname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { glob as globFs } from "glob";
-import { MCP_RESULTS_DIR } from "../constants.js";
+import { DEFAULT_MCP_RESULTS_MAX_AGE_MS, MCP_RESULTS_DIR } from "../constants.js";
 
 // Resolve workspace relative to module location (not cwd) for plugin portability
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -39,9 +39,9 @@ function resolvePath(relativePath: string): string {
 
 /**
  * Clean up old MCP results (older than maxAge ms)
- * Default: 1 hour (3600000ms)
+ * Default: 1 hour (DEFAULT_MCP_RESULTS_MAX_AGE_MS)
  */
-async function cleanupMcpResults(maxAgeMs = 3600000): Promise<number> {
+async function cleanupMcpResults(maxAgeMs = DEFAULT_MCP_RESULTS_MAX_AGE_MS): Promise<number> {
   const dir = join(WORKSPACE_ROOT, MCP_RESULTS_DIR);
 
   try {

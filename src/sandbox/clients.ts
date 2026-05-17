@@ -1,14 +1,18 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { loadConfig } from "../config.js";
-import { MCP_CLIENT_VERSION } from "../constants.js";
+import {
+  AUDIT_LOG_DEFAULT_LIMIT,
+  AUDIT_LOG_MAX_ENTRIES,
+  CLIENT_CLEANUP_INTERVAL_MS,
+  CLIENT_IDLE_TIMEOUT_MS,
+  MCP_CLIENT_VERSION,
+} from "../constants.js";
 import type { AuditLogEntry, ClientState, ServerConfig } from "../types.js";
 
 type DefaultServerConfig = ServerConfig & {
   envKeys?: string[];
 };
-
-const IDLE_TIMEOUT = 3 * 60 * 1000; // 3 minutes
 
 /**
  * Default MCP server configurations.
@@ -137,14 +141,14 @@ function loadServerConfigs(): ServerConfig[] {
   const byName = new Map<string, ServerConfig>();
 
   // Layer A: defaults (with commandEnvKey + envKeys resolved at runtime)
-  for (const c of DEFAULT_CONFIGS) {
-    const normalized = normalizeServerConfig(c);
-    byName.set(c.name, {
+  for (const defaultConfig of DEFAULT_CONFIGS) {
+    const normalized = normalizeServerConfig(defaultConfig);
+    byName.set(defaultConfig.name, {
       name: normalized.name,
       displayName: normalized.displayName,
       command: normalized.command,
       args: normalized.args,
-      env: resolveEnvKeys(c.envKeys),
+      env: resolveEnvKeys(defaultConfig.envKeys),
       trusted: normalized.trusted,
       commandEnvKey: normalized.commandEnvKey,
       source: DEFAULT_SOURCE,
@@ -154,9 +158,9 @@ function loadServerConfigs(): ServerConfig[] {
   // Layer B: user entries (commandEnvKey honoured via normalizeServerConfig;
   // env taken literally — ${VAR} was already expanded at parse time).
   if (result) {
-    for (const s of result.servers) {
-      const normalized = normalizeServerConfig(s);
-      byName.set(s.name, {
+    for (const userServer of result.servers) {
+      const normalized = normalizeServerConfig(userServer);
+      byName.set(userServer.name, {
         name: normalized.name,
         displayName: normalized.displayName,
         command: normalized.command,
@@ -164,7 +168,7 @@ function loadServerConfigs(): ServerConfig[] {
         env: normalized.env,
         trusted: normalized.trusted,
         commandEnvKey: normalized.commandEnvKey,
-        source: s.source,
+        source: userServer.source,
       });
     }
     console.error(
@@ -201,10 +205,10 @@ export function getServerConfigs(): ServerConfig[] {
 export const SERVER_CONFIGS = new Proxy([] as ServerConfig[], {
   get(_, prop) {
     const configs = getServerConfigs();
-    const value = (configs as any)[prop];
+    const value = (configs as unknown as Record<string | symbol, unknown>)[prop];
     // Bind methods to the actual configs array
     if (typeof value === "function") {
-      return value.bind(configs);
+      return (value as (...args: unknown[]) => unknown).bind(configs);
     }
     return value;
   },
@@ -275,7 +279,7 @@ export async function getClient(name: string): Promise<Client | null> {
  * Internal connection logic
  */
 async function connectClientInternal(name: string, state: ClientState): Promise<Client | null> {
-  const config = SERVER_CONFIGS.find((c) => c.name === name);
+  const config = SERVER_CONFIGS.find((cfg) => cfg.name === name);
   if (!config) {
     return null;
   }
@@ -337,7 +341,7 @@ export async function disconnectAll(): Promise<void> {
 export async function cleanupIdleClients(): Promise<void> {
   const now = Date.now();
   for (const [name, state] of clientStates) {
-    if (state.client && now - state.lastUsed > IDLE_TIMEOUT) {
+    if (state.client && now - state.lastUsed > CLIENT_IDLE_TIMEOUT_MS) {
       await disconnectClient(name);
     }
   }
@@ -360,7 +364,7 @@ export function getConnectedClients(): string[] {
  * Get list of all available clients (connected or not)
  */
 export function getAvailableClients(): string[] {
-  return SERVER_CONFIGS.map((c) => c.name);
+  return SERVER_CONFIGS.map((config) => config.name);
 }
 
 /**
@@ -369,8 +373,8 @@ export function getAvailableClients(): string[] {
 export function logMcpCall(entry: AuditLogEntry): void {
   auditLog.push(entry);
 
-  // Keep only last 1000 entries
-  if (auditLog.length > 1000) {
+  // Keep only the most recent AUDIT_LOG_MAX_ENTRIES entries
+  if (auditLog.length > AUDIT_LOG_MAX_ENTRIES) {
     auditLog.shift();
   }
 }
@@ -378,7 +382,7 @@ export function logMcpCall(entry: AuditLogEntry): void {
 /**
  * Get recent audit log entries
  */
-export function getAuditLog(limit = 100): AuditLogEntry[] {
+export function getAuditLog(limit = AUDIT_LOG_DEFAULT_LIMIT): AuditLogEntry[] {
   return auditLog.slice(-limit);
 }
 
@@ -395,10 +399,14 @@ export function startLifecycleManagement(): void {
   // Initialize client states (deferred to ensure dotenv has loaded)
   initClientStates();
 
-  // Check for idle clients every minute
-  cleanupInterval = setInterval(cleanupIdleClients, 60_000);
+  // Check for idle clients every CLIENT_CLEANUP_INTERVAL_MS
+  cleanupInterval = setInterval(() => {
+    void cleanupIdleClients();
+  }, CLIENT_CLEANUP_INTERVAL_MS);
 
-  // Clean shutdown handlers
+  // Clean shutdown handlers — returns a Promise so tests can await completion;
+  // wrapped with `.catch` at the registration site so the floating signal-handler
+  // promise can never go unhandled in production.
   const shutdown = async (): Promise<void> => {
     console.error("Shutting down...");
     if (cleanupInterval) {
@@ -409,8 +417,17 @@ export function startLifecycleManagement(): void {
     process.exit(0);
   };
 
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+  // The signal listener returns the shutdown promise so callers (notably the
+  // lifecycle test) can await it. Node's process.on typing expects a void-
+  // returning listener; the explicit `as` cast tells the linter this is a
+  // deliberate mismatch — the promise rejection is contained inside `shutdown`.
+  const onSignal = ((): Promise<void> =>
+    shutdown().catch((err: unknown) => {
+      console.error("Shutdown failed:", err);
+    })) as () => void;
+
+  process.on("SIGINT", onSignal);
+  process.on("SIGTERM", onSignal);
 }
 
 /**

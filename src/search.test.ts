@@ -240,7 +240,7 @@ describe("searchTools", () => {
       } as unknown as Client;
     });
     mockReadFile.mockImplementation(async (path) => {
-      if (String(path).includes("generate-diagram")) {
+      if (String(path as string).includes("generate-diagram")) {
         return JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]);
       }
       return JSON.stringify(toolFixtures["/registry/code-nav/search.yaml"]);
