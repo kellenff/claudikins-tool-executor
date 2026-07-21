@@ -45,6 +45,7 @@ import {
   listToolsInCategory,
   loadToolDefinition,
   searchTools,
+  tokenizeQuery,
 } from "./search.js";
 
 import { initBM25, isBM25Ready, searchBM25 } from "./bm25.js";
@@ -486,6 +487,18 @@ describe("search pure helpers", () => {
 
     it("leaves alphanumeric terms unchanged", () => {
       expect(escapeRegexTerm("generate")).toBe("generate");
+    });
+  });
+
+  describe("tokenizeQuery", () => {
+    it("splits on whitespace and drops empties", () => {
+      expect(tokenizeQuery("generate image")).toStrictEqual(["generate", "image"]);
+      expect(tokenizeQuery("  a   b   c  ")).toStrictEqual(["a", "b", "c"]);
+    });
+
+    it("returns empty array for whitespace-only input", () => {
+      expect(tokenizeQuery("")).toStrictEqual([]);
+      expect(tokenizeQuery("   ")).toStrictEqual([]);
     });
   });
 });

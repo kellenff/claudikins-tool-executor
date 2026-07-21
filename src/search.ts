@@ -120,6 +120,15 @@ export const escapeRegexTerm = (term: string): string =>
   term.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 /**
+ * Splits a free-text search query into individual terms on whitespace,
+ * discarding empty fragments. Whitespace-only input yields `[]`.
+ *
+ * @param {string} query - Free-text query string.
+ * @returns {string[]} Non-empty term fragments in original order.
+ */
+export const tokenizeQuery = (query: string): string[] => query.split(/\s+/).filter(Boolean);
+
+/**
  * Load a tool definition from a YAML file
  */
 export async function loadToolDefinition(filePath: string): Promise<ToolDefinition | null> {

@@ -28,6 +28,14 @@ interface SearchResponse {
  */
 declare const escapeRegexTerm: (term: string) => string;
 /**
+ * Splits a free-text search query into individual terms on whitespace,
+ * discarding empty fragments. Whitespace-only input yields `[]`.
+ *
+ * @param {string} query - Free-text query string.
+ * @returns {string[]} Non-empty term fragments in original order.
+ */
+declare const tokenizeQuery: (query: string) => string[];
+/**
  * Load a tool definition from a YAML file
  */
 declare function loadToolDefinition(filePath: string): Promise<ToolDefinition | null>;
@@ -52,4 +60,4 @@ declare function getToolByName(toolName: string): Promise<ToolDefinition | null>
  */
 declare function disconnectRegistrySerena(): Promise<void>;
 
-export { type SearchResponse, type SearchResult, disconnectRegistrySerena, escapeRegexTerm, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools };
+export { type SearchResponse, type SearchResult, disconnectRegistrySerena, escapeRegexTerm, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools, tokenizeQuery };
