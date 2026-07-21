@@ -48,6 +48,23 @@ declare const tokenizeQuery: (query: string) => string[];
  */
 declare const buildLookaheadPattern: (terms: string[]) => string;
 /**
+ * Extracts every registry-shaped YAML file path from a single text snippet.
+ *
+ * Matches substrings of the form `<category>/<server>/<file>.yaml` (or `.yml`),
+ * case-insensitive. Returns an empty array if no matches.
+ *
+ * @param {string} text - Free-text snippet (e.g. one item from a Serena response).
+ * @returns {string[]} Matched path substrings in source order, possibly empty.
+ */
+declare const extractRegistryPaths: (text: string) => string[];
+/**
+ * Deduplicates a list of file paths while preserving first-occurrence order.
+ *
+ * @param {string[]} paths - Possibly-duplicated file paths.
+ * @returns {string[]} The same paths with later duplicates removed.
+ */
+declare const dedupePaths: (paths: string[]) => string[];
+/**
  * Load a tool definition from a YAML file
  */
 declare function loadToolDefinition(filePath: string): Promise<ToolDefinition | null>;
@@ -72,4 +89,4 @@ declare function getToolByName(toolName: string): Promise<ToolDefinition | null>
  */
 declare function disconnectRegistrySerena(): Promise<void>;
 
-export { type SearchResponse, type SearchResult, buildLookaheadPattern, disconnectRegistrySerena, escapeRegexTerm, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools, tokenizeQuery };
+export { type SearchResponse, type SearchResult, buildLookaheadPattern, dedupePaths, disconnectRegistrySerena, escapeRegexTerm, extractRegistryPaths, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools, tokenizeQuery };

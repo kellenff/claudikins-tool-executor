@@ -150,6 +150,29 @@ export const buildLookaheadPattern = (terms: string[]): string => {
 };
 
 /**
+ * Extracts every registry-shaped YAML file path from a single text snippet.
+ *
+ * Matches substrings of the form `<category>/<server>/<file>.yaml` (or `.yml`),
+ * case-insensitive. Returns an empty array if no matches.
+ *
+ * @param {string} text - Free-text snippet (e.g. one item from a Serena response).
+ * @returns {string[]} Matched path substrings in source order, possibly empty.
+ */
+export const extractRegistryPaths = (text: string): string[] =>
+  text.match(/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/[^\s:]+\.ya?ml/gi) ?? [];
+
+/**
+ * Deduplicates a list of file paths while preserving first-occurrence order.
+ *
+ * @param {string[]} paths - Possibly-duplicated file paths.
+ * @returns {string[]} The same paths with later duplicates removed.
+ */
+export const dedupePaths = (paths: string[]): string[] => {
+  const seen = new Set<string>();
+  return paths.filter((path) => (seen.has(path) ? false : seen.add(path)));
+};
+
+/**
  * Load a tool definition from a YAML file
  */
 export async function loadToolDefinition(filePath: string): Promise<ToolDefinition | null> {
