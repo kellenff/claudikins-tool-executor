@@ -20,6 +20,14 @@ interface SearchResponse {
     fallbackReason?: string;
 }
 /**
+ * Escapes regex metacharacters in a single search term so the term can be
+ * embedded into a lookahead pattern without altering its literal meaning.
+ *
+ * @param {string} term - Raw search term, may contain any character.
+ * @returns {string} The term with regex metacharacters (`.*+?^${}()|[]\`) escaped.
+ */
+declare const escapeRegexTerm: (term: string) => string;
+/**
  * Load a tool definition from a YAML file
  */
 declare function loadToolDefinition(filePath: string): Promise<ToolDefinition | null>;
@@ -44,4 +52,4 @@ declare function getToolByName(toolName: string): Promise<ToolDefinition | null>
  */
 declare function disconnectRegistrySerena(): Promise<void>;
 
-export { type SearchResponse, type SearchResult, disconnectRegistrySerena, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools };
+export { type SearchResponse, type SearchResult, disconnectRegistrySerena, escapeRegexTerm, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools };

@@ -110,6 +110,16 @@ async function connectRegistrySerena(): Promise<Client | null> {
 }
 
 /**
+ * Escapes regex metacharacters in a single search term so the term can be
+ * embedded into a lookahead pattern without altering its literal meaning.
+ *
+ * @param {string} term - Raw search term, may contain any character.
+ * @returns {string} The term with regex metacharacters (`.*+?^${}()|[]\`) escaped.
+ */
+export const escapeRegexTerm = (term: string): string =>
+  term.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+
+/**
  * Load a tool definition from a YAML file
  */
 export async function loadToolDefinition(filePath: string): Promise<ToolDefinition | null> {

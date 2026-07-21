@@ -1,0 +1,2 @@
+import {f}from'./chunk-SIFRHUHA.js';async function s(e){let t=await f(e.name);if(!t)return {content:[{type:"text",text:JSON.stringify({error:`Tool not found: ${e.name}`,suggestion:"Use search_tools to find available tools first"})}],isError:true};let n={name:t.name,server:t.server,description:t.description,inputSchema:t.inputSchema,example:t.example,notes:t.notes};return {content:[{type:"text",text:JSON.stringify(n,null,2)}],structuredContent:n}}export{s as a};//# sourceMappingURL=chunk-ZTM7X5PU.js.map
+//# sourceMappingURL=chunk-ZTM7X5PU.js.map

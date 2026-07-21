@@ -1,2 +1,2 @@
-export{a as handleGetToolSchema}from'../chunk-OUD2A5IG.js';import'../chunk-OCUG45OL.js';import'../chunk-3UK5GFJN.js';//# sourceMappingURL=schema.js.map
+export{a as handleGetToolSchema}from'../chunk-ZTM7X5PU.js';import'../chunk-SIFRHUHA.js';import'../chunk-3UK5GFJN.js';//# sourceMappingURL=schema.js.map
 //# sourceMappingURL=schema.js.map

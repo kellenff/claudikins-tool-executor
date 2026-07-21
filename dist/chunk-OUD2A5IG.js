@@ -1,2 +1,0 @@
-import {e}from'./chunk-OCUG45OL.js';async function s(e$1){let t=await e(e$1.name);if(!t)return {content:[{type:"text",text:JSON.stringify({error:`Tool not found: ${e$1.name}`,suggestion:"Use search_tools to find available tools first"})}],isError:true};let n={name:t.name,server:t.server,description:t.description,inputSchema:t.inputSchema,example:t.example,notes:t.notes};return {content:[{type:"text",text:JSON.stringify(n,null,2)}],structuredContent:n}}export{s as a};//# sourceMappingURL=chunk-OUD2A5IG.js.map
-//# sourceMappingURL=chunk-OUD2A5IG.js.map

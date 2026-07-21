@@ -1,2 +1,2 @@
-export{f as disconnectRegistrySerena,c as getCategories,e as getToolByName,d as listToolsInCategory,a as loadToolDefinition,b as searchTools}from'./chunk-OCUG45OL.js';import'./chunk-3UK5GFJN.js';//# sourceMappingURL=search.js.map
+export{g as disconnectRegistrySerena,a as escapeRegexTerm,d as getCategories,f as getToolByName,e as listToolsInCategory,b as loadToolDefinition,c as searchTools}from'./chunk-SIFRHUHA.js';import'./chunk-3UK5GFJN.js';//# sourceMappingURL=search.js.map
 //# sourceMappingURL=search.js.map

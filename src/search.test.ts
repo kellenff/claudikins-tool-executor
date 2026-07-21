@@ -39,6 +39,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 import {
   disconnectRegistrySerena,
+  escapeRegexTerm,
   getCategories,
   getToolByName,
   listToolsInCategory,
@@ -472,5 +473,19 @@ describe("search module helpers", () => {
 
   it("disconnects the registry Serena client without error", async () => {
     await expect(disconnectRegistrySerena()).resolves.toBeUndefined();
+  });
+});
+
+describe("search pure helpers", () => {
+  describe("escapeRegexTerm", () => {
+    it("escapes regex metacharacters", () => {
+      expect(escapeRegexTerm("a+b")).toBe("a\\+b");
+      expect(escapeRegexTerm("foo.bar")).toBe("foo\\.bar");
+      expect(escapeRegexTerm("(x|y)")).toBe("\\(x\\|y\\)");
+    });
+
+    it("leaves alphanumeric terms unchanged", () => {
+      expect(escapeRegexTerm("generate")).toBe("generate");
+    });
   });
 });
