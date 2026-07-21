@@ -1,0 +1,2 @@
+import {j}from'./chunk-RIVMLVYW.js';async function s(e){let t=await j(e.name);if(!t)return {content:[{type:"text",text:JSON.stringify({error:`Tool not found: ${e.name}`,suggestion:"Use search_tools to find available tools first"})}],isError:true};let n={name:t.name,server:t.server,description:t.description,inputSchema:t.inputSchema,example:t.example,notes:t.notes};return {content:[{type:"text",text:JSON.stringify(n,null,2)}],structuredContent:n}}export{s as a};//# sourceMappingURL=chunk-WX3CM47F.js.map
+//# sourceMappingURL=chunk-WX3CM47F.js.map

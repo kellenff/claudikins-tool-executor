@@ -17,3 +17,12 @@ export const sleep = async (timeout: number, rejection: Error): Promise<never> =
       reject(rejection);
     }, timeout);
   });
+
+/**
+ * Type guard that filters out null and undefined values from an array.
+ *
+ * @param {T | null | undefined} value - The value to check.
+ * @returns {boolean} true if the value is neither null nor undefined.
+ */
+export const notNullish = <T>(value: T | null | undefined): value is T =>
+  value !== null && value !== undefined;

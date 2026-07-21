@@ -1,2 +1,0 @@
-import {j}from'./chunk-FMIVL74Y.js';async function s(e){let t=await j(e.name);if(!t)return {content:[{type:"text",text:JSON.stringify({error:`Tool not found: ${e.name}`,suggestion:"Use search_tools to find available tools first"})}],isError:true};let n={name:t.name,server:t.server,description:t.description,inputSchema:t.inputSchema,example:t.example,notes:t.notes};return {content:[{type:"text",text:JSON.stringify(n,null,2)}],structuredContent:n}}export{s as a};//# sourceMappingURL=chunk-22UO3TXU.js.map
-//# sourceMappingURL=chunk-22UO3TXU.js.map

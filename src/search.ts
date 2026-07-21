@@ -194,27 +194,41 @@ export async function loadToolDefinition(filePath: string): Promise<ToolDefiniti
 }
 
 /**
+ * Resolves a registry-relative path against REGISTRY_ROOT, loads its
+ * ToolDefinition, and packages it as a SearchResult. Returns null if the
+ * file cannot be loaded.
+ *
+ * @param {string} match - Path relative to the registry root.
+ * @param {string} contextText - Source text from which the match was discovered;
+ *   truncated to MATCH_CONTEXT_CHARS for the SearchResult.matchContext field.
+ * @returns {Promise<SearchResult | null>} The result, or null if the file failed to load.
+ */
+const loadToolResult = async (match: string, contextText: string): Promise<SearchResult | null> => {
+  const fullPath = resolve(REGISTRY_ROOT, match);
+  const tool = await loadToolDefinition(fullPath);
+  if (!tool) {
+    return null;
+  }
+  return {
+    tool,
+    score: DEFAULT_SEARCH_SCORE,
+    matchContext: contextText.slice(0, MATCH_CONTEXT_CHARS),
+  };
+};
+
+/**
  * Search tools using Registry Serena (dedicated instance for tool search)
  */
-async function searchWithSerena(query: string, limit: number): Promise<SearchResult[] | null> {
+const searchWithSerena = async (query: string, limit: number): Promise<SearchResult[] | null> => {
   try {
     const serena = await getRegistrySerena();
     if (!serena) {
       return null;
     }
 
-    // Convert query to flexible regex with lookaheads for ANY order matching
-    // "generate image banana" → "(?=.*generate)(?=.*image)(?=.*banana)"
-    // This matches files containing ALL terms regardless of order
-    const terms = query.split(/\s+/).map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")); // escape regex chars
+    const terms = tokenizeQuery(query).map(escapeRegexTerm);
+    const pattern = buildLookaheadPattern(terms);
 
-    // Use lookaheads so terms can appear in any order
-    // Single term: just use it directly. Multiple terms: use lookaheads
-    const pattern =
-      terms.length === 1 ? terms[0] : terms.map((term) => `(?=.*${term})`).join("") + ".*";
-
-    // Use Serena's search_for_pattern to find matches in registry
-    // relative_path is "." since registry project is already activated
     const result = (await serena.callTool({
       name: "search_for_pattern",
       arguments: {
@@ -229,52 +243,22 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
       return null;
     }
 
-    // Parse Serena results and load corresponding tool definitions
-    const results: SearchResult[] = [];
-    const seenFiles = new Set<string>();
+    const texts = result.content
+      .filter((item): item is { type: "text"; text: string } => item.type === "text")
+      .map((item) => item.text);
 
-    for (const item of result.content) {
-      if (item.type !== "text") {
-        continue;
-      }
+    const matches = dedupePaths(texts.flatMap(extractRegistryPaths));
 
-      // Extract file paths from Serena output (relative to registry root)
-      const text = item.text;
+    const results = await Promise.all(
+      matches.slice(0, limit).map((match) => loadToolResult(match, texts[0] ?? "")),
+    );
 
-      // Match paths like "ui/mermaid/generate_diagram.yaml", "knowledge/context7/query-docs.yaml", or
-      // "reasoning/sequentialThinking/sequentialthinking.yaml"
-      const fileMatches = text.match(/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/[^\s:]+\.ya?ml/gi);
-
-      if (fileMatches) {
-        for (const match of fileMatches) {
-          if (seenFiles.has(match)) {
-            continue;
-          }
-          seenFiles.add(match);
-
-          const fullPath = resolve(REGISTRY_ROOT, match);
-          const tool = await loadToolDefinition(fullPath);
-          if (tool) {
-            results.push({
-              tool,
-              score: DEFAULT_SEARCH_SCORE,
-              matchContext: text.slice(0, MATCH_CONTEXT_CHARS),
-            });
-          }
-
-          if (results.length >= limit) {
-            break;
-          }
-        }
-      }
-    }
-
-    return results;
+    return results.filter((entry) => entry !== null);
   } catch (error) {
     console.error("Serena search failed:", error);
     return null;
   }
-}
+};
 
 /**
  * Load all tools for BM25 indexing
