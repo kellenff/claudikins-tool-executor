@@ -129,6 +129,27 @@ export const escapeRegexTerm = (term: string): string =>
 export const tokenizeQuery = (query: string): string[] => query.split(/\s+/).filter(Boolean);
 
 /**
+ * Builds a regex substring pattern for Serena's `search_for_pattern`.
+ *
+ * For a single term, returns the term as-is (already escaped by the caller).
+ * For multiple terms, wraps each in a lookahead `(?=.*term)` so all terms must
+ * appear in any order, terminating with `.*`. For an empty array, returns `.*`
+ * (matches anything — preserves the current implicit behavior).
+ *
+ * @param {string[]} terms - Pre-escaped search terms.
+ * @returns {string} The substring pattern to pass to `search_for_pattern`.
+ */
+export const buildLookaheadPattern = (terms: string[]): string => {
+  if (terms.length === 0) {
+    return ".*";
+  }
+  if (terms.length === 1) {
+    return terms[0];
+  }
+  return terms.map((term) => `(?=.*${term})`).join("") + ".*";
+};
+
+/**
  * Load a tool definition from a YAML file
  */
 export async function loadToolDefinition(filePath: string): Promise<ToolDefinition | null> {

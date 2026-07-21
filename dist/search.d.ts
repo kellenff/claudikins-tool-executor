@@ -36,6 +36,18 @@ declare const escapeRegexTerm: (term: string) => string;
  */
 declare const tokenizeQuery: (query: string) => string[];
 /**
+ * Builds a regex substring pattern for Serena's `search_for_pattern`.
+ *
+ * For a single term, returns the term as-is (already escaped by the caller).
+ * For multiple terms, wraps each in a lookahead `(?=.*term)` so all terms must
+ * appear in any order, terminating with `.*`. For an empty array, returns `.*`
+ * (matches anything — preserves the current implicit behavior).
+ *
+ * @param {string[]} terms - Pre-escaped search terms.
+ * @returns {string} The substring pattern to pass to `search_for_pattern`.
+ */
+declare const buildLookaheadPattern: (terms: string[]) => string;
+/**
  * Load a tool definition from a YAML file
  */
 declare function loadToolDefinition(filePath: string): Promise<ToolDefinition | null>;
@@ -60,4 +72,4 @@ declare function getToolByName(toolName: string): Promise<ToolDefinition | null>
  */
 declare function disconnectRegistrySerena(): Promise<void>;
 
-export { type SearchResponse, type SearchResult, disconnectRegistrySerena, escapeRegexTerm, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools, tokenizeQuery };
+export { type SearchResponse, type SearchResult, buildLookaheadPattern, disconnectRegistrySerena, escapeRegexTerm, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools, tokenizeQuery };

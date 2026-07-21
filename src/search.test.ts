@@ -40,6 +40,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import {
   disconnectRegistrySerena,
   escapeRegexTerm,
+  buildLookaheadPattern,
   getCategories,
   getToolByName,
   listToolsInCategory,
@@ -499,6 +500,20 @@ describe("search pure helpers", () => {
     it("returns empty array for whitespace-only input", () => {
       expect(tokenizeQuery("")).toStrictEqual([]);
       expect(tokenizeQuery("   ")).toStrictEqual([]);
+    });
+  });
+
+  describe("buildLookaheadPattern", () => {
+    it("uses a single term directly", () => {
+      expect(buildLookaheadPattern(["generate"])).toBe("generate");
+    });
+
+    it("joins multiple terms with lookaheads", () => {
+      expect(buildLookaheadPattern(["generate", "diagram"])).toBe("(?=.*generate)(?=.*diagram).*");
+    });
+
+    it("returns .* for empty terms", () => {
+      expect(buildLookaheadPattern([])).toBe(".*");
     });
   });
 });
