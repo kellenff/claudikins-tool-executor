@@ -48,7 +48,7 @@ inputSchema:
         Requires moderate/full index mode. Results appear in the 'semantic_results' field (separate from 'results').
     limit:
       type: integer
-      description: 'Max results. Default: unlimited'
+      description: "Max results. Default: unlimited"
     offset:
       type: integer
       default: 0

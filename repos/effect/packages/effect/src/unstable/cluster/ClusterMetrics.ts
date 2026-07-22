@@ -1,51 +1,47 @@
 /**
- * Standard metric definitions used by the unstable cluster runtime. The gauges
- * track runner-local entities, singleton processes, registered runners,
- * healthy runners, and acquired shards.
+ * Standard metric definitions used by the unstable cluster runtime. The gauges track runner-local
+ * entities, singleton processes, registered runners, healthy runners, and acquired shards.
  *
- * This module only defines the metric handles. The runtime components that
- * manage entities, runners, singletons, and sharding update these gauges while
- * the cluster is running.
+ * This module only defines the metric handles. The runtime components that manage entities,
+ * runners, singletons, and sharding update these gauges while the cluster is running.
  *
  * @since 4.0.0
  */
-import * as Metric from "../../Metric.ts"
+import * as Metric from "../../Metric.ts";
 
 /**
- * Creates a gauge tracking the number of active entity instances for each entity type on
- * the current runner.
+ * Creates a gauge tracking the number of active entity instances for each entity type on the
+ * current runner.
  *
  * **When to use**
  *
- * Use when instrumenting runner-local entity counts and tagging them by entity
- * type for cluster dashboards.
+ * Use when instrumenting runner-local entity counts and tagging them by entity type for cluster
+ * dashboards.
  *
  * **Details**
  *
- * Bigint gauge named `effect_cluster_entities`, updated with the entity type as
- * a metric tag.
+ * Bigint gauge named `effect_cluster_entities`, updated with the entity type as a metric tag.
  *
  * **Gotchas**
  *
- * This gauge is runner-local and sampled by the entity manager loop. Aggregate
- * across runners and expect up to roughly one polling interval of lag.
+ * This gauge is runner-local and sampled by the entity manager loop. Aggregate across runners and
+ * expect up to roughly one polling interval of lag.
  *
+ * @since 4.0.0
+ * @category Metrics
  * @see {@link singletons} for singleton process counts on the current runner
  * @see {@link shards} for shard ownership on the current runner
- *
- * @category metrics
- * @since 4.0.0
  */
-export const entities = Metric.gauge("effect_cluster_entities", { bigint: true })
+export const entities = Metric.gauge("effect_cluster_entities", { bigint: true });
 
 /**
- * Creates a gauge tracking the number of singleton processes currently running on the
- * current runner.
+ * Creates a gauge tracking the number of singleton processes currently running on the current
+ * runner.
  *
- * @category metrics
  * @since 4.0.0
+ * @category Metrics
  */
-export const singletons = Metric.gauge("effect_cluster_singletons", { bigint: true })
+export const singletons = Metric.gauge("effect_cluster_singletons", { bigint: true });
 
 /**
  * Represents a gauge tracking the number of registered cluster runners.
@@ -58,12 +54,11 @@ export const singletons = Metric.gauge("effect_cluster_singletons", { bigint: tr
  *
  * The value can lag briefly during membership changes or failure detection.
  *
- * @see {@link runnersHealthy} for the healthy-runner subset
- *
- * @category metrics
  * @since 4.0.0
+ * @category Metrics
+ * @see {@link runnersHealthy} for the healthy-runner subset
  */
-export const runners = Metric.gauge("effect_cluster_runners", { bigint: true })
+export const runners = Metric.gauge("effect_cluster_runners", { bigint: true });
 
 /**
  * Represents a gauge tracking the number of cluster runners currently considered healthy.
@@ -78,35 +73,33 @@ export const runners = Metric.gauge("effect_cluster_runners", { bigint: true })
  *
  * **Gotchas**
  *
- * The value reflects the runtime's health-check view and can lag during
- * membership changes or failure detection.
+ * The value reflects the runtime's health-check view and can lag during membership changes or
+ * failure detection.
  *
- * @see {@link runners} for the total registered-runner gauge
- *
- * @category metrics
  * @since 4.0.0
+ * @category Metrics
+ * @see {@link runners} for the total registered-runner gauge
  */
-export const runnersHealthy = Metric.gauge("effect_cluster_runners_healthy", { bigint: true })
+export const runnersHealthy = Metric.gauge("effect_cluster_runners_healthy", { bigint: true });
 
 /**
  * Represents a gauge tracking the number of shards currently acquired by the current runner.
  *
  * **When to use**
  *
- * Use to observe shard ownership held by the current runner during startup,
- * rebalancing, or failover.
+ * Use to observe shard ownership held by the current runner during startup, rebalancing, or
+ * failover.
  *
  * **Details**
  *
- * Bigint gauge named `effect_cluster_shards`, updated from the sharding
- * acquisition loop using the current acquired shard count.
+ * Bigint gauge named `effect_cluster_shards`, updated from the sharding acquisition loop using the
+ * current acquired shard count.
  *
  * **Gotchas**
  *
- * This is runner-local, not a cluster-wide shard total. Aggregate per-runner
- * values carefully.
+ * This is runner-local, not a cluster-wide shard total. Aggregate per-runner values carefully.
  *
- * @category metrics
  * @since 4.0.0
+ * @category Metrics
  */
-export const shards = Metric.gauge("effect_cluster_shards", { bigint: true })
+export const shards = Metric.gauge("effect_cluster_shards", { bigint: true });

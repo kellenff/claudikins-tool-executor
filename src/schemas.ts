@@ -7,9 +7,7 @@ import {
   SEARCH_TOOLS_MAX_LIMIT,
 } from "./constants.js";
 
-/**
- * Input schema for search_tools
- */
+/** Input schema for search_tools */
 export const SearchToolsInputSchema = z
   .object({
     query: z
@@ -34,9 +32,7 @@ export const SearchToolsInputSchema = z
 
 export type SearchToolsInput = z.infer<typeof SearchToolsInputSchema>;
 
-/**
- * Input schema for get_tool_schema
- */
+/** Input schema for get_tool_schema */
 export const GetToolSchemaInputSchema = z
   .object({
     name: z
@@ -48,9 +44,7 @@ export const GetToolSchemaInputSchema = z
 
 export type GetToolSchemaInput = z.infer<typeof GetToolSchemaInputSchema>;
 
-/**
- * Input schema for execute_code
- */
+/** Input schema for execute_code */
 export const ExecuteCodeInputSchema = z
   .object({
     code: z

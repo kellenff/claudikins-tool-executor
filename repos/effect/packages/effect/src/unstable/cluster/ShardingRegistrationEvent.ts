@@ -1,76 +1,72 @@
 /**
- * The `ShardingRegistrationEvent` module models the live notifications emitted
- * by `Sharding` when the local runner registers an entity handler or singleton.
- * Consumers can use these events to wait for registrations during startup,
- * inspect which capabilities a runner made available, or assert registration
- * behavior in tests.
+ * The `ShardingRegistrationEvent` module models the live notifications emitted by `Sharding` when
+ * the local runner registers an entity handler or singleton. Consumers can use these events to wait
+ * for registrations during startup, inspect which capabilities a runner made available, or assert
+ * registration behavior in tests.
  *
  * @since 4.0.0
  */
-import * as Data from "../../Data.ts"
-import type { Entity } from "./Entity.ts"
-import type { SingletonAddress } from "./SingletonAddress.ts"
+import * as Data from "../../Data.ts";
+import type { Entity } from "./Entity.ts";
+import type { SingletonAddress } from "./SingletonAddress.ts";
 
 /**
  * Represents events that can occur when a runner registers entities or singletons.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export type ShardingRegistrationEvent =
-  | EntityRegistered
-  | SingletonRegistered
+export type ShardingRegistrationEvent = EntityRegistered | SingletonRegistered;
 
 /**
  * Represents an event that occurs when a new entity is registered with a runner.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface EntityRegistered {
-  readonly _tag: "EntityRegistered"
-  readonly entity: Entity<any, any>
+  readonly _tag: "EntityRegistered";
+  readonly entity: Entity<any, any>;
 }
 
 /**
- * Represents an event that occurs when a new singleton is registered with a
- * runner.
+ * Represents an event that occurs when a new singleton is registered with a runner.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface SingletonRegistered {
-  readonly _tag: "SingletonRegistered"
-  readonly address: SingletonAddress
+  readonly _tag: "SingletonRegistered";
+  readonly address: SingletonAddress;
 }
 
 /**
  * Constructors and matchers for sharding registration events.
  *
- * @category pattern matching
  * @since 4.0.0
+ * @category Pattern matching
  */
 export const {
   /**
-   * Pattern matches on a sharding registration event and dispatches to the
-   * matching variant handler.
+   * Pattern matches on a sharding registration event and dispatches to the matching variant
+   * handler.
    *
-   * @category pattern matching
    * @since 4.0.0
+   * @category Pattern matching
    */
   $match: match,
   /**
    * Creates an event for an entity registered by the local runner.
    *
-   * @category constructors
    * @since 4.0.0
+   * @category Constructors
    */
   EntityRegistered,
   /**
    * Creates an event for a singleton registered by the local runner.
    *
-   * @category constructors
    * @since 4.0.0
+   * @category Constructors
    */
-  SingletonRegistered
-} = Data.taggedEnum<ShardingRegistrationEvent>()
+  SingletonRegistered,
+} = Data.taggedEnum<ShardingRegistrationEvent>();

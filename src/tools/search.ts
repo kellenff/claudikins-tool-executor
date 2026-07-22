@@ -14,8 +14,8 @@ function oneLiner(text: string): string {
 }
 
 /**
- * Search for MCP tools across all wrapped servers
- * Returns MINIMAL results - just enough to identify and call the tool
+ * Search for MCP tools across all wrapped servers Returns MINIMAL results - just enough to identify
+ * and call the tool
  */
 export async function handleSearchTools(params: SearchToolsInput): Promise<{
   content: { type: "text"; text: string }[];

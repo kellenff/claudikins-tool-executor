@@ -1,11 +1,6 @@
-/**
- * Clean up old MCP results (older than maxAge ms)
- * Default: 1 hour (DEFAULT_MCP_RESULTS_MAX_AGE_MS)
- */
+/** Clean up old MCP results (older than maxAge ms) Default: 1 hour (DEFAULT_MCP_RESULTS_MAX_AGE_MS) */
 declare function cleanupMcpResults(maxAgeMs?: number): Promise<number>;
-/**
- * Workspace API - all file operations scoped to ./workspace/
- */
+/** Workspace API - all file operations scoped to ./workspace/ */
 declare const workspace: {
     read(path: string): Promise<string>;
     write(path: string, data: string): Promise<void>;

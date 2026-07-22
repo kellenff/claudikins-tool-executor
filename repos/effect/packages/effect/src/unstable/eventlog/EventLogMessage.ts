@@ -1,89 +1,97 @@
 /**
  * Defines protocol messages for event-log remote clients and servers.
  *
- * This module is the shared boundary between `EventLogRemote` clients and
- * event-log servers. It defines store ids, protocol errors, the
- * hello/authenticate session handshake, remote calls for writes and changes,
- * and message formats for encrypted or plaintext journal entries.
+ * This module is the shared boundary between `EventLogRemote` clients and event-log servers. It
+ * defines store ids, protocol errors, the hello/authenticate session handshake, remote calls for
+ * writes and changes, and message formats for encrypted or plaintext journal entries.
  *
  * @since 4.0.0
  */
-import type { NonEmptyArray, NonEmptyReadonlyArray } from "../../Array.ts"
-import type { Brand } from "../../Brand.ts"
-import * as Schema from "../../Schema.ts"
-import * as Msgpack from "../encoding/Msgpack.ts"
-import * as Rpc from "../rpc/Rpc.ts"
-import * as RpcGroup from "../rpc/RpcGroup.ts"
-import * as RpcMiddleware from "../rpc/RpcMiddleware.ts"
-import * as Transferable from "../workers/Transferable.ts"
-import { Entry, RemoteEntry, RemoteId } from "./EventJournal.ts"
-import type { Identity } from "./EventLog.ts"
-import { EncryptedEntry, EncryptedRemoteEntry } from "./EventLogEncryption.ts"
+import type { NonEmptyArray, NonEmptyReadonlyArray } from "../../Array.ts";
+import type { Brand } from "../../Brand.ts";
+import * as Schema from "../../Schema.ts";
+import * as Msgpack from "../encoding/Msgpack.ts";
+import * as Rpc from "../rpc/Rpc.ts";
+import * as RpcGroup from "../rpc/RpcGroup.ts";
+import * as RpcMiddleware from "../rpc/RpcMiddleware.ts";
+import * as Transferable from "../workers/Transferable.ts";
+import { Entry, RemoteEntry, RemoteId } from "./EventJournal.ts";
+import type { Identity } from "./EventLog.ts";
+import { EncryptedEntry, EncryptedRemoteEntry } from "./EventLogEncryption.ts";
 
 /**
  * Type-level identifier used to brand event-log store ids.
  *
- * @category type IDs
  * @since 4.0.0
+ * @category Type IDs
  */
-export type StoreIdTypeId = "effect/eventlog/EventLog/StoreId"
+export type StoreIdTypeId = "effect/eventlog/EventLog/StoreId";
 
 /**
  * Runtime brand identifier for event-log store ids.
  *
- * @category type IDs
  * @since 4.0.0
+ * @category Type IDs
  */
-export const StoreIdTypeId: StoreIdTypeId = "effect/eventlog/EventLog/StoreId"
+export const StoreIdTypeId: StoreIdTypeId = "effect/eventlog/EventLog/StoreId";
 
 /**
  * Branded string identifying a logical event-log store.
  *
- * @category StoreId
  * @since 4.0.0
+ * @category StoreId
  */
-export type StoreId = string & Brand<StoreIdTypeId>
+export type StoreId = string & Brand<StoreIdTypeId>;
 
 /**
  * Schema for branded event-log store ids.
  *
- * @category StoreId
  * @since 4.0.0
+ * @category StoreId
  */
-export const StoreId = Schema.String.pipe(Schema.brand(StoreIdTypeId))
+export const StoreId = Schema.String.pipe(Schema.brand(StoreIdTypeId));
 
 /**
  * Error returned by event-log remote RPCs.
  *
  * **Details**
  *
- * It records the request tag, optional identity and store information, a protocol
- * error code, and a human-readable message.
+ * It records the request tag, optional identity and store information, a protocol error code, and a
+ * human-readable message.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
 export class EventLogProtocolError extends Schema.TaggedErrorClass<EventLogProtocolError>(
-  "effect/eventlog/EventLogRemote/ProtocolError"
+  "effect/eventlog/EventLogRemote/ProtocolError",
 )("EventLogProtocolError", {
   requestTag: Schema.String,
   publicKey: Schema.optional(Schema.String),
   storeId: Schema.optional(StoreId),
-  code: Schema.Literals(["Unauthorized", "Forbidden", "NotFound", "InvalidRequest", "InternalServerError"]),
-  message: Schema.String
+  code: Schema.Literals([
+    "Unauthorized",
+    "Forbidden",
+    "NotFound",
+    "InvalidRequest",
+    "InternalServerError",
+  ]),
+  message: Schema.String,
 }) {}
 
 /**
- * RPC middleware that authenticates event-log requests and provides the client
- * `Identity` to authenticated handlers.
+ * RPC middleware that authenticates event-log requests and provides the client `Identity` to
+ * authenticated handlers.
  *
- * @category middleware
  * @since 4.0.0
+ * @category Middleware
  */
-export class EventLogAuthentication extends RpcMiddleware.Service<EventLogAuthentication, {
-  provides: Identity
-}>()("effect/eventlog/EventLogMessage/EventLogAuthentication", {
-  error: EventLogProtocolError
+export class EventLogAuthentication extends RpcMiddleware.Service<
+  EventLogAuthentication,
+  {
+    provides: Identity;
+  }
+>()("effect/eventlog/EventLogMessage/EventLogAuthentication", {
+  error: EventLogProtocolError,
 }) {}
 
 /**
@@ -91,91 +99,96 @@ export class EventLogAuthentication extends RpcMiddleware.Service<EventLogAuthen
  *
  * **Details**
  *
- * It contains the server remote id and a challenge that must be signed by the
- * client.
+ * It contains the server remote id and a challenge that must be signed by the client.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
-export class HelloResponse extends Schema.Class<HelloResponse>("effect/eventlog/EventLogRemote/HelloResponse")({
+export class HelloResponse extends Schema.Class<HelloResponse>(
+  "effect/eventlog/EventLogRemote/HelloResponse",
+)({
   remoteId: RemoteId,
-  challenge: Transferable.Uint8Array
+  challenge: Transferable.Uint8Array,
 }) {}
 
 /**
  * RPC used to start an event-log remote session and receive a `HelloResponse`.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
 export class HelloRpc extends Rpc.make("EventLog.Hello", {
-  success: HelloResponse
+  success: HelloResponse,
 }) {}
 
 /**
- * Schema for an authentication request containing the client public key,
- * Ed25519 signing public key, signature over the session challenge payload, and
- * algorithm name.
+ * Schema for an authentication request containing the client public key, Ed25519 signing public
+ * key, signature over the session challenge payload, and algorithm name.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
-export class Authenticate extends Schema.Class<Authenticate>("effect/eventlog/EventLogRemote/Authenticate")({
+export class Authenticate extends Schema.Class<Authenticate>(
+  "effect/eventlog/EventLogRemote/Authenticate",
+)({
   publicKey: Schema.String,
   signingPublicKey: Transferable.Uint8Array,
   signature: Transferable.Uint8Array,
-  algorithm: Schema.Literal("Ed25519")
+  algorithm: Schema.Literal("Ed25519"),
 }) {}
 
 /**
  * RPC used to authenticate a remote event-log session after `HelloRpc`.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
 export class AuthenticateRpc extends Rpc.make("EventLog.Authenticate", {
   payload: Authenticate,
-  error: EventLogProtocolError
+  error: EventLogProtocolError,
 }) {}
 
 /**
  * Represents an entire encoded event-log payload in one transport frame.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
-export class SingleMessage
-  extends Schema.TaggedClass<SingleMessage>("effect/eventlog/EventLogRemote/SingleMessage")("Single", {
-    data: Transferable.Uint8Array
-  })
-{}
+export class SingleMessage extends Schema.TaggedClass<SingleMessage>(
+  "effect/eventlog/EventLogRemote/SingleMessage",
+)("Single", {
+  data: Transferable.Uint8Array,
+}) {}
 
 /**
  * Represents one part of a large encoded event-log payload.
  *
  * **When to use**
  *
- * Use to divide data into chunks and `join` to reassemble all chunks with
- * the same id once every part has arrived.
+ * Use to divide data into chunks and `join` to reassemble all chunks with the same id once every
+ * part has arrived.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
-export class ChunkedMessage
-  extends Schema.TaggedClass<ChunkedMessage>("effect/eventlog/EventLogRemote/ChunkedMessage")("Chunked", {
-    id: Schema.Number,
-    part: Schema.Tuple([Schema.Number, Schema.Number]),
-    data: Transferable.Uint8Array
-  })
-{
-  static chunkSize = 512_000
+export class ChunkedMessage extends Schema.TaggedClass<ChunkedMessage>(
+  "effect/eventlog/EventLogRemote/ChunkedMessage",
+)("Chunked", {
+  id: Schema.Number,
+  part: Schema.Tuple([Schema.Number, Schema.Number]),
+  data: Transferable.Uint8Array,
+}) {
+  static chunkSize = 512_000;
 
   static initialJoinState() {
-    return new Map<number, {
-      readonly parts: Array<Uint8Array>
-      count: number
-      bytes: number
-    }>()
+    return new Map<
+      number,
+      {
+        readonly parts: Array<Uint8Array>;
+        count: number;
+        bytes: number;
+      }
+    >();
   }
 
   /**
@@ -184,18 +197,18 @@ export class ChunkedMessage
    * @since 4.0.0
    */
   static split(id: number, data: Uint8Array): NonEmptyReadonlyArray<ChunkedMessage> {
-    const parts = Math.ceil(data.byteLength / ChunkedMessage.chunkSize)
-    const result: NonEmptyArray<ChunkedMessage> = new Array(parts) as any
+    const parts = Math.ceil(data.byteLength / ChunkedMessage.chunkSize);
+    const result: NonEmptyArray<ChunkedMessage> = new Array(parts) as any;
     for (let i = 0; i < parts; i++) {
-      const start = i * ChunkedMessage.chunkSize
-      const end = Math.min((i + 1) * ChunkedMessage.chunkSize, data.byteLength)
+      const start = i * ChunkedMessage.chunkSize;
+      const end = Math.min((i + 1) * ChunkedMessage.chunkSize, data.byteLength);
       result[i] = new ChunkedMessage({
         id,
         part: [i, parts],
-        data: data.subarray(start, end) as any
-      })
+        data: data.subarray(start, end) as any,
+      });
     }
-    return result
+    return result;
   }
 
   /**
@@ -204,49 +217,52 @@ export class ChunkedMessage
    * @since 4.0.0
    */
   static join(
-    map: Map<number, {
-      readonly parts: Array<Uint8Array>
-      count: number
-      bytes: number
-    }>,
-    part: ChunkedMessage
+    map: Map<
+      number,
+      {
+        readonly parts: Array<Uint8Array>;
+        count: number;
+        bytes: number;
+      }
+    >,
+    part: ChunkedMessage,
   ): Uint8Array<ArrayBuffer> | undefined {
-    const [index, total] = part.part
-    let entry = map.get(part.id)
+    const [index, total] = part.part;
+    let entry = map.get(part.id);
     if (!entry) {
       entry = {
         parts: new Array(total),
         count: 0,
-        bytes: 0
-      }
-      map.set(part.id, entry)
+        bytes: 0,
+      };
+      map.set(part.id, entry);
     }
-    entry.parts[index] = part.data
-    entry.count++
-    entry.bytes += part.data.byteLength
+    entry.parts[index] = part.data;
+    entry.count++;
+    entry.bytes += part.data.byteLength;
     if (entry.count !== total) {
-      return
+      return;
     }
-    const data = new Uint8Array(entry.bytes)
-    let offset = 0
+    const data = new Uint8Array(entry.bytes);
+    let offset = 0;
     for (const part of entry.parts) {
-      data.set(part, offset)
-      offset += part.byteLength
+      data.set(part, offset);
+      offset += part.byteLength;
     }
-    map.delete(part.id)
-    return data
+    map.delete(part.id);
+    return data;
   }
 }
 
 /**
  * RPC used to send one chunk of a large encoded write payload.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
 export class WriteChunkedRpc extends Rpc.make("EventLog.WriteChunked", {
   payload: ChunkedMessage,
-  error: EventLogProtocolError
+  error: EventLogProtocolError,
 }).middleware(EventLogAuthentication) {}
 
 /**
@@ -254,101 +270,102 @@ export class WriteChunkedRpc extends Rpc.make("EventLog.WriteChunked", {
  *
  * **Details**
  *
- * It includes the client public key, target store id, AES-GCM initialization
- * vector, and encrypted entries.
+ * It includes the client public key, target store id, AES-GCM initialization vector, and encrypted
+ * entries.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
-export class WriteEntries extends Schema.Class<WriteEntries>("effect/eventlog/EventLogRemote/WriteEntries")({
+export class WriteEntries extends Schema.Class<WriteEntries>(
+  "effect/eventlog/EventLogRemote/WriteEntries",
+)({
   publicKey: Schema.String,
   storeId: StoreId,
   iv: Transferable.Uint8Array,
-  encryptedEntries: Schema.Array(EncryptedEntry)
+  encryptedEntries: Schema.Array(EncryptedEntry),
 }) {
-  static FromMsgpack = Msgpack.schema(WriteEntries)
-  static encode = Schema.encodeEffect(this.FromMsgpack)
-  static decode = Schema.decodeEffect(this.FromMsgpack)
+  static FromMsgpack = Msgpack.schema(WriteEntries);
+  static encode = Schema.encodeEffect(this.FromMsgpack);
+  static decode = Schema.decodeEffect(this.FromMsgpack);
   get encoded() {
-    return WriteEntries.encode(this)
+    return WriteEntries.encode(this);
   }
 }
 
 /**
  * Schema for plaintext event-log write payloads sent to a remote store.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
-export class WriteEntriesUnencrypted
-  extends Schema.Class<WriteEntriesUnencrypted>("effect/eventlog/EventLogRemote/WriteEntriesUnencrypted")({
-    publicKey: Schema.String,
-    storeId: StoreId,
-    entries: Schema.Array(Entry)
-  })
-{
-  static FromMsgpack = Msgpack.schema(WriteEntriesUnencrypted)
-  static encode = Schema.encodeEffect(this.FromMsgpack)
-  static decode = Schema.decodeEffect(this.FromMsgpack)
+export class WriteEntriesUnencrypted extends Schema.Class<WriteEntriesUnencrypted>(
+  "effect/eventlog/EventLogRemote/WriteEntriesUnencrypted",
+)({
+  publicKey: Schema.String,
+  storeId: StoreId,
+  entries: Schema.Array(Entry),
+}) {
+  static FromMsgpack = Msgpack.schema(WriteEntriesUnencrypted);
+  static encode = Schema.encodeEffect(this.FromMsgpack);
+  static decode = Schema.decodeEffect(this.FromMsgpack);
   get encoded() {
-    return WriteEntriesUnencrypted.encode(this)
+    return WriteEntriesUnencrypted.encode(this);
   }
 }
 
 /**
  * RPC used to send an encoded write payload that fits in one message.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
 export class WriteSingleRpc extends Rpc.make("EventLog.WriteSingle", {
   payload: {
-    data: Transferable.Uint8Array
+    data: Transferable.Uint8Array,
   },
-  error: EventLogProtocolError
+  error: EventLogProtocolError,
 }).middleware(EventLogAuthentication) {}
 
 /**
- * RPC used to stream remote event-log changes for a public key and store id
- * starting at a sequence number.
+ * RPC used to stream remote event-log changes for a public key and store id starting at a sequence
+ * number.
  *
  * **Details**
  *
- * Responses are encoded as either `SingleMessage` values or `ChunkedMessage`
- * parts.
+ * Responses are encoded as either `SingleMessage` values or `ChunkedMessage` parts.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
 export class ChangesRpc extends Rpc.make("EventLog.Changes", {
   payload: {
     publicKey: Schema.String,
     storeId: StoreId,
-    startSequence: Schema.Number
+    startSequence: Schema.Number,
   },
   success: Schema.Union([SingleMessage, ChunkedMessage]),
   error: EventLogProtocolError,
-  stream: true
+  stream: true,
 }).middleware(EventLogAuthentication) {
-  static EncryptedFromMsgpack = Msgpack.schema(Schema.NonEmptyArray(EncryptedRemoteEntry))
-  static UnencryptedFromMsgpack = Msgpack.schema(Schema.NonEmptyArray(RemoteEntry))
-  static encodeEncrypted = Schema.encodeEffect(ChangesRpc.EncryptedFromMsgpack)
-  static decodeEncrypted = Schema.decodeEffect(ChangesRpc.EncryptedFromMsgpack)
-  static encodeUnencrypted = Schema.encodeEffect(ChangesRpc.UnencryptedFromMsgpack)
-  static decodeUnencrypted = Schema.decodeEffect(ChangesRpc.UnencryptedFromMsgpack)
+  static EncryptedFromMsgpack = Msgpack.schema(Schema.NonEmptyArray(EncryptedRemoteEntry));
+  static UnencryptedFromMsgpack = Msgpack.schema(Schema.NonEmptyArray(RemoteEntry));
+  static encodeEncrypted = Schema.encodeEffect(ChangesRpc.EncryptedFromMsgpack);
+  static decodeEncrypted = Schema.decodeEffect(ChangesRpc.EncryptedFromMsgpack);
+  static encodeUnencrypted = Schema.encodeEffect(ChangesRpc.UnencryptedFromMsgpack);
+  static decodeUnencrypted = Schema.decodeEffect(ChangesRpc.UnencryptedFromMsgpack);
 }
 
 /**
- * RPC group containing the event-log remote handshake, authentication, write, and
- * changes endpoints.
+ * RPC group containing the event-log remote handshake, authentication, write, and changes
+ * endpoints.
  *
- * @category protocols
  * @since 4.0.0
+ * @category Protocols
  */
 export class EventLogRemoteRpcs extends RpcGroup.make(
   HelloRpc,
   AuthenticateRpc,
   WriteChunkedRpc,
   WriteSingleRpc,
-  ChangesRpc
+  ChangesRpc,
 ) {}

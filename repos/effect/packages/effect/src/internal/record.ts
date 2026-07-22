@@ -1,6 +1,4 @@
-/**
- * @since 4.0.0
- */
+/** @since 4.0.0 */
 
 /** @internal */
 export function set<K extends PropertyKey, A>(self: Record<K, A>, key: K, value: A): Record<K, A> {
@@ -9,10 +7,10 @@ export function set<K extends PropertyKey, A>(self: Record<K, A>, key: K, value:
       value,
       writable: true,
       enumerable: true,
-      configurable: true
-    })
+      configurable: true,
+    });
   } else {
-    self[key] = value
+    self[key] = value;
   }
-  return self
+  return self;
 }

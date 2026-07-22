@@ -13,7 +13,7 @@ inputSchema:
       description: Source code snippet to parse
     language:
       type: string
-      description: 'Programming language: ''Java'' or ''Kotlin'''
+      description: "Programming language: 'Java' or 'Kotlin'"
     projectPath:
       type: string
       description: |2-

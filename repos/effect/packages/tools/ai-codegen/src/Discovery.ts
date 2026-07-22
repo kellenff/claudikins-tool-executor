@@ -3,16 +3,16 @@
  *
  * @since 4.0.0
  */
-import * as Context from "effect/Context"
-import * as Data from "effect/Data"
-import * as Effect from "effect/Effect"
-import * as FileSystem from "effect/FileSystem"
-import * as Layer from "effect/Layer"
-import * as Path from "effect/Path"
-import * as Schema from "effect/Schema"
-import * as Yaml from "yaml"
-import { CodegenConfig, type SpecSource, SpecSource as SpecSourceUtils } from "./Config.ts"
-import * as Glob from "./Glob.ts"
+import * as Context from "effect/Context";
+import * as Data from "effect/Data";
+import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
+import * as Layer from "effect/Layer";
+import * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
+import * as Yaml from "yaml";
+import { CodegenConfig, type SpecSource, SpecSource as SpecSourceUtils } from "./Config.ts";
+import * as Glob from "./Glob.ts";
 
 /**
  * A discovered AI provider with resolved paths.
@@ -20,53 +20,49 @@ import * as Glob from "./Glob.ts"
  * **Example** (Inspecting a discovered provider)
  *
  * ```ts
- * import type * as Discovery from "@effect/ai-codegen/Discovery"
+ * import type * as Discovery from "@effect/ai-codegen/Discovery";
  *
- * declare const provider: Discovery.DiscoveredProvider
+ * declare const provider: Discovery.DiscoveredProvider;
  *
- * console.log(provider.name) // "openai"
- * console.log(provider.specSource._tag) // "Url" | "File"
+ * console.log(provider.name); // "openai"
+ * console.log(provider.specSource._tag); // "Url" | "File"
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface DiscoveredProvider {
-  readonly name: string
-  readonly packagePath: string
-  readonly config: CodegenConfig
-  readonly specSource: SpecSource
-  readonly outputPath: string
+  readonly name: string;
+  readonly packagePath: string;
+  readonly config: CodegenConfig;
+  readonly specSource: SpecSource;
+  readonly outputPath: string;
 }
 
 /**
  * Service for discovering AI provider configurations.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface ProviderDiscovery {
   readonly discover: () => Effect.Effect<
     Array<DiscoveredProvider>,
     DiscoveryError | Glob.GlobError
-  >
+  >;
   readonly discoverOne: (
-    name: string
-  ) => Effect.Effect<
-    DiscoveredProvider,
-    DiscoveryError | ProviderNotFoundError | Glob.GlobError
-  >
+    name: string,
+  ) => Effect.Effect<DiscoveredProvider, DiscoveryError | ProviderNotFoundError | Glob.GlobError>;
 }
 
 /**
  * Service tag for discovering AI provider codegen configurations.
  *
- * @category services
  * @since 4.0.0
+ * @category Services
  */
-export const ProviderDiscovery: Context.Service<ProviderDiscovery, ProviderDiscovery> = Context.Service(
-  "@effect/ai-codegen/ProviderDiscovery"
-)
+export const ProviderDiscovery: Context.Service<ProviderDiscovery, ProviderDiscovery> =
+  Context.Service("@effect/ai-codegen/ProviderDiscovery");
 
 /**
  * Error during provider discovery.
@@ -74,20 +70,20 @@ export const ProviderDiscovery: Context.Service<ProviderDiscovery, ProviderDisco
  * **Example** (Creating a discovery error)
  *
  * ```ts
- * import * as Discovery from "@effect/ai-codegen/Discovery"
+ * import * as Discovery from "@effect/ai-codegen/Discovery";
  *
  * const error = new Discovery.DiscoveryError({
  *   message: "Failed to parse config",
- *   cause: new Error("Invalid JSON")
- * })
+ *   cause: new Error("Invalid JSON"),
+ * });
  * ```
  *
- * @category errors
  * @since 4.0.0
+ * @category Errors
  */
 export class DiscoveryError extends Data.TaggedError("DiscoveryError")<{
-  readonly message: string
-  readonly cause?: unknown
+  readonly message: string;
+  readonly cause?: unknown;
 }> {}
 
 /**
@@ -96,102 +92,104 @@ export class DiscoveryError extends Data.TaggedError("DiscoveryError")<{
  * **Example** (Creating a provider not found error)
  *
  * ```ts
- * import * as Discovery from "@effect/ai-codegen/Discovery"
+ * import * as Discovery from "@effect/ai-codegen/Discovery";
  *
  * const error = new Discovery.ProviderNotFoundError({
  *   provider: "openai",
- *   available: ["anthropic", "google"]
- * })
+ *   available: ["anthropic", "google"],
+ * });
  * ```
  *
- * @category errors
  * @since 4.0.0
+ * @category Errors
  */
 export class ProviderNotFoundError extends Data.TaggedError("ProviderNotFoundError")<{
-  readonly provider: string
-  readonly available: ReadonlyArray<string>
+  readonly provider: string;
+  readonly available: ReadonlyArray<string>;
 }> {}
 
 /**
  * Layer providing the ProviderDiscovery service.
  *
- * @category layers
  * @since 4.0.0
+ * @category Layers
  */
 export const layer: Layer.Layer<
   ProviderDiscovery,
   never,
   Glob.Glob | FileSystem.FileSystem | Path.Path
-> = Effect.gen(function*() {
-  const glob = yield* Glob.Glob
-  const fs = yield* FileSystem.FileSystem
-  const pathService = yield* Path.Path
+> = Effect.gen(function* () {
+  const glob = yield* Glob.Glob;
+  const fs = yield* FileSystem.FileSystem;
+  const pathService = yield* Path.Path;
 
-  const parseConfig = Effect.fn("parseConfig")(function*(configPath: string) {
-    const packagePath = pathService.dirname(configPath)
-    const name = pathService.basename(packagePath)
-    const isYaml = configPath.endsWith(".yaml") || configPath.endsWith(".yml")
+  const parseConfig = Effect.fn("parseConfig")(function* (configPath: string) {
+    const packagePath = pathService.dirname(configPath);
+    const name = pathService.basename(packagePath);
+    const isYaml = configPath.endsWith(".yaml") || configPath.endsWith(".yml");
 
     const content = yield* fs.readFileString(configPath).pipe(
-      Effect.mapError((cause) =>
-        new DiscoveryError({
-          message: `Failed to read config at ${configPath}`,
-          cause
-        })
-      )
-    )
+      Effect.mapError(
+        (cause) =>
+          new DiscoveryError({
+            message: `Failed to read config at ${configPath}`,
+            cause,
+          }),
+      ),
+    );
 
     const parsed = yield* Effect.try({
-      try: () => isYaml ? Yaml.parse(content) : JSON.parse(content),
+      try: () => (isYaml ? Yaml.parse(content) : JSON.parse(content)),
       catch: (cause) =>
         new DiscoveryError({
           message: `Failed to parse ${isYaml ? "YAML" : "JSON"} at ${configPath}`,
-          cause
-        })
-    })
+          cause,
+        }),
+    });
 
     const config = yield* Schema.decodeUnknownEffect(CodegenConfig)(parsed).pipe(
-      Effect.mapError((cause) =>
-        new DiscoveryError({
-          message: `Invalid config schema at ${configPath}`,
-          cause
-        })
-      )
-    )
+      Effect.mapError(
+        (cause) =>
+          new DiscoveryError({
+            message: `Invalid config schema at ${configPath}`,
+            cause,
+          }),
+      ),
+    );
 
     const provider: DiscoveredProvider = {
       name,
       packagePath,
       config,
       specSource: SpecSourceUtils.fromConfig(config.spec, packagePath, pathService),
-      outputPath: pathService.join(packagePath, config.output)
-    }
+      outputPath: pathService.join(packagePath, config.output),
+    };
 
-    return provider
-  })
+    return provider;
+  });
 
-  const discover = Effect.fn("discover")(function*() {
+  const discover = Effect.fn("discover")(function* () {
     const configFiles = yield* glob.glob("packages/ai/*/codegen.{json,yaml,yml}", {
       cwd: process.cwd(),
-      absolute: true
-    })
+      absolute: true,
+    });
 
-    return yield* Effect.forEach(configFiles, parseConfig)
-  })
+    return yield* Effect.forEach(configFiles, parseConfig);
+  });
 
-  const discoverOne = Effect.fn("discoverOne")(function*(providerName: string) {
-    const providers = yield* discover()
-    const found = providers.find((p) => p.name === providerName)
+  const discoverOne = Effect.fn("discoverOne")(function* (providerName: string) {
+    const providers = yield* discover();
+    const found = providers.find((p) => p.name === providerName);
 
     if (!found) {
       return yield* new ProviderNotFoundError({
         provider: providerName,
-        available: providers.map((p) => p.name)
-      })
+        available: providers.map((p) => p.name),
+      });
     }
 
-    return found
-  })
+    return found;
+  });
 
-  return { discover, discoverOne }
-}).pipe(Layer.effect(ProviderDiscovery))
+  return { discover, discoverOne };
+}).pipe(Layer.effect(ProviderDiscovery));

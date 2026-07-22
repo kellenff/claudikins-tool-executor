@@ -1,81 +1,76 @@
 /**
  * Defines prompts sent to AI language models.
  *
- * A prompt is an ordered list of messages. Messages can use roles such as
- * system, user, assistant, and tool, and their content can be split into typed
- * parts such as text, files, reasoning, tool calls, tool results, and approval
- * messages. This module helps build prompts, combine them, and convert raw
- * input or response parts into the shared prompt shape.
+ * A prompt is an ordered list of messages. Messages can use roles such as system, user, assistant,
+ * and tool, and their content can be split into typed parts such as text, files, reasoning, tool
+ * calls, tool results, and approval messages. This module helps build prompts, combine them, and
+ * convert raw input or response parts into the shared prompt shape.
  *
  * @since 4.0.0
  */
-import * as Arr from "../../Array.ts"
-import * as Effect from "../../Effect.ts"
-import { dual } from "../../Function.ts"
-import * as Option from "../../Option.ts"
-import { type Pipeable, pipeArguments } from "../../Pipeable.ts"
-import * as Predicate from "../../Predicate.ts"
-import * as Schema from "../../Schema.ts"
-import * as SchemaIssue from "../../SchemaIssue.ts"
-import * as SchemaParser from "../../SchemaParser.ts"
-import * as SchemaTransformation from "../../SchemaTransformation.ts"
-import type * as Response from "./Response.ts"
+import * as Arr from "../../Array.ts";
+import * as Effect from "../../Effect.ts";
+import { dual } from "../../Function.ts";
+import * as Option from "../../Option.ts";
+import { type Pipeable, pipeArguments } from "../../Pipeable.ts";
+import * as Predicate from "../../Predicate.ts";
+import * as Schema from "../../Schema.ts";
+import * as SchemaIssue from "../../SchemaIssue.ts";
+import * as SchemaParser from "../../SchemaParser.ts";
+import * as SchemaTransformation from "../../SchemaTransformation.ts";
+import type * as Response from "./Response.ts";
 
 // =============================================================================
 // Options
 // =============================================================================
 
 /**
- * Schema for provider-specific options that can be attached to content parts
- * and messages.
+ * Schema for provider-specific options that can be attached to content parts and messages.
  *
  * **Details**
  *
- * Provider-specific options are keyed by provider-specific names, and each
- * value is JSON or `null`.
+ * Provider-specific options are keyed by provider-specific names, and each value is JSON or `null`.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export const ProviderOptions: Schema.$Record<
   Schema.String,
   Schema.NullOr<Schema.Codec<Schema.Json>>
-> = Schema.Record(Schema.String, Schema.NullOr(Schema.Json))
+> = Schema.Record(Schema.String, Schema.NullOr(Schema.Json));
 
 /**
- * Type of provider-specific options that can be attached to prompt messages
- * and content parts.
+ * Type of provider-specific options that can be attached to prompt messages and content parts.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
-export type ProviderOptions = typeof ProviderOptions.Type
+export type ProviderOptions = typeof ProviderOptions.Type;
 
 // =============================================================================
 // Base Part
 // =============================================================================
 
-const PartTypeId = "~effect/ai/Prompt/Part" as const
+const PartTypeId = "~effect/ai/Prompt/Part" as const;
 
 /**
  * Type guard to check if a value is a Part.
  *
- * @category guards
  * @since 4.0.0
+ * @category Guards
  */
-export const isPart = (u: unknown): u is Part => Predicate.hasProperty(u, PartTypeId)
+export const isPart = (u: unknown): u is Part => Predicate.hasProperty(u, PartTypeId);
 
 /**
  * Union type representing all possible content parts within messages.
  *
  * **Details**
  *
- * Parts are the building blocks of message content, supporting text, files,
- * reasoning, tool calls, tool results, tool approval responses, and tool
- * approval requests.
+ * Parts are the building blocks of message content, supporting text, files, reasoning, tool calls,
+ * tool results, tool approval responses, and tool approval requests.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export type Part =
   | TextPart
@@ -84,13 +79,13 @@ export type Part =
   | ToolCallPart
   | ToolResultPart
   | ToolApprovalResponsePart
-  | ToolApprovalRequestPart
+  | ToolApprovalRequestPart;
 
 /**
  * Encoded representation of a Part.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export type PartEncoded =
   | TextPartEncoded
@@ -99,54 +94,46 @@ export type PartEncoded =
   | ToolCallPartEncoded
   | ToolResultPartEncoded
   | ToolApprovalResponsePartEncoded
-  | ToolApprovalRequestPartEncoded
+  | ToolApprovalRequestPartEncoded;
 
 /**
  * Base interface for all content parts.
  *
  * **Details**
  *
- * It provides the common structure shared by all content parts, including the
- * part type and provider options.
+ * It provides the common structure shared by all content parts, including the part type and
+ * provider options.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface BasePart<Type extends string, Options extends ProviderOptions> {
-  readonly [PartTypeId]: typeof PartTypeId
-  /**
-   * The type of this content part.
-   */
-  readonly type: Type
-  /**
-   * Provider-specific options for this part.
-   */
-  readonly options: Options
+  readonly [PartTypeId]: typeof PartTypeId;
+  /** The type of this content part. */
+  readonly type: Type;
+  /** Provider-specific options for this part. */
+  readonly options: Options;
 }
 
 /**
  * Base interface for encoded content parts.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface BasePartEncoded<Type extends string, Options extends ProviderOptions> {
-  /**
-   * The type of this content part.
-   */
-  readonly type: Type
-  /**
-   * Provider-specific options for this part.
-   */
-  readonly options?: Options | undefined
+  /** The type of this content part. */
+  readonly type: Type;
+  /** Provider-specific options for this part. */
+  readonly options?: Options | undefined;
 }
 
 const BasePart = Schema.Struct({
   [PartTypeId]: Schema.Literal(PartTypeId).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed(PartTypeId), { encodingStrategy: "omit" })
+    Schema.withDecodingDefaultKey(Effect.succeed(PartTypeId), { encodingStrategy: "omit" }),
   ),
-  options: ProviderOptions.pipe(Schema.withDecodingDefault(Effect.succeed({})))
-})
+  options: ProviderOptions.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+});
 
 /**
  * Creates a new content part of the specified type.
@@ -154,56 +141,51 @@ const BasePart = Schema.Struct({
  * **Example** (Creating content parts)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const textPart = Prompt.makePart("text", {
- *   text: "Hello, world!"
- * })
+ *   text: "Hello, world!",
+ * });
  *
  * const filePart = Prompt.makePart("file", {
  *   mediaType: "image/png",
  *   fileName: "screenshot.png",
- *   data: new Uint8Array([1, 2, 3])
- * })
+ *   data: new Uint8Array([1, 2, 3]),
+ * });
  * ```
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const makePart = <const Type extends Part["type"]>(
-  /**
-   * The type of part to create.
-   */
+  /** The type of part to create. */
   type: Type,
-  /**
-   * Parameters specific to the part type being created.
-   */
+  /** Parameters specific to the part type being created. */
   params: Omit<Extract<Part, { type: Type }>, typeof PartTypeId | "type" | "options"> & {
-    /**
-     * Optional provider-specific options for this part.
-     */
-    readonly options?: Extract<Part, { type: Type }>["options"] | undefined
-  }
-): Extract<Part, { type: Type }> => (({
-  ...params,
-  [PartTypeId]: PartTypeId,
-  type,
-  options: params.options ?? {}
-}) as any)
+    /** Optional provider-specific options for this part. */
+    readonly options?: Extract<Part, { type: Type }>["options"] | undefined;
+  },
+): Extract<Part, { type: Type }> =>
+  ({
+    ...params,
+    [PartTypeId]: PartTypeId,
+    type,
+    options: params.options ?? {},
+  }) as any;
 
 /**
- * A utility type for specifying the parameters required to construct a
- * specific part of a prompt.
+ * A utility type for specifying the parameters required to construct a specific part of a prompt.
  *
- * @category utility types
  * @since 4.0.0
+ * @category Utility types
  */
-export type PartConstructorParams<P extends Part> = Omit<P, typeof PartTypeId | "type" | "options"> & {
-  /**
-   * Optional provider-specific options for this part.
-   */
-  readonly options?: Part["options"] | undefined
-}
+export type PartConstructorParams<P extends Part> = Omit<
+  P,
+  typeof PartTypeId | "type" | "options"
+> & {
+  /** Optional provider-specific options for this part. */
+  readonly options?: Part["options"] | undefined;
+};
 
 // =============================================================================
 // Text Part
@@ -214,164 +196,151 @@ export type PartConstructorParams<P extends Part> = Omit<P, typeof PartTypeId | 
  *
  * **Details**
  *
- * Text parts are the basic content type used for textual information in
- * messages.
+ * Text parts are the basic content type used for textual information in messages.
  *
  * **Example** (Creating text parts)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const textPart: Prompt.TextPart = Prompt.makePart("text", {
- *   text: "Hello, how can I help you today?"
- * })
+ *   text: "Hello, how can I help you today?",
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface TextPart extends BasePart<"text", TextPartOptions> {
-  /**
-   * The text content.
-   */
-  readonly text: string
+  /** The text content. */
+  readonly text: string;
 }
 
 /**
  * Encoded representation of text parts for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface TextPartEncoded extends BasePartEncoded<"text", TextPartOptions> {
-  /**
-   * The text content.
-   */
-  readonly text: string
+  /** The text content. */
+  readonly text: string;
 }
 
 /**
- * Represents provider-specific options that can be associated with a
- * `TextPart` through module augmentation.
+ * Represents provider-specific options that can be associated with a `TextPart` through module
+ * augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface TextPartOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of text parts.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export const TextPart: Schema.Struct<
-  {
-    readonly type: Schema.Literal<"text">
-    readonly text: Schema.String
-    readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
-    readonly options: Schema.withDecodingDefault<
-      Schema.$Record<
-        Schema.String,
-        Schema.NullOr<Schema.Codec<Schema.Json>>
-      >
-    >
-  }
-> = Schema.Struct({
+export const TextPart: Schema.Struct<{
+  readonly type: Schema.Literal<"text">;
+  readonly text: Schema.String;
+  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Part">
+  >;
+  readonly options: Schema.withDecodingDefault<
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
+}> = Schema.Struct({
   ...BasePart.fields,
   type: Schema.Literal("text"),
-  text: Schema.String
-}).annotate({ identifier: "TextPart" })
+  text: Schema.String,
+}).annotate({ identifier: "TextPart" });
 
 /**
  * Constructs a new text part.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
-export const textPart = (params: PartConstructorParams<TextPart>): TextPart => makePart("text", params as any)
+export const textPart = (params: PartConstructorParams<TextPart>): TextPart =>
+  makePart("text", params as any);
 
 // =============================================================================
 // Reasoning Part
 // =============================================================================
 
 /**
- * Content part carrying reasoning text in an assistant message, such as a
- * provider-supplied reasoning summary or explanation.
+ * Content part carrying reasoning text in an assistant message, such as a provider-supplied
+ * reasoning summary or explanation.
  *
  * **Example** (Creating reasoning parts)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const reasoningPart: Prompt.ReasoningPart = Prompt.makePart("reasoning", {
- *   text:
- *     "Summary: the response compares the requested options by price and availability."
- * })
+ *   text: "Summary: the response compares the requested options by price and availability.",
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface ReasoningPart extends BasePart<"reasoning", ReasoningPartOptions> {
-  /**
-   * The reasoning or thought process text.
-   */
-  readonly text: string
+  /** The reasoning or thought process text. */
+  readonly text: string;
 }
 
 /**
  * Encoded representation of reasoning parts for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface ReasoningPartEncoded extends BasePartEncoded<"reasoning", ReasoningPartOptions> {
-  /**
-   * The reasoning or thought process text.
-   */
-  readonly text: string
+  /** The reasoning or thought process text. */
+  readonly text: string;
 }
 
 /**
- * Represents provider-specific options that can be associated with a
- * `ReasoningPart` through module augmentation.
+ * Represents provider-specific options that can be associated with a `ReasoningPart` through module
+ * augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface ReasoningPartOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of reasoning parts.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const ReasoningPart: Schema.Struct<{
-  readonly type: Schema.Literal<"reasoning">
-  readonly text: Schema.String
-  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+  readonly type: Schema.Literal<"reasoning">;
+  readonly text: Schema.String;
+  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Part">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BasePart.fields,
   type: Schema.Literal("reasoning"),
-  text: Schema.String
-}).annotate({ identifier: "ReasoningPart" })
+  text: Schema.String,
+}).annotate({ identifier: "ReasoningPart" });
 
 /**
  * Constructs a new reasoning part.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const reasoningPart = (params: PartConstructorParams<ReasoningPart>): ReasoningPart =>
-  makePart("reasoning", params as any)
+  makePart("reasoning", params as any);
 
 // =============================================================================
 // File Part
@@ -382,115 +351,101 @@ export const reasoningPart = (params: PartConstructorParams<ReasoningPart>): Rea
  *
  * **Details**
  *
- * Files can be provided as base64 data strings, byte arrays, or URLs, and can
- * represent images, documents, or other binary data.
+ * Files can be provided as base64 data strings, byte arrays, or URLs, and can represent images,
+ * documents, or other binary data.
  *
  * **Example** (Creating file parts)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const imagePart: Prompt.FilePart = Prompt.makePart("file", {
  *   mediaType: "image/jpeg",
  *   fileName: "photo.jpg",
- *   data: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ..."
- * })
+ *   data: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...",
+ * });
  *
  * const documentPart: Prompt.FilePart = Prompt.makePart("file", {
  *   mediaType: "application/pdf",
  *   fileName: "report.pdf",
- *   data: new Uint8Array([1, 2, 3])
- * })
+ *   data: new Uint8Array([1, 2, 3]),
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface FilePart extends BasePart<"file", FilePartOptions> {
-  /**
-   * MIME type of the file (e.g., "image/jpeg", "application/pdf").
-   */
-  readonly mediaType: string
-  /**
-   * Optional filename for the file.
-   */
-  readonly fileName?: string | undefined
-  /**
-   * File data as base64 string of data, a byte array, or a URL.
-   */
-  readonly data: string | Uint8Array | URL
+  /** MIME type of the file (e.g., "image/jpeg", "application/pdf"). */
+  readonly mediaType: string;
+  /** Optional filename for the file. */
+  readonly fileName?: string | undefined;
+  /** File data as base64 string of data, a byte array, or a URL. */
+  readonly data: string | Uint8Array | URL;
 }
 
 /**
  * Encoded representation of file parts for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface FilePartEncoded extends BasePartEncoded<"file", FilePartOptions> {
-  /**
-   * MIME type of the file (e.g., "image/jpeg", "application/pdf").
-   */
-  readonly mediaType: string
-  /**
-   * Optional filename for the file.
-   */
-  readonly fileName?: string | undefined
-  /**
-   * File data as base64 string of data, a byte array, or a URL.
-   */
-  readonly data: string | Uint8Array | URL
+  /** MIME type of the file (e.g., "image/jpeg", "application/pdf"). */
+  readonly mediaType: string;
+  /** Optional filename for the file. */
+  readonly fileName?: string | undefined;
+  /** File data as base64 string of data, a byte array, or a URL. */
+  readonly data: string | Uint8Array | URL;
 }
 
 /**
- * Represents provider-specific options that can be associated with a
- * `FilePart` through module augmentation.
+ * Represents provider-specific options that can be associated with a `FilePart` through module
+ * augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface FilePartOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of file parts.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const FilePart: Schema.Struct<{
-  readonly type: Schema.Literal<"file">
-  readonly mediaType: Schema.String
-  readonly fileName: Schema.optional<Schema.String>
-  readonly data: Schema.Union<readonly [Schema.String, Schema.Uint8Array, Schema.URL]>
-  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+  readonly type: Schema.Literal<"file">;
+  readonly mediaType: Schema.String;
+  readonly fileName: Schema.optional<Schema.String>;
+  readonly data: Schema.Union<readonly [Schema.String, Schema.Uint8Array, Schema.URL]>;
+  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Part">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BasePart.fields,
   type: Schema.Literal("file"),
   mediaType: Schema.String,
   fileName: Schema.optional(Schema.String),
-  data: Schema.Union([Schema.String, Schema.Uint8Array, Schema.URL])
-}).annotate({ identifier: "FilePart" })
+  data: Schema.Union([Schema.String, Schema.Uint8Array, Schema.URL]),
+}).annotate({ identifier: "FilePart" });
 
 /**
  * Constructs a `FilePart` for prompt file attachments.
  *
  * **When to use**
  *
- * Use to create the file-attachment part of a prompt from typed file part
- * parameters.
+ * Use to create the file-attachment part of a prompt from typed file part parameters.
  *
- * @see {@link makePart} for the generic part constructor
- *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
+ * @see {@link makePart} for the generic part constructor
  */
-export const filePart = (params: PartConstructorParams<FilePart>): FilePart => makePart("file", params as any)
+export const filePart = (params: PartConstructorParams<FilePart>): FilePart =>
+  makePart("file", params as any);
 
 // =============================================================================
 // Tool Call Part
@@ -502,108 +457,91 @@ export const filePart = (params: PartConstructorParams<FilePart>): FilePart => m
  * **Example** (Creating tool call parts)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const toolCallPart: Prompt.ToolCallPart = Prompt.makePart("tool-call", {
  *   id: "call_123",
  *   name: "get_weather",
  *   params: { city: "San Francisco", units: "celsius" },
- *   providerExecuted: false
- * })
+ *   providerExecuted: false,
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface ToolCallPart extends BasePart<"tool-call", ToolCallPartOptions> {
-  /**
-   * Unique identifier for this tool call.
-   */
-  readonly id: string
-  /**
-   * Name of the tool to invoke.
-   */
-  readonly name: string
-  /**
-   * Parameters to pass to the tool.
-   */
-  readonly params: unknown
-  /**
-   * Whether the tool was executed by the provider (true) or framework (false).
-   */
-  readonly providerExecuted: boolean
+  /** Unique identifier for this tool call. */
+  readonly id: string;
+  /** Name of the tool to invoke. */
+  readonly name: string;
+  /** Parameters to pass to the tool. */
+  readonly params: unknown;
+  /** Whether the tool was executed by the provider (true) or framework (false). */
+  readonly providerExecuted: boolean;
 }
 
 /**
  * Encoded representation of tool call parts for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface ToolCallPartEncoded extends BasePartEncoded<"tool-call", ToolCallPartOptions> {
-  /**
-   * Unique identifier for this tool call.
-   */
-  readonly id: string
-  /**
-   * Name of the tool to invoke.
-   */
-  readonly name: string
-  /**
-   * Parameters to pass to the tool.
-   */
-  readonly params: unknown
-  /**
-   * Whether the tool was executed by the provider (true) or framework (false).
-   */
-  readonly providerExecuted?: boolean | undefined
+  /** Unique identifier for this tool call. */
+  readonly id: string;
+  /** Name of the tool to invoke. */
+  readonly name: string;
+  /** Parameters to pass to the tool. */
+  readonly params: unknown;
+  /** Whether the tool was executed by the provider (true) or framework (false). */
+  readonly providerExecuted?: boolean | undefined;
 }
 
 /**
- * Represents provider-specific options that can be associated with a
- * `ToolCallPart` through module augmentation.
+ * Represents provider-specific options that can be associated with a `ToolCallPart` through module
+ * augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface ToolCallPartOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of tool call parts.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const ToolCallPart: Schema.Struct<{
-  readonly type: Schema.Literal<"tool-call">
-  readonly id: Schema.String
-  readonly name: Schema.String
-  readonly params: Schema.Unknown
-  readonly providerExecuted: Schema.withDecodingDefault<Schema.Boolean>
-  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+  readonly type: Schema.Literal<"tool-call">;
+  readonly id: Schema.String;
+  readonly name: Schema.String;
+  readonly params: Schema.Unknown;
+  readonly providerExecuted: Schema.withDecodingDefault<Schema.Boolean>;
+  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Part">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BasePart.fields,
   type: Schema.Literal("tool-call"),
   id: Schema.String,
   name: Schema.String,
   params: Schema.Unknown,
-  providerExecuted: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false)))
-}).annotate({ identifier: "ToolCallPart" })
+  providerExecuted: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+}).annotate({ identifier: "ToolCallPart" });
 
 /**
  * Constructs a new tool call part.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const toolCallPart = (params: PartConstructorParams<ToolCallPart>): ToolCallPart =>
-  makePart("tool-call", params as any)
+  makePart("tool-call", params as any);
 
 // =============================================================================
 // Tool Result Part
@@ -615,7 +553,7 @@ export const toolCallPart = (params: PartConstructorParams<ToolCallPart>): ToolC
  * **Example** (Creating tool result parts)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const toolResultPart: Prompt.ToolResultPart = Prompt.makePart("tool-result", {
  *   id: "call_123",
@@ -624,103 +562,89 @@ export const toolCallPart = (params: PartConstructorParams<ToolCallPart>): ToolC
  *   result: {
  *     temperature: 22,
  *     condition: "sunny",
- *     humidity: 65
- *   }
- * })
+ *     humidity: 65,
+ *   },
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface ToolResultPart extends BasePart<"tool-result", ToolResultPartOptions> {
-  /**
-   * Unique identifier matching the original tool call.
-   */
-  readonly id: string
-  /**
-   * Name of the tool that was executed.
-   */
-  readonly name: string
-  /**
-   * Whether or not the result of executing the tool call handler was an error.
-   */
-  readonly isFailure: boolean
-  /**
-   * The result returned by the tool execution.
-   */
-  readonly result: unknown
+  /** Unique identifier matching the original tool call. */
+  readonly id: string;
+  /** Name of the tool that was executed. */
+  readonly name: string;
+  /** Whether or not the result of executing the tool call handler was an error. */
+  readonly isFailure: boolean;
+  /** The result returned by the tool execution. */
+  readonly result: unknown;
 }
 
 /**
  * Encoded representation of tool result parts for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export interface ToolResultPartEncoded extends BasePartEncoded<"tool-result", ToolResultPartOptions> {
-  /**
-   * Unique identifier matching the original tool call.
-   */
-  readonly id: string
-  /**
-   * Name of the tool that was executed.
-   */
-  readonly name: string
-  /**
-   * Whether or not the result of executing the tool call handler was an error.
-   */
-  readonly isFailure: boolean
-  /**
-   * The result returned by the tool execution.
-   */
-  readonly result: unknown
+export interface ToolResultPartEncoded extends BasePartEncoded<
+  "tool-result",
+  ToolResultPartOptions
+> {
+  /** Unique identifier matching the original tool call. */
+  readonly id: string;
+  /** Name of the tool that was executed. */
+  readonly name: string;
+  /** Whether or not the result of executing the tool call handler was an error. */
+  readonly isFailure: boolean;
+  /** The result returned by the tool execution. */
+  readonly result: unknown;
 }
 
 /**
- * Represents provider-specific options that can be associated with a
- * `ToolResultPart` through module augmentation.
+ * Represents provider-specific options that can be associated with a `ToolResultPart` through
+ * module augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface ToolResultPartOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of tool result parts.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const ToolResultPart: Schema.Struct<{
-  readonly type: Schema.Literal<"tool-result">
-  readonly id: Schema.String
-  readonly name: Schema.String
-  readonly isFailure: Schema.Boolean
-  readonly result: Schema.Unknown
-  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+  readonly type: Schema.Literal<"tool-result">;
+  readonly id: Schema.String;
+  readonly name: Schema.String;
+  readonly isFailure: Schema.Boolean;
+  readonly result: Schema.Unknown;
+  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Part">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BasePart.fields,
   type: Schema.Literal("tool-result"),
   id: Schema.String,
   name: Schema.String,
   isFailure: Schema.Boolean,
-  result: Schema.Unknown
-}).annotate({ identifier: "ToolResultPart" })
+  result: Schema.Unknown,
+}).annotate({ identifier: "ToolResultPart" });
 
 /**
  * Constructs a new tool result part.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const toolResultPart = (params: PartConstructorParams<ToolResultPart>): ToolResultPart =>
-  makePart("tool-result", params as any)
+  makePart("tool-result", params as any);
 
 // =============================================================================
 // Tool Approval Response Part
@@ -731,117 +655,108 @@ export const toolResultPart = (params: PartConstructorParams<ToolResultPart>): T
  *
  * **When to use**
  *
- * Use when tool messages must approve or deny tool execution for tools with the
- * `needsApproval` property set.
+ * Use when tool messages must approve or deny tool execution for tools with the `needsApproval`
+ * property set.
  *
  * **Example** (Creating tool approval responses)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const approvalResponse: Prompt.ToolApprovalResponsePart = Prompt.makePart(
  *   "tool-approval-response",
  *   {
  *     approvalId: "approval_123",
- *     approved: true
- *   }
- * )
+ *     approved: true,
+ *   },
+ * );
  *
  * const denialResponse: Prompt.ToolApprovalResponsePart = Prompt.makePart(
  *   "tool-approval-response",
  *   {
  *     approvalId: "approval_456",
  *     approved: false,
- *     reason: "Operation not allowed"
- *   }
- * )
+ *     reason: "Operation not allowed",
+ *   },
+ * );
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export interface ToolApprovalResponsePart extends BasePart<"tool-approval-response", ToolApprovalResponsePartOptions> {
-  /**
-   * References the original approval request.
-   */
-  readonly approvalId: string
-  /**
-   * User's decision to approve or deny the tool execution.
-   */
-  readonly approved: boolean
-  /**
-   * Optional justification for the decision.
-   */
-  readonly reason?: string | undefined
+export interface ToolApprovalResponsePart extends BasePart<
+  "tool-approval-response",
+  ToolApprovalResponsePartOptions
+> {
+  /** References the original approval request. */
+  readonly approvalId: string;
+  /** User's decision to approve or deny the tool execution. */
+  readonly approved: boolean;
+  /** Optional justification for the decision. */
+  readonly reason?: string | undefined;
 }
 
 /**
  * Encoded representation of tool approval response parts for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export interface ToolApprovalResponsePartEncoded
-  extends BasePartEncoded<"tool-approval-response", ToolApprovalResponsePartOptions>
-{
-  /**
-   * References the original approval request.
-   */
-  readonly approvalId: string
-  /**
-   * User's decision to approve or deny the tool execution.
-   */
-  readonly approved: boolean
-  /**
-   * Optional justification for the decision.
-   */
-  readonly reason?: string | undefined
+export interface ToolApprovalResponsePartEncoded extends BasePartEncoded<
+  "tool-approval-response",
+  ToolApprovalResponsePartOptions
+> {
+  /** References the original approval request. */
+  readonly approvalId: string;
+  /** User's decision to approve or deny the tool execution. */
+  readonly approved: boolean;
+  /** Optional justification for the decision. */
+  readonly reason?: string | undefined;
 }
 
 /**
- * Represents provider-specific options that can be associated with a
- * `ToolApprovalResponsePart` through module augmentation.
+ * Represents provider-specific options that can be associated with a `ToolApprovalResponsePart`
+ * through module augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface ToolApprovalResponsePartOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of tool approval response parts.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const ToolApprovalResponsePart: Schema.Struct<{
-  readonly type: Schema.Literal<"tool-approval-response">
-  readonly approvalId: Schema.String
-  readonly approved: Schema.Boolean
-  readonly reason: Schema.optional<Schema.String>
-  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+  readonly type: Schema.Literal<"tool-approval-response">;
+  readonly approvalId: Schema.String;
+  readonly approved: Schema.Boolean;
+  readonly reason: Schema.optional<Schema.String>;
+  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Part">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BasePart.fields,
   type: Schema.Literal("tool-approval-response"),
   approvalId: Schema.String,
   approved: Schema.Boolean,
-  reason: Schema.optional(Schema.String)
-}).annotate({ identifier: "ToolApprovalResponsePart" })
+  reason: Schema.optional(Schema.String),
+}).annotate({ identifier: "ToolApprovalResponsePart" });
 
 /**
  * Constructs a new tool approval response part.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const toolApprovalResponsePart = (
-  params: PartConstructorParams<ToolApprovalResponsePart>
-): ToolApprovalResponsePart => makePart("tool-approval-response", params as any)
+  params: PartConstructorParams<ToolApprovalResponsePart>,
+): ToolApprovalResponsePart => makePart("tool-approval-response", params as any);
 
 // =============================================================================
 // Tool Approval Request Part
@@ -852,160 +767,145 @@ export const toolApprovalResponsePart = (
  *
  * **Details**
  *
- * Tool approval request parts are stored in assistant messages when a tool
- * requires user approval before execution. The user responds with a
- * `ToolApprovalResponsePart` in a tool message.
+ * Tool approval request parts are stored in assistant messages when a tool requires user approval
+ * before execution. The user responds with a `ToolApprovalResponsePart` in a tool message.
  *
  * **Example** (Creating tool approval requests)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const approvalRequest: Prompt.ToolApprovalRequestPart = Prompt.makePart(
  *   "tool-approval-request",
  *   {
  *     approvalId: "approval_123",
- *     toolCallId: "call_456"
- *   }
- * )
+ *     toolCallId: "call_456",
+ *   },
+ * );
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export interface ToolApprovalRequestPart extends BasePart<"tool-approval-request", ToolApprovalRequestPartOptions> {
-  /**
-   * Unique identifier for this approval flow.
-   */
-  readonly approvalId: string
-  /**
-   * The tool call ID requiring approval.
-   */
-  readonly toolCallId: string
+export interface ToolApprovalRequestPart extends BasePart<
+  "tool-approval-request",
+  ToolApprovalRequestPartOptions
+> {
+  /** Unique identifier for this approval flow. */
+  readonly approvalId: string;
+  /** The tool call ID requiring approval. */
+  readonly toolCallId: string;
 }
 
 /**
  * Encoded representation of tool approval request parts for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export interface ToolApprovalRequestPartEncoded
-  extends BasePartEncoded<"tool-approval-request", ToolApprovalRequestPartOptions>
-{
-  /**
-   * Unique identifier for this approval flow.
-   */
-  readonly approvalId: string
-  /**
-   * The tool call ID requiring approval.
-   */
-  readonly toolCallId: string
+export interface ToolApprovalRequestPartEncoded extends BasePartEncoded<
+  "tool-approval-request",
+  ToolApprovalRequestPartOptions
+> {
+  /** Unique identifier for this approval flow. */
+  readonly approvalId: string;
+  /** The tool call ID requiring approval. */
+  readonly toolCallId: string;
 }
 
 /**
- * Represents provider-specific options that can be associated with a
- * `ToolApprovalRequestPart` through module augmentation.
+ * Represents provider-specific options that can be associated with a `ToolApprovalRequestPart`
+ * through module augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface ToolApprovalRequestPartOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of tool approval request parts.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const ToolApprovalRequestPart: Schema.Struct<{
-  readonly type: Schema.Literal<"tool-approval-request">
-  readonly approvalId: Schema.String
-  readonly toolCallId: Schema.String
-  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+  readonly type: Schema.Literal<"tool-approval-request">;
+  readonly approvalId: Schema.String;
+  readonly toolCallId: Schema.String;
+  readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Part">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BasePart.fields,
   type: Schema.Literal("tool-approval-request"),
   approvalId: Schema.String,
-  toolCallId: Schema.String
-}).annotate({ identifier: "ToolApprovalRequestPart" })
+  toolCallId: Schema.String,
+}).annotate({ identifier: "ToolApprovalRequestPart" });
 
 /**
  * Constructs a new tool approval request part.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const toolApprovalRequestPart = (
-  params: PartConstructorParams<ToolApprovalRequestPart>
-): ToolApprovalRequestPart => makePart("tool-approval-request", params as any)
+  params: PartConstructorParams<ToolApprovalRequestPart>,
+): ToolApprovalRequestPart => makePart("tool-approval-request", params as any);
 
 // =============================================================================
 // Base Message
 // =============================================================================
 
-const MessageTypeId = "~effect/ai/Prompt/Message" as const
+const MessageTypeId = "~effect/ai/Prompt/Message" as const;
 
 /**
  * Type guard to check if a value is a Message.
  *
- * @category guards
  * @since 4.0.0
+ * @category Guards
  */
-export const isMessage = (u: unknown): u is Message => Predicate.hasProperty(u, MessageTypeId)
+export const isMessage = (u: unknown): u is Message => Predicate.hasProperty(u, MessageTypeId);
 
 /**
  * Base interface for all message types.
  *
  * **Details**
  *
- * It provides the common structure shared by all messages, including the role
- * and provider options.
+ * It provides the common structure shared by all messages, including the role and provider options.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface BaseMessage<Role extends string, Options extends ProviderOptions> {
-  readonly [MessageTypeId]: typeof MessageTypeId
-  /**
-   * The role of the message participant.
-   */
-  readonly role: Role
-  /**
-   * Provider-specific options for this message.
-   */
-  readonly options: Options
+  readonly [MessageTypeId]: typeof MessageTypeId;
+  /** The role of the message participant. */
+  readonly role: Role;
+  /** Provider-specific options for this message. */
+  readonly options: Options;
 }
 
 /**
  * Base interface for encoded message types.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface BaseMessageEncoded<Role extends string, Options extends ProviderOptions> {
-  /**
-   * The role of the message participant.
-   */
-  readonly role: Role
-  /**
-   * Provider-specific options for this message.
-   */
-  readonly options?: Options | undefined
+  /** The role of the message participant. */
+  readonly role: Role;
+  /** Provider-specific options for this message. */
+  readonly options?: Options | undefined;
 }
 
 const BaseMessage = Schema.Struct({
   [MessageTypeId]: Schema.Literal(MessageTypeId).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed(MessageTypeId), { encodingStrategy: "omit" })
+    Schema.withDecodingDefaultKey(Effect.succeed(MessageTypeId), { encodingStrategy: "omit" }),
   ),
-  options: ProviderOptions.pipe(Schema.withDecodingDefault(Effect.succeed({})))
-})
+  options: ProviderOptions.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+});
 
 /**
  * Creates a new message with the specified role.
@@ -1013,66 +913,67 @@ const BaseMessage = Schema.Struct({
  * **Example** (Creating messages)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const textPart = Prompt.makePart("text", {
- *   text: "Hello, world!"
- * })
+ *   text: "Hello, world!",
+ * });
  *
  * const userMessage = Prompt.makeMessage("user", {
- *   content: [textPart]
- * })
+ *   content: [textPart],
+ * });
  * ```
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const makeMessage = <const Role extends Message["role"]>(
   role: Role,
   params: Omit<Extract<Message, { role: Role }>, typeof MessageTypeId | "role" | "options"> & {
-    readonly options?: Extract<Message, { role: Role }>["options"] | undefined
-  }
-): Extract<Message, { role: Role }> => (({
-  ...params,
-  [MessageTypeId]: MessageTypeId,
-  role,
-  options: params.options ?? {}
-}) as any)
+    readonly options?: Extract<Message, { role: Role }>["options"] | undefined;
+  },
+): Extract<Message, { role: Role }> =>
+  ({
+    ...params,
+    [MessageTypeId]: MessageTypeId,
+    role,
+    options: params.options ?? {},
+  }) as any;
 
 /**
- * A utility type for specifying the parameters required to construct a
- * specific message for a prompt.
+ * A utility type for specifying the parameters required to construct a specific message for a
+ * prompt.
  *
- * @category utility types
  * @since 4.0.0
+ * @category Utility types
  */
-export type MessageConstructorParams<M extends Message> = Omit<M, typeof MessageTypeId | "role" | "options"> & {
-  /**
-   * Optional provider-specific options for this message.
-   */
-  readonly options?: Part["options"] | undefined
-}
+export type MessageConstructorParams<M extends Message> = Omit<
+  M,
+  typeof MessageTypeId | "role" | "options"
+> & {
+  /** Optional provider-specific options for this message. */
+  readonly options?: Part["options"] | undefined;
+};
 
 /**
- * Schema that decodes a string into content containing a single `TextPart` and,
- * when encoding, emits the `text` value of the first part.
+ * Schema that decodes a string into content containing a single `TextPart` and, when encoding,
+ * emits the `text` value of the first part.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const ContentFromString: Schema.decodeTo<
   Schema.NonEmptyArray<
     Schema.toType<
       Schema.Struct<{
-        readonly type: Schema.Literal<"text">
-        readonly text: Schema.String
-        readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+        readonly type: Schema.Literal<"text">;
+        readonly text: Schema.String;
+        readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+          Schema.Literal<"~effect/ai/Prompt/Part">
+        >;
         readonly options: Schema.withDecodingDefault<
-          Schema.$Record<
-            Schema.String,
-            Schema.NullOr<Schema.Codec<Schema.Json>>
-          >
-        >
+          Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+        >;
       }>
     >
   >,
@@ -1082,10 +983,10 @@ export const ContentFromString: Schema.decodeTo<
     Schema.NonEmptyArray(Schema.toType(TextPart)),
     SchemaTransformation.transform({
       decode: (text) => Arr.of(makePart("text", { text })) as Arr.NonEmptyReadonlyArray<TextPart>,
-      encode: (content) => content[0].text
-    })
-  )
-)
+      encode: (content) => content[0].text,
+    }),
+  ),
+);
 
 // =============================================================================
 // System Message
@@ -1097,76 +998,72 @@ export const ContentFromString: Schema.decodeTo<
  * **Example** (Creating system messages)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const systemMessage: Prompt.SystemMessage = Prompt.makeMessage("system", {
- *   content: "You are a helpful assistant specialized in mathematics. " +
- *     "Always show your work step by step."
- * })
+ *   content:
+ *     "You are a helpful assistant specialized in mathematics. " +
+ *     "Always show your work step by step.",
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface SystemMessage extends BaseMessage<"system", SystemMessageOptions> {
-  /**
-   * The system instruction or context as plain text.
-   */
-  readonly content: string
+  /** The system instruction or context as plain text. */
+  readonly content: string;
 }
 
 /**
  * Encoded representation of system messages for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface SystemMessageEncoded extends BaseMessageEncoded<"system", SystemMessageOptions> {
-  /**
-   * The system instruction or context as plain text.
-   */
-  readonly content: string
+  /** The system instruction or context as plain text. */
+  readonly content: string;
 }
 
 /**
- * Represents provider-specific options that can be associated with a
- * `SystemMessage` through module augmentation.
+ * Represents provider-specific options that can be associated with a `SystemMessage` through module
+ * augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface SystemMessageOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of system messages.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const SystemMessage: Schema.Struct<{
-  readonly role: Schema.Literal<"system">
-  readonly content: Schema.String
-  readonly "~effect/ai/Prompt/Message": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Message">>
+  readonly role: Schema.Literal<"system">;
+  readonly content: Schema.String;
+  readonly "~effect/ai/Prompt/Message": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Message">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BaseMessage.fields,
   role: Schema.Literal("system"),
-  content: Schema.String
-}).annotate({ identifier: "SystemMessage" })
+  content: Schema.String,
+}).annotate({ identifier: "SystemMessage" });
 
 /**
  * Constructs a new system message.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const systemMessage = (params: MessageConstructorParams<SystemMessage>): SystemMessage =>
-  makeMessage("system", params)
+  makeMessage("system", params);
 
 // =============================================================================
 // User Message
@@ -1178,101 +1075,96 @@ export const systemMessage = (params: MessageConstructorParams<SystemMessage>): 
  * **Example** (Creating user messages)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const textUserMessage: Prompt.UserMessage = Prompt.makeMessage("user", {
  *   content: [
  *     Prompt.makePart("text", {
- *       text: "Can you analyze this image for me?"
- *     })
- *   ]
- * })
+ *       text: "Can you analyze this image for me?",
+ *     }),
+ *   ],
+ * });
  *
  * const multimodalUserMessage: Prompt.UserMessage = Prompt.makeMessage("user", {
  *   content: [
  *     Prompt.makePart("text", {
- *       text: "What do you see in this image?"
+ *       text: "What do you see in this image?",
  *     }),
  *     Prompt.makePart("file", {
  *       mediaType: "image/jpeg",
  *       fileName: "vacation.jpg",
- *       data: "data:image/jpeg;base64,..."
- *     })
- *   ]
- * })
+ *       data: "data:image/jpeg;base64,...",
+ *     }),
+ *   ],
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface UserMessage extends BaseMessage<"user", UserMessageOptions> {
-  /**
-   * Array of content parts that make up the user's message.
-   */
-  readonly content: ReadonlyArray<UserMessagePart>
+  /** Array of content parts that make up the user's message. */
+  readonly content: ReadonlyArray<UserMessagePart>;
 }
 
 /**
  * Union type of content parts allowed in user messages.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export type UserMessagePart = TextPart | FilePart
+export type UserMessagePart = TextPart | FilePart;
 
 /**
  * Encoded representation of user messages for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface UserMessageEncoded extends BaseMessageEncoded<"user", UserMessageOptions> {
-  /**
-   * Array of content parts that make up the user's message.
-   */
-  readonly content: string | ReadonlyArray<UserMessagePartEncoded>
+  /** Array of content parts that make up the user's message. */
+  readonly content: string | ReadonlyArray<UserMessagePartEncoded>;
 }
 
 /**
  * Union type of encoded content parts for user messages.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export type UserMessagePartEncoded = TextPartEncoded | FilePartEncoded
+export type UserMessagePartEncoded = TextPartEncoded | FilePartEncoded;
 
 /**
- * Represents provider-specific options that can be associated with a
- * `UserMessage` through module augmentation.
+ * Represents provider-specific options that can be associated with a `UserMessage` through module
+ * augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface UserMessageOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of user messages.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const UserMessage: Schema.Struct<{
-  readonly role: Schema.Literal<"user">
+  readonly role: Schema.Literal<"user">;
   readonly content: Schema.Union<
     readonly [
       Schema.decodeTo<
         Schema.NonEmptyArray<
           Schema.toType<
             Schema.Struct<{
-              readonly type: Schema.Literal<"text">
-              readonly text: Schema.String
-              readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+              readonly type: Schema.Literal<"text">;
+              readonly text: Schema.String;
+              readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+                Schema.Literal<"~effect/ai/Prompt/Part">
+              >;
               readonly options: Schema.withDecodingDefault<
-                Schema.$Record<
-                  Schema.String,
-                  Schema.NullOr<Schema.Codec<Schema.Json>>
-                >
-              >
+                Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+              >;
             }>
           >
         >,
@@ -1284,57 +1176,52 @@ export const UserMessage: Schema.Struct<{
         Schema.Union<
           readonly [
             Schema.Struct<{
-              readonly type: Schema.Literal<"text">
-              readonly text: Schema.String
-              readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+              readonly type: Schema.Literal<"text">;
+              readonly text: Schema.String;
+              readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+                Schema.Literal<"~effect/ai/Prompt/Part">
+              >;
               readonly options: Schema.withDecodingDefault<
-                Schema.$Record<
-                  Schema.String,
-                  Schema.NullOr<Schema.Codec<Schema.Json>>
-                >
-              >
+                Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+              >;
             }>,
             Schema.Struct<{
-              readonly type: Schema.Literal<"file">
-              readonly mediaType: Schema.String
-              readonly fileName: Schema.optional<Schema.String>
-              readonly data: Schema.Union<readonly [Schema.String, Schema.Uint8Array, Schema.URL]>
-              readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+              readonly type: Schema.Literal<"file">;
+              readonly mediaType: Schema.String;
+              readonly fileName: Schema.optional<Schema.String>;
+              readonly data: Schema.Union<readonly [Schema.String, Schema.Uint8Array, Schema.URL]>;
+              readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+                Schema.Literal<"~effect/ai/Prompt/Part">
+              >;
               readonly options: Schema.withDecodingDefault<
-                Schema.$Record<
-                  Schema.String,
-                  Schema.NullOr<Schema.Codec<Schema.Json>>
-                >
-              >
-            }>
+                Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+              >;
+            }>,
           ]
         >
-      >
+      >,
     ]
-  >
-  readonly "~effect/ai/Prompt/Message": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Message">>
+  >;
+  readonly "~effect/ai/Prompt/Message": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Message">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BaseMessage.fields,
   role: Schema.Literal("user"),
-  content: Schema.Union([
-    ContentFromString,
-    Schema.Array(Schema.Union([TextPart, FilePart]))
-  ])
-}).annotate({ identifier: "UserMessage" })
+  content: Schema.Union([ContentFromString, Schema.Array(Schema.Union([TextPart, FilePart]))]),
+}).annotate({ identifier: "UserMessage" });
 
 /**
  * Constructs a new user message.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
-export const userMessage = (params: MessageConstructorParams<UserMessage>): UserMessage => makeMessage("user", params)
+export const userMessage = (params: MessageConstructorParams<UserMessage>): UserMessage =>
+  makeMessage("user", params);
 
 // =============================================================================
 // Assistant Message
@@ -1346,54 +1233,48 @@ export const userMessage = (params: MessageConstructorParams<UserMessage>): User
  * **Example** (Creating assistant messages)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
- * const assistantMessage: Prompt.AssistantMessage = Prompt.makeMessage(
- *   "assistant",
- *   {
- *     content: [
- *       Prompt.makePart("text", {
- *         text:
- *           "I can check the current weather for San Francisco."
- *       }),
- *       Prompt.makePart("tool-call", {
- *         id: "call_123",
- *         name: "get_weather",
- *         params: { city: "San Francisco" },
- *         providerExecuted: false
- *       }),
- *       Prompt.makePart("tool-result", {
- *         id: "call_123",
- *         name: "get_weather",
- *         isFailure: false,
- *         result: {
- *           temperature: 72,
- *           condition: "sunny"
- *         }
- *       }),
- *       Prompt.makePart("text", {
- *         text: "The weather in San Francisco is currently 72°F and sunny."
- *       })
- *     ]
- *   }
- * )
+ * const assistantMessage: Prompt.AssistantMessage = Prompt.makeMessage("assistant", {
+ *   content: [
+ *     Prompt.makePart("text", {
+ *       text: "I can check the current weather for San Francisco.",
+ *     }),
+ *     Prompt.makePart("tool-call", {
+ *       id: "call_123",
+ *       name: "get_weather",
+ *       params: { city: "San Francisco" },
+ *       providerExecuted: false,
+ *     }),
+ *     Prompt.makePart("tool-result", {
+ *       id: "call_123",
+ *       name: "get_weather",
+ *       isFailure: false,
+ *       result: {
+ *         temperature: 72,
+ *         condition: "sunny",
+ *       },
+ *     }),
+ *     Prompt.makePart("text", {
+ *       text: "The weather in San Francisco is currently 72°F and sunny.",
+ *     }),
+ *   ],
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface AssistantMessage extends BaseMessage<"assistant", AssistantMessageOptions> {
-  /**
-   * Array of content parts that make up the assistant's response.
-   */
-  readonly content: ReadonlyArray<AssistantMessagePart>
+  /** Array of content parts that make up the assistant's response. */
+  readonly content: ReadonlyArray<AssistantMessagePart>;
 }
 
 /**
  * Union type of content parts allowed in assistant messages.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export type AssistantMessagePart =
   | TextPart
@@ -1401,23 +1282,26 @@ export type AssistantMessagePart =
   | ReasoningPart
   | ToolCallPart
   | ToolResultPart
-  | ToolApprovalRequestPart
+  | ToolApprovalRequestPart;
 
 /**
  * Encoded representation of assistant messages for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export interface AssistantMessageEncoded extends BaseMessageEncoded<"assistant", AssistantMessageOptions> {
-  readonly content: string | ReadonlyArray<AssistantMessagePartEncoded>
+export interface AssistantMessageEncoded extends BaseMessageEncoded<
+  "assistant",
+  AssistantMessageOptions
+> {
+  readonly content: string | ReadonlyArray<AssistantMessagePartEncoded>;
 }
 
 /**
  * Union type of encoded content parts for assistant messages.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export type AssistantMessagePartEncoded =
   | TextPartEncoded
@@ -1425,14 +1309,14 @@ export type AssistantMessagePartEncoded =
   | ReasoningPartEncoded
   | ToolCallPartEncoded
   | ToolResultPartEncoded
-  | ToolApprovalRequestPartEncoded
+  | ToolApprovalRequestPartEncoded;
 
 /**
- * Represents provider-specific options that can be associated with a
- * `AssistantMessage` through module augmentation.
+ * Represents provider-specific options that can be associated with a `AssistantMessage` through
+ * module augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface AssistantMessageOptions extends ProviderOptions {}
 
@@ -1441,30 +1325,28 @@ export interface AssistantMessageOptions extends ProviderOptions {}
  *
  * **Details**
  *
- * Assistant content can be a string decoded through `ContentFromString` or an
- * array of text, file, reasoning, tool-call, tool-result, and
- * tool-approval-request parts.
+ * Assistant content can be a string decoded through `ContentFromString` or an array of text, file,
+ * reasoning, tool-call, tool-result, and tool-approval-request parts.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const AssistantMessage: Schema.Struct<{
-  readonly role: Schema.Literal<"assistant">
+  readonly role: Schema.Literal<"assistant">;
   readonly content: Schema.Union<
     readonly [
       Schema.decodeTo<
         Schema.NonEmptyArray<
           Schema.toType<
             Schema.Struct<{
-              readonly type: Schema.Literal<"text">
-              readonly text: Schema.String
-              readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Part">>
+              readonly type: Schema.Literal<"text">;
+              readonly text: Schema.String;
+              readonly "~effect/ai/Prompt/Part": Schema.withDecodingDefaultKey<
+                Schema.Literal<"~effect/ai/Prompt/Part">
+              >;
               readonly options: Schema.withDecodingDefault<
-                Schema.$Record<
-                  Schema.String,
-                  Schema.NullOr<Schema.Codec<Schema.Json>>
-                >
-              >
+                Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+              >;
             }>
           >
         >,
@@ -1480,34 +1362,35 @@ export const AssistantMessage: Schema.Struct<{
             typeof ReasoningPart,
             typeof ToolCallPart,
             typeof ToolResultPart,
-            typeof ToolApprovalRequestPart
+            typeof ToolApprovalRequestPart,
           ]
         >
-      >
+      >,
     ]
-  >
-  readonly "~effect/ai/Prompt/Message": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Message">>
+  >;
+  readonly "~effect/ai/Prompt/Message": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Message">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BaseMessage.fields,
   role: Schema.Literal("assistant"),
   content: Schema.Union([
     ContentFromString,
-    Schema.Array(Schema.Union([
-      TextPart,
-      FilePart,
-      ReasoningPart,
-      ToolCallPart,
-      ToolResultPart,
-      ToolApprovalRequestPart
-    ]))
-  ])
-}).annotate({ identifier: "AssistantMessage" })
+    Schema.Array(
+      Schema.Union([
+        TextPart,
+        FilePart,
+        ReasoningPart,
+        ToolCallPart,
+        ToolResultPart,
+        ToolApprovalRequestPart,
+      ]),
+    ),
+  ]),
+}).annotate({ identifier: "AssistantMessage" });
 
 /**
  * Constructs a new assistant message.
@@ -1520,24 +1403,25 @@ export const AssistantMessage: Schema.Struct<{
  *
  * This is the role-specific wrapper around `makeMessage("assistant", params)`.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
-export const assistantMessage = (params: MessageConstructorParams<AssistantMessage>): AssistantMessage =>
-  makeMessage("assistant", params)
+export const assistantMessage = (
+  params: MessageConstructorParams<AssistantMessage>,
+): AssistantMessage => makeMessage("assistant", params);
 
 // =============================================================================
 // Tool Message
 // =============================================================================
 
 /**
- * Message carrying tool-side content, including tool execution results and
- * responses to tool approval requests.
+ * Message carrying tool-side content, including tool execution results and responses to tool
+ * approval requests.
  *
  * **Example** (Creating tool messages)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const toolMessage: Prompt.ToolMessage = Prompt.makeMessage("tool", {
  *   content: [
@@ -1549,93 +1433,89 @@ export const assistantMessage = (params: MessageConstructorParams<AssistantMessa
  *         query: "TypeScript best practices",
  *         results: [
  *           { title: "TypeScript Handbook", url: "https://..." },
- *           { title: "Effective TypeScript", url: "https://..." }
- *         ]
- *       }
- *     })
- *   ]
- * })
+ *           { title: "Effective TypeScript", url: "https://..." },
+ *         ],
+ *       },
+ *     }),
+ *   ],
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface ToolMessage extends BaseMessage<"tool", ToolMessageOptions> {
-  /**
-   * Array of tool result parts.
-   */
-  readonly content: ReadonlyArray<ToolMessagePart>
+  /** Array of tool result parts. */
+  readonly content: ReadonlyArray<ToolMessagePart>;
 }
 
 /**
  * Union type of content parts allowed in tool messages.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export type ToolMessagePart = ToolResultPart | ToolApprovalResponsePart
+export type ToolMessagePart = ToolResultPart | ToolApprovalResponsePart;
 
 /**
  * Encoded representation of tool messages for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface ToolMessageEncoded extends BaseMessageEncoded<"tool", ToolMessageOptions> {
-  /**
-   * Array of tool result parts.
-   */
-  readonly content: ReadonlyArray<ToolMessagePartEncoded>
+  /** Array of tool result parts. */
+  readonly content: ReadonlyArray<ToolMessagePartEncoded>;
 }
 
 /**
  * Union type of encoded content parts for tool messages.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export type ToolMessagePartEncoded = ToolResultPartEncoded | ToolApprovalResponsePartEncoded
+export type ToolMessagePartEncoded = ToolResultPartEncoded | ToolApprovalResponsePartEncoded;
 
 /**
- * Represents provider-specific options that can be associated with a
- * `ToolMessage` through module augmentation.
+ * Represents provider-specific options that can be associated with a `ToolMessage` through module
+ * augmentation.
  *
- * @category options
  * @since 4.0.0
+ * @category Options
  */
 export interface ToolMessageOptions extends ProviderOptions {}
 
 /**
  * Schema for validation and encoding of tool messages.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const ToolMessage: Schema.Struct<{
-  readonly role: Schema.Literal<"tool">
+  readonly role: Schema.Literal<"tool">;
   readonly content: Schema.$Array<
     Schema.Union<readonly [typeof ToolResultPart, typeof ToolApprovalResponsePart]>
-  >
-  readonly "~effect/ai/Prompt/Message": Schema.withDecodingDefaultKey<Schema.Literal<"~effect/ai/Prompt/Message">>
+  >;
+  readonly "~effect/ai/Prompt/Message": Schema.withDecodingDefaultKey<
+    Schema.Literal<"~effect/ai/Prompt/Message">
+  >;
   readonly options: Schema.withDecodingDefault<
-    Schema.$Record<
-      Schema.String,
-      Schema.NullOr<Schema.Codec<Schema.Json>>
-    >
-  >
+    Schema.$Record<Schema.String, Schema.NullOr<Schema.Codec<Schema.Json>>>
+  >;
 }> = Schema.Struct({
   ...BaseMessage.fields,
   role: Schema.Literal("tool"),
-  content: Schema.Array(Schema.Union([ToolResultPart, ToolApprovalResponsePart]))
-}).annotate({ identifier: "ToolMessage" })
+  content: Schema.Array(Schema.Union([ToolResultPart, ToolApprovalResponsePart])),
+}).annotate({ identifier: "ToolMessage" });
 
 /**
  * Constructs a new tool message.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
-export const toolMessage = (params: MessageConstructorParams<ToolMessage>): ToolMessage => makeMessage("tool", params)
+export const toolMessage = (params: MessageConstructorParams<ToolMessage>): ToolMessage =>
+  makeMessage("tool", params);
 
 // =============================================================================
 // Message
@@ -1644,83 +1524,75 @@ export const toolMessage = (params: MessageConstructorParams<ToolMessage>): Tool
 /**
  * A type representing all possible message types in a conversation.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export type Message =
-  | SystemMessage
-  | UserMessage
-  | AssistantMessage
-  | ToolMessage
+export type Message = SystemMessage | UserMessage | AssistantMessage | ToolMessage;
 
 /**
  * A type representing all possible encoded message types for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export type MessageEncoded =
   | SystemMessageEncoded
   | UserMessageEncoded
   | AssistantMessageEncoded
-  | ToolMessageEncoded
+  | ToolMessageEncoded;
 
 /**
  * Schema for validation and encoding of messages.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Message: Schema.Codec<Message, MessageEncoded> = Schema.Union([
   SystemMessage,
   UserMessage,
   AssistantMessage,
-  ToolMessage
-])
+  ToolMessage,
+]);
 
 // =============================================================================
 // Prompt
 // =============================================================================
 
-const TypeId = "~effect/unstable/ai/Prompt" as const
+const TypeId = "~effect/unstable/ai/Prompt" as const;
 
 /**
  * Type guard to check if a value is a Prompt.
  *
- * @category guards
  * @since 4.0.0
+ * @category Guards
  */
-export const isPrompt = (u: unknown): u is Prompt => Predicate.hasProperty(u, TypeId)
+export const isPrompt = (u: unknown): u is Prompt => Predicate.hasProperty(u, TypeId);
 
 /**
- * A Prompt contains a sequence of messages that form the context of a
- * conversation with a large language model.
+ * A Prompt contains a sequence of messages that form the context of a conversation with a large
+ * language model.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface Prompt extends Pipeable {
-  readonly [TypeId]: typeof TypeId
-  /**
-   * Array of messages that make up the conversation.
-   */
-  readonly content: ReadonlyArray<Message>
+  readonly [TypeId]: typeof TypeId;
+  /** Array of messages that make up the conversation. */
+  readonly content: ReadonlyArray<Message>;
 }
 
 /**
  * Encoded representation of prompts for serialization.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface PromptEncoded {
-  /**
-   * Array of messages that make up the conversation.
-   */
-  readonly content: ReadonlyArray<MessageEncoded>
+  /** Array of messages that make up the conversation. */
+  readonly content: ReadonlyArray<MessageEncoded>;
 }
 
-const $Prompt = Schema.declare((u) => isPrompt(u), { identifier: "Prompt" })
+const $Prompt = Schema.declare((u) => isPrompt(u), { identifier: "Prompt" });
 
 // TODO: is the type annotation necessary?
 // TODO: shoudn't the name be `PromptFrom...`?
@@ -1728,81 +1600,75 @@ const $Prompt = Schema.declare((u) => isPrompt(u), { identifier: "Prompt" })
 /**
  * Schema for AI prompt instances.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Prompt: Schema.Codec<Prompt, PromptEncoded> = Schema.Struct({
-  content: Schema.Array(Schema.toEncoded(Message))
+  content: Schema.Array(Schema.toEncoded(Message)),
 }).pipe(
   Schema.decodeTo(
     $Prompt,
     SchemaTransformation.transformOrFail({
       decode: (input) =>
-        Effect.mapBothEager(
-          SchemaParser.decodeEffect(Schema.Array(Message))(input.content),
-          {
-            onSuccess: makePrompt,
-            onFailure: () =>
-              new SchemaIssue.InvalidValue(Option.some(input.content), { message: "Invalid Prompt messages" })
-          }
-        ),
+        Effect.mapBothEager(SchemaParser.decodeEffect(Schema.Array(Message))(input.content), {
+          onSuccess: makePrompt,
+          onFailure: () =>
+            new SchemaIssue.InvalidValue(Option.some(input.content), {
+              message: "Invalid Prompt messages",
+            }),
+        }),
       encode: (prompt) =>
-        Effect.mapBothEager(
-          SchemaParser.encodeEffect(Schema.Array(Message))(prompt.content),
-          {
-            onSuccess: (messages) => ({ content: messages }),
-            onFailure: () =>
-              new SchemaIssue.InvalidValue(Option.some(prompt.content), { message: "Invalid Prompt messages" })
-          }
-        )
-    })
-  )
-)
+        Effect.mapBothEager(SchemaParser.encodeEffect(Schema.Array(Message))(prompt.content), {
+          onSuccess: (messages) => ({ content: messages }),
+          onFailure: () =>
+            new SchemaIssue.InvalidValue(Option.some(prompt.content), {
+              message: "Invalid Prompt messages",
+            }),
+        }),
+    }),
+  ),
+);
 
 /**
- * Raw input accepted by `make`: a string, an iterable of encoded messages, or
- * an existing `Prompt`.
+ * Raw input accepted by `make`: a string, an iterable of encoded messages, or an existing `Prompt`.
  *
  * **Example** (Accepting raw prompt input)
  *
  * ```ts
- * import type { Prompt } from "effect/unstable/ai"
+ * import type { Prompt } from "effect/unstable/ai";
  *
  * // String input - creates a user message
- * const stringInput: Prompt.RawInput = "Hello, world!"
+ * const stringInput: Prompt.RawInput = "Hello, world!";
  *
  * // Message array input
  * const messagesInput: Prompt.RawInput = [
  *   { role: "system", content: "You are helpful." },
- *   { role: "user", content: [{ type: "text", text: "Hi!" }] }
- * ]
+ *   { role: "user", content: [{ type: "text", text: "Hi!" }] },
+ * ];
  *
  * // Existing prompt
- * declare const existingPrompt: Prompt.Prompt
- * const promptInput: Prompt.RawInput = existingPrompt
+ * declare const existingPrompt: Prompt.Prompt;
+ * const promptInput: Prompt.RawInput = existingPrompt;
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export type RawInput =
-  | string
-  | Iterable<MessageEncoded>
-  | Prompt
+export type RawInput = string | Iterable<MessageEncoded> | Prompt;
 
 const Proto = {
   [TypeId]: TypeId,
   pipe() {
-    return pipeArguments(this, arguments)
-  }
-}
+    return pipeArguments(this, arguments);
+  },
+};
 
 const makePrompt = (content: ReadonlyArray<Message>): Prompt =>
   Object.assign(Object.create(Proto), {
-    content
-  })
+    content,
+  });
 
-const decodeMessagesSync = Schema.decodeSync(Schema.Array(Message))
+const decodeMessagesSync = Schema.decodeSync(Schema.Array(Message));
 
 /**
  * An empty prompt with no messages.
@@ -1810,62 +1676,64 @@ const decodeMessagesSync = Schema.decodeSync(Schema.Array(Message))
  * **Example** (Creating an empty prompt)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
- * const emptyPrompt = Prompt.empty
- * console.log(emptyPrompt.content) // []
+ * const emptyPrompt = Prompt.empty;
+ * console.log(emptyPrompt.content); // []
  * ```
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
-export const empty: Prompt = makePrompt([])
+export const empty: Prompt = makePrompt([]);
 
 /**
  * Creates a `Prompt` from an input.
  *
  * **Details**
  *
- * This is the primary constructor for creating prompts, supporting multiple
- * input formats for convenience and flexibility.
+ * This is the primary constructor for creating prompts, supporting multiple input formats for
+ * convenience and flexibility.
  *
  * **Example** (Creating prompts from inputs)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * // From string - creates a user message
- * const textPrompt = Prompt.make("Hello, how are you?")
+ * const textPrompt = Prompt.make("Hello, how are you?");
  *
  * // From messages array
  * const structuredPrompt = Prompt.make([
  *   { role: "system", content: "You are a helpful assistant." },
- *   { role: "user", content: [{ type: "text", text: "Hi!" }] }
- * ])
+ *   { role: "user", content: [{ type: "text", text: "Hi!" }] },
+ * ]);
  *
  * // From existing prompt
- * declare const existingPrompt: Prompt.Prompt
- * const copiedPrompt = Prompt.make(existingPrompt)
+ * declare const existingPrompt: Prompt.Prompt;
+ * const copiedPrompt = Prompt.make(existingPrompt);
  * ```
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const make = (input: RawInput): Prompt => {
   if (typeof input === "string") {
-    const part = makePart("text", { text: input })
-    const message = makeMessage("user", { content: [part] })
-    return makePrompt([message])
+    const part = makePart("text", { text: input });
+    const message = makeMessage("user", { content: [part] });
+    return makePrompt([message]);
   }
 
   if (Predicate.isIterable(input)) {
-    return makePrompt(decodeMessagesSync(Arr.fromIterable(input), {
-      errors: "all"
-    }))
+    return makePrompt(
+      decodeMessagesSync(Arr.fromIterable(input), {
+        errors: "all",
+      }),
+    );
   }
 
-  return input
-}
+  return input;
+};
 
 /**
  * Creates a Prompt from an array of messages.
@@ -1873,45 +1741,44 @@ export const make = (input: RawInput): Prompt => {
  * **Example** (Creating prompts from messages)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
  * const messages: ReadonlyArray<Prompt.Message> = [
  *   Prompt.makeMessage("system", {
- *     content: "You are a coding assistant."
+ *     content: "You are a coding assistant.",
  *   }),
  *   Prompt.makeMessage("user", {
- *     content: [Prompt.makePart("text", { text: "Help me with TypeScript" })]
- *   })
- * ]
+ *     content: [Prompt.makePart("text", { text: "Help me with TypeScript" })],
+ *   }),
+ * ];
  *
- * const prompt = Prompt.fromMessages(messages)
+ * const prompt = Prompt.fromMessages(messages);
  * ```
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
-export const fromMessages = (messages: ReadonlyArray<Message>): Prompt => makePrompt(messages)
+export const fromMessages = (messages: ReadonlyArray<Message>): Prompt => makePrompt(messages);
 
 /**
- * Creates a `Prompt` from response parts by folding completed text and
- * reasoning streams into assistant parts, placing tool calls and approval
- * requests in an assistant message, and placing non-preliminary tool results
- * in a tool message using their encoded results.
+ * Creates a `Prompt` from response parts by folding completed text and reasoning streams into
+ * assistant parts, placing tool calls and approval requests in an assistant message, and placing
+ * non-preliminary tool results in a tool message using their encoded results.
  *
  * **Example** (Creating prompts from response parts)
  *
  * ```ts
- * import { Prompt, Response } from "effect/unstable/ai"
+ * import { Prompt, Response } from "effect/unstable/ai";
  *
  * const responseParts: ReadonlyArray<Response.AnyPart> = [
  *   Response.makePart("text", {
- *     text: "Hello there!"
+ *     text: "Hello there!",
  *   }),
  *   Response.makePart("tool-call", {
  *     id: "call_1",
  *     name: "get_time",
  *     params: {},
- *     providerExecuted: false
+ *     providerExecuted: false,
  *   }),
  *   Response.makePart("tool-result", {
  *     id: "call_1",
@@ -1920,129 +1787,135 @@ export const fromMessages = (messages: ReadonlyArray<Message>): Prompt => makePr
  *     result: "10:30 AM",
  *     encodedResult: "10:30 AM",
  *     providerExecuted: false,
- *     preliminary: false
- *   })
- * ]
+ *     preliminary: false,
+ *   }),
+ * ];
  *
- * const prompt = Prompt.fromResponseParts(responseParts)
+ * const prompt = Prompt.fromResponseParts(responseParts);
  * // Creates an assistant message with the response content
  * ```
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const fromResponseParts = (parts: ReadonlyArray<Response.AnyPart>): Prompt => {
   if (parts.length === 0) {
-    return empty
+    return empty;
   }
 
-  const assistantParts: Array<AssistantMessagePart> = []
-  const toolParts: Array<ToolMessagePart> = []
+  const assistantParts: Array<AssistantMessagePart> = [];
+  const toolParts: Array<ToolMessagePart> = [];
 
-  const activeTextDeltas = new Map<string, { text: string }>()
-  const activeReasoningDeltas = new Map<string, { text: string }>()
+  const activeTextDeltas = new Map<string, { text: string }>();
+  const activeReasoningDeltas = new Map<string, { text: string }>();
 
   for (const part of parts) {
     switch (part.type) {
       // Text Parts
       case "text": {
-        assistantParts.push(makePart("text", { text: part.text }))
-        break
+        assistantParts.push(makePart("text", { text: part.text }));
+        break;
       }
 
       // Text Parts (streaming)
       case "text-start": {
-        activeTextDeltas.set(part.id, { text: "" })
-        break
+        activeTextDeltas.set(part.id, { text: "" });
+        break;
       }
       case "text-delta": {
         if (activeTextDeltas.has(part.id)) {
-          activeTextDeltas.get(part.id)!.text += part.delta
+          activeTextDeltas.get(part.id)!.text += part.delta;
         }
-        break
+        break;
       }
       case "text-end": {
         if (activeTextDeltas.has(part.id)) {
-          assistantParts.push(makePart("text", activeTextDeltas.get(part.id)!))
+          assistantParts.push(makePart("text", activeTextDeltas.get(part.id)!));
         }
-        break
+        break;
       }
 
       // Reasoning Parts
       case "reasoning": {
-        assistantParts.push(makePart("reasoning", { text: part.text }))
-        break
+        assistantParts.push(makePart("reasoning", { text: part.text }));
+        break;
       }
 
       // Reasoning Parts (streaming)
       case "reasoning-start": {
-        activeReasoningDeltas.set(part.id, { text: "" })
-        break
+        activeReasoningDeltas.set(part.id, { text: "" });
+        break;
       }
       case "reasoning-delta": {
         if (activeReasoningDeltas.has(part.id)) {
-          activeReasoningDeltas.get(part.id)!.text += part.delta
+          activeReasoningDeltas.get(part.id)!.text += part.delta;
         }
-        break
+        break;
       }
       case "reasoning-end": {
         if (activeReasoningDeltas.has(part.id)) {
-          assistantParts.push(makePart("reasoning", activeReasoningDeltas.get(part.id)!))
+          assistantParts.push(makePart("reasoning", activeReasoningDeltas.get(part.id)!));
         }
-        break
+        break;
       }
 
       // Tool Call Parts
       case "tool-call": {
-        assistantParts.push(makePart("tool-call", {
-          id: part.id,
-          name: part.name,
-          params: part.params,
-          providerExecuted: part.providerExecuted ?? false
-        }))
-        break
+        assistantParts.push(
+          makePart("tool-call", {
+            id: part.id,
+            name: part.name,
+            params: part.params,
+            providerExecuted: part.providerExecuted ?? false,
+          }),
+        );
+        break;
       }
 
       // Tool Result Parts (skip preliminary results)
       case "tool-result": {
         if (part.preliminary !== true) {
-          toolParts.push(makePart("tool-result", {
-            id: part.id,
-            name: part.name,
-            isFailure: part.isFailure,
-            result: part.encodedResult
-          }))
+          toolParts.push(
+            makePart("tool-result", {
+              id: part.id,
+              name: part.name,
+              isFailure: part.isFailure,
+              result: part.encodedResult,
+            }),
+          );
         }
-        break
+        break;
       }
 
       // Tool Approval Request Parts
       case "tool-approval-request": {
-        assistantParts.push(makePart("tool-approval-request", {
-          approvalId: part.approvalId,
-          toolCallId: part.toolCallId
-        }))
-        break
+        assistantParts.push(
+          makePart("tool-approval-request", {
+            approvalId: part.approvalId,
+            toolCallId: part.toolCallId,
+          }),
+        );
+        break;
       }
     }
   }
 
   if (assistantParts.length === 0 && toolParts.length === 0) {
-    return empty
+    return empty;
   }
 
-  const messages: Array<Message> = []
+  const messages: Array<Message> = [];
 
   if (assistantParts.length > 0) {
-    messages.push(makeMessage("assistant", { content: assistantParts }))
+    messages.push(makeMessage("assistant", { content: assistantParts }));
   }
 
   if (toolParts.length > 0) {
-    messages.push(makeMessage("tool", { content: toolParts }))
+    messages.push(makeMessage("tool", { content: toolParts }));
   }
 
-  return makePrompt(messages)
-}
+  return makePrompt(messages);
+};
 
 // =============================================================================
 // Merging Prompts
@@ -2053,182 +1926,178 @@ export const fromResponseParts = (parts: ReadonlyArray<Response.AnyPart>): Promp
  *
  * **Details**
  *
- * The returned prompt contains all messages from the original prompt followed
- * by the provided raw input, preserving message order.
+ * The returned prompt contains all messages from the original prompt followed by the provided raw
+ * input, preserving message order.
  *
  * **Example** (Concatenating prompts)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
- * const systemPrompt = Prompt.make([{
- *   role: "system",
- *   content: "You are a helpful assistant."
- * }])
+ * const systemPrompt = Prompt.make([
+ *   {
+ *     role: "system",
+ *     content: "You are a helpful assistant.",
+ *   },
+ * ]);
  *
- * const merged = Prompt.concat(systemPrompt, "Hello, world!")
+ * const merged = Prompt.concat(systemPrompt, "Hello, world!");
  * ```
  *
- * @category combinators
  * @since 4.0.0
+ * @category Combinators
  */
 export const concat: {
-  (input: RawInput): (self: Prompt) => Prompt
-  (self: Prompt, input: RawInput): Prompt
+  (input: RawInput): (self: Prompt) => Prompt;
+  (self: Prompt, input: RawInput): Prompt;
 } = dual(2, (self: Prompt, input: RawInput): Prompt => {
-  const other = make(input)
+  const other = make(input);
   if (self.content.length === 0) {
-    return other
+    return other;
   }
   if (other.content.length === 0) {
-    return self
+    return self;
   }
-  return fromMessages([...self.content, ...other.content])
-})
+  return fromMessages([...self.content, ...other.content]);
+});
 
 // =============================================================================
 // Manipulating Prompts
 // =============================================================================
 
 /**
- * Creates a new prompt from the specified prompt with the system message set
- * to the specified text content.
+ * Creates a new prompt from the specified prompt with the system message set to the specified text
+ * content.
  *
  * **Gotchas**
  *
- * This method removes and replaces any previous system message from the
- * prompt.
+ * This method removes and replaces any previous system message from the prompt.
  *
  * **Example** (Replacing system instructions)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
- * const systemPrompt = Prompt.make([{
- *   role: "system",
- *   content: "You are a helpful assistant."
- * }])
+ * const systemPrompt = Prompt.make([
+ *   {
+ *     role: "system",
+ *     content: "You are a helpful assistant.",
+ *   },
+ * ]);
  *
- * const userPrompt = Prompt.make("Hello, world!")
+ * const userPrompt = Prompt.make("Hello, world!");
  *
- * const prompt = Prompt.concat(systemPrompt, userPrompt)
+ * const prompt = Prompt.concat(systemPrompt, userPrompt);
  *
- * const replaced = Prompt.setSystem(
- *   prompt,
- *   "You are an expert in programming"
- * )
+ * const replaced = Prompt.setSystem(prompt, "You are an expert in programming");
  * ```
  *
- * @category combinators
  * @since 4.0.0
+ * @category Combinators
  */
 export const setSystem: {
-  (content: string): (self: Prompt) => Prompt
-  (self: Prompt, content: string): Prompt
+  (content: string): (self: Prompt) => Prompt;
+  (self: Prompt, content: string): Prompt;
 } = dual(2, (self: Prompt, content: string): Prompt => {
-  const messages: Array<Message> = [makeMessage("system", { content })]
+  const messages: Array<Message> = [makeMessage("system", { content })];
   for (const message of self.content) {
     if (message.role !== "system") {
-      messages.push(message)
+      messages.push(message);
     }
   }
-  return makePrompt(messages)
-})
+  return makePrompt(messages);
+});
 
 /**
- * Creates a new prompt with a leading system message. If the prompt already has
- * a system message, the new message uses the provided content prepended to the
- * first existing system message's content; the original messages remain after
- * it.
+ * Creates a new prompt with a leading system message. If the prompt already has a system message,
+ * the new message uses the provided content prepended to the first existing system message's
+ * content; the original messages remain after it.
  *
  * **Example** (Prepending system instructions)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
- * const systemPrompt = Prompt.make([{
- *   role: "system",
- *   content: "You are an expert in programming."
- * }])
+ * const systemPrompt = Prompt.make([
+ *   {
+ *     role: "system",
+ *     content: "You are an expert in programming.",
+ *   },
+ * ]);
  *
- * const userPrompt = Prompt.make("Hello, world!")
+ * const userPrompt = Prompt.make("Hello, world!");
  *
- * const prompt = Prompt.concat(systemPrompt, userPrompt)
+ * const prompt = Prompt.concat(systemPrompt, userPrompt);
  *
- * const replaced = Prompt.prependSystem(
- *   prompt,
- *   "You are a helpful assistant. "
- * )
+ * const replaced = Prompt.prependSystem(prompt, "You are a helpful assistant. ");
  * // result content: "You are a helpful assistant. You are an expert in programming."
  * ```
  *
- * @category combinators
  * @since 4.0.0
+ * @category Combinators
  */
 export const prependSystem: {
-  (content: string): (self: Prompt) => Prompt
-  (self: Prompt, content: string): Prompt
+  (content: string): (self: Prompt) => Prompt;
+  (self: Prompt, content: string): Prompt;
 } = dual(2, (self: Prompt, content: string): Prompt => {
-  let system: SystemMessage | undefined = undefined
+  let system: SystemMessage | undefined = undefined;
   for (const message of self.content) {
     if (message.role === "system") {
       system = makeMessage("system", {
-        content: content + message.content
-      })
-      break
+        content: content + message.content,
+      });
+      break;
     }
   }
   if (Predicate.isUndefined(system)) {
-    system = makeMessage("system", { content })
+    system = makeMessage("system", { content });
   }
-  return makePrompt([system, ...self.content])
-})
+  return makePrompt([system, ...self.content]);
+});
 
 /**
- * Creates a new prompt with a leading system message. If the prompt already has
- * a system message, the new message uses the provided content appended to the
- * first existing system message's content; the original messages remain after
- * it.
+ * Creates a new prompt with a leading system message. If the prompt already has a system message,
+ * the new message uses the provided content appended to the first existing system message's
+ * content; the original messages remain after it.
  *
  * **Example** (Appending system instructions)
  *
  * ```ts
- * import { Prompt } from "effect/unstable/ai"
+ * import { Prompt } from "effect/unstable/ai";
  *
- * const systemPrompt = Prompt.make([{
- *   role: "system",
- *   content: "You are an expert in programming."
- * }])
+ * const systemPrompt = Prompt.make([
+ *   {
+ *     role: "system",
+ *     content: "You are an expert in programming.",
+ *   },
+ * ]);
  *
- * const userPrompt = Prompt.make("Hello, world!")
+ * const userPrompt = Prompt.make("Hello, world!");
  *
- * const prompt = Prompt.concat(systemPrompt, userPrompt)
+ * const prompt = Prompt.concat(systemPrompt, userPrompt);
  *
- * const replaced = Prompt.appendSystem(
- *   prompt,
- *   " You are a helpful assistant."
- * )
+ * const replaced = Prompt.appendSystem(prompt, " You are a helpful assistant.");
  * // result content: "You are an expert in programming. You are a helpful assistant."
  * ```
  *
- * @category combinators
  * @since 4.0.0
+ * @category Combinators
  */
 export const appendSystem: {
-  (content: string): (self: Prompt) => Prompt
-  (self: Prompt, content: string): Prompt
+  (content: string): (self: Prompt) => Prompt;
+  (self: Prompt, content: string): Prompt;
 } = dual(2, (self: Prompt, content: string): Prompt => {
-  let system: SystemMessage | undefined = undefined
+  let system: SystemMessage | undefined = undefined;
   for (const message of self.content) {
     if (message.role === "system") {
       system = makeMessage("system", {
-        content: message.content + content
-      })
-      break
+        content: message.content + content,
+      });
+      break;
     }
   }
   if (Predicate.isUndefined(system)) {
-    system = makeMessage("system", { content })
+    system = makeMessage("system", { content });
   }
-  return makePrompt([system, ...self.content])
-})
+  return makePrompt([system, ...self.content]);
+});

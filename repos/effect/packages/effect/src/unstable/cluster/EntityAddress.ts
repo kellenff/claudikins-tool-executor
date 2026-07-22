@@ -1,37 +1,36 @@
 /**
- * The `EntityAddress` module defines the value used to locate an entity within
- * a cluster. An address combines the entity type, entity id, and shard id so
- * messages, persisted envelopes, workflow executions, and entity managers can
- * agree on the same routing target.
+ * The `EntityAddress` module defines the value used to locate an entity within a cluster. An
+ * address combines the entity type, entity id, and shard id so messages, persisted envelopes,
+ * workflow executions, and entity managers can agree on the same routing target.
  *
  * @since 4.0.0
  */
-import * as Equal from "../../Equal.ts"
-import * as Hash from "../../Hash.ts"
-import * as Schema from "../../Schema.ts"
-import { EntityId } from "./EntityId.ts"
-import { EntityType } from "./EntityType.ts"
-import { ShardId } from "./ShardId.ts"
+import * as Equal from "../../Equal.ts";
+import * as Hash from "../../Hash.ts";
+import * as Schema from "../../Schema.ts";
+import { EntityId } from "./EntityId.ts";
+import { EntityType } from "./EntityType.ts";
+import { ShardId } from "./ShardId.ts";
 
-const TypeId = "~effect/cluster/EntityAddress"
+const TypeId = "~effect/cluster/EntityAddress";
 
 /**
  * Represents the unique address of an entity within the cluster.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export class EntityAddress extends Schema.Class<EntityAddress>(TypeId)({
   shardId: ShardId,
   entityType: EntityType,
-  entityId: EntityId
+  entityId: EntityId,
 }) {
   /**
    * Marks this value as a cluster entity address for runtime guards.
    *
    * @since 4.0.0
    */
-  readonly [TypeId] = TypeId
+  readonly [TypeId] = TypeId;
 
   /**
    * Formats the entity type, entity id, and shard id as a readable address.
@@ -39,7 +38,7 @@ export class EntityAddress extends Schema.Class<EntityAddress>(TypeId)({
    * @since 4.0.0
    */
   override toString() {
-    return `EntityAddress(${this.entityType.toString()}, ${this.entityId.toString()}, ${this.shardId.toString()})`
+    return `EntityAddress(${this.entityType.toString()}, ${this.entityId.toString()}, ${this.shardId.toString()})`;
   }
 
   /**
@@ -48,8 +47,11 @@ export class EntityAddress extends Schema.Class<EntityAddress>(TypeId)({
    * @since 4.0.0
    */
   [Equal.symbol](that: EntityAddress): boolean {
-    return this.entityType === that.entityType && this.entityId === that.entityId &&
+    return (
+      this.entityType === that.entityType &&
+      this.entityId === that.entityId &&
       Equal.equals(this.shardId, that.shardId)
+    );
   }
 
   /**
@@ -58,7 +60,7 @@ export class EntityAddress extends Schema.Class<EntityAddress>(TypeId)({
    * @since 4.0.0
    */
   [Hash.symbol]() {
-    return Hash.string(`${this.entityType}:${this.entityId}:${this.shardId.toString()}`)
+    return Hash.string(`${this.entityType}:${this.entityId}:${this.shardId.toString()}`);
   }
 }
 /**
@@ -66,28 +68,27 @@ export class EntityAddress extends Schema.Class<EntityAddress>(TypeId)({
  *
  * **When to use**
  *
- * Use to create the routing target for a known entity type and entity id after
- * resolving that id to the `ShardId` assigned by the entity's shard group.
+ * Use to create the routing target for a known entity type and entity id after resolving that id to
+ * the `ShardId` assigned by the entity's shard group.
  *
  * **Details**
  *
- * The returned `EntityAddress` stores the supplied `shardId`, `entityType`, and
- * `entityId`. Equality and hashing include all three fields.
+ * The returned `EntityAddress` stores the supplied `shardId`, `entityType`, and `entityId`.
+ * Equality and hashing include all three fields.
  *
  * **Gotchas**
  *
- * `make` does not choose the shard for an entity. Use the same shard group
- * logic as the entity definition; a different `shardId` makes a different
- * address even when the entity type and entity id match.
+ * `make` does not choose the shard for an entity. Use the same shard group logic as the entity
+ * definition; a different `shardId` makes a different address even when the entity type and entity
+ * id match.
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link EntityAddress} for the equality, hashing, and string formatting behavior of constructed addresses
  * @see {@link ShardId} for the shard identifier included in the address
- *
- * @category constructors
- * @since 4.0.0
  */
 export const make = (options: {
-  readonly shardId: ShardId
-  readonly entityType: EntityType
-  readonly entityId: EntityId
-}): EntityAddress => new EntityAddress(options, { disableChecks: true })
+  readonly shardId: ShardId;
+  readonly entityType: EntityType;
+  readonly entityId: EntityId;
+}): EntityAddress => new EntityAddress(options, { disableChecks: true });

@@ -1,35 +1,21 @@
 {
   "name": "@effect/atom-solid",
   "version": "4.0.0-beta.100",
-  "type": "module",
-  "license": "MIT",
   "description": "SolidJS bindings for the Effect Atom modules",
+  "keywords": [
+    "database",
+    "solid",
+    "typescript"
+  ],
   "homepage": "https://effect.website",
+  "bugs": {
+    "url": "https://github.com/Effect-TS/effect/issues"
+  },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Effect-TS/effect.git",
     "directory": "packages/atom/solid"
-  },
-  "bugs": {
-    "url": "https://github.com/Effect-TS/effect/issues"
-  },
-  "tags": [
-    "typescript",
-    "solid",
-    "database"
-  ],
-  "keywords": [
-    "typescript",
-    "solid",
-    "database"
-  ],
-  "sideEffects": [],
-  "exports": {
-    "./package.json": "./package.json",
-    ".": "./src/index.ts",
-    "./*": "./src/*.ts",
-    "./internal/*": null,
-    "./*/index": null
   },
   "files": [
     "src/**/*.ts",
@@ -38,16 +24,25 @@
     "dist/**/*.d.ts",
     "dist/**/*.d.ts.map"
   ],
+  "type": "module",
+  "sideEffects": [],
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts",
+    "./internal/*": null,
+    "./*/index": null
+  },
   "publishConfig": {
-    "access": "public",
-    "provenance": true,
     "exports": {
       "./package.json": "./package.json",
       ".": "./dist/index.js",
       "./*": "./dist/*.js",
       "./internal/*": null,
       "./*/index": null
-    }
+    },
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsc -b tsconfig.json && pnpm babel",
@@ -56,10 +51,6 @@
     "test": "vitest",
     "coverage": "vitest --coverage"
   },
-  "peerDependencies": {
-    "effect": "workspace:^",
-    "solid-js": ">=1 <2"
-  },
   "devDependencies": {
     "@solidjs/testing-library": "^0.8.0",
     "@testing-library/dom": "^10.4.1",
@@ -67,5 +58,14 @@
     "effect": "workspace:^",
     "jsdom": "^29.1.1",
     "solid-js": "^1.9.14"
-  }
+  },
+  "peerDependencies": {
+    "effect": "workspace:^",
+    "solid-js": ">=1 <2"
+  },
+  "tags": [
+    "typescript",
+    "solid",
+    "database"
+  ]
 }

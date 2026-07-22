@@ -17,9 +17,9 @@ type DefaultServerConfig = ServerConfig & {
 /**
  * Default MCP server configurations.
  *
- * Always merged with user-supplied servers (later layers in the resolved config
- * win by `name`). NOTE: env vars are specified as keys, resolved at connect time
- * (not module load time) so dotenv has loaded before we read process.env.
+ * Always merged with user-supplied servers (later layers in the resolved config win by `name`).
+ * NOTE: env vars are specified as keys, resolved at connect time (not module load time) so dotenv
+ * has loaded before we read process.env.
  */
 const DEFAULT_CONFIGS: DefaultServerConfig[] = [
   // NPX servers (Node.js)
@@ -83,9 +83,7 @@ const SAFE_SERVER_COMMANDS = new Set(["npx", "uvx", "node", "python", "codebase-
 
 const DEFAULT_SOURCE = "<default>";
 
-/**
- * Resolve optional command env override at runtime (after dotenv loads)
- */
+/** Resolve optional command env override at runtime (after dotenv loads) */
 function resolveCommand(config: ServerConfig): string {
   if (!config.commandEnvKey) {
     return config.command;
@@ -94,8 +92,8 @@ function resolveCommand(config: ServerConfig): string {
 }
 
 /**
- * Resolve envKeys to actual env values at runtime (after dotenv loads).
- * Used only for built-in defaults; user-supplied entries use literal `env`.
+ * Resolve envKeys to actual env values at runtime (after dotenv loads). Used only for built-in
+ * defaults; user-supplied entries use literal `env`.
  */
 function resolveEnvKeys(envKeys?: string[]): Record<string, string> | undefined {
   if (!envKeys || envKeys.length === 0) {
@@ -108,9 +106,7 @@ function resolveEnvKeys(envKeys?: string[]): Record<string, string> | undefined 
   }, {});
 }
 
-/**
- * Validate server commands to avoid accidental command injection from config
- */
+/** Validate server commands to avoid accidental command injection from config */
 function isSafeCommand(config: ServerConfig): boolean {
   const command = config.command;
   if (command === "") {
@@ -130,11 +126,10 @@ function normalizeServerConfig<T extends ServerConfig>(config: T): T {
 }
 
 /**
- * Load server configs by always starting from DEFAULT_CONFIGS and overlaying any
- * user-supplied servers (resolved from layered config files) by `name`. User
- * entries replace defaults of the same name; defaults without a user override
- * remain. Unsafe entries are filtered post-merge with a warning that names the
- * provenance source.
+ * Load server configs by always starting from DEFAULT_CONFIGS and overlaying any user-supplied
+ * servers (resolved from layered config files) by `name`. User entries replace defaults of the same
+ * name; defaults without a user override remain. Unsafe entries are filtered post-merge with a
+ * warning that names the provenance source.
  */
 function loadServerConfigs(): ServerConfig[] {
   const result = loadConfig();
@@ -189,9 +184,7 @@ function loadServerConfigs(): ServerConfig[] {
   });
 }
 
-/**
- * MCP server configurations - lazily loaded to ensure dotenv has run first
- */
+/** MCP server configurations - lazily loaded to ensure dotenv has run first */
 let _serverConfigs: ServerConfig[] | null = null;
 
 export function getServerConfigs(): ServerConfig[] {
@@ -214,24 +207,16 @@ export const SERVER_CONFIGS = new Proxy([] as ServerConfig[], {
   },
 });
 
-/**
- * Client state tracking for lazy loading and lifecycle management
- */
+/** Client state tracking for lazy loading and lifecycle management */
 const clientStates = new Map<string, ClientState>();
 
-/**
- * Track in-flight connection promises to avoid duplicate connections
- */
+/** Track in-flight connection promises to avoid duplicate connections */
 const connectionPromises = new Map<string, Promise<Client | null>>();
 
-/**
- * Audit log for all MCP calls
- */
+/** Audit log for all MCP calls */
 const auditLog: AuditLogEntry[] = [];
 
-/**
- * Initialize client states (all disconnected)
- */
+/** Initialize client states (all disconnected) */
 export function initClientStates(): void {
   for (const config of SERVER_CONFIGS) {
     clientStates.set(config.name, {
@@ -242,9 +227,7 @@ export function initClientStates(): void {
   }
 }
 
-/**
- * Get a client, connecting lazily if needed
- */
+/** Get a client, connecting lazily if needed */
 export async function getClient(name: string): Promise<Client | null> {
   const state = clientStates.get(name);
   if (!state) {
@@ -275,9 +258,7 @@ export async function getClient(name: string): Promise<Client | null> {
   }
 }
 
-/**
- * Internal connection logic
- */
+/** Internal connection logic */
 async function connectClientInternal(name: string, state: ClientState): Promise<Client | null> {
   const config = SERVER_CONFIGS.find((candidate) => candidate.name === name);
   if (!config) {
@@ -307,9 +288,7 @@ async function connectClientInternal(name: string, state: ClientState): Promise<
   }
 }
 
-/**
- * Disconnect a specific client
- */
+/** Disconnect a specific client */
 export async function disconnectClient(name: string): Promise<void> {
   const state = clientStates.get(name);
   if (!state?.client) {
@@ -327,17 +306,13 @@ export async function disconnectClient(name: string): Promise<void> {
   state.lastUsed = 0;
 }
 
-/**
- * Disconnect all clients
- */
+/** Disconnect all clients */
 export async function disconnectAll(): Promise<void> {
   const names = Array.from(clientStates.keys());
   await Promise.all(names.map(disconnectClient));
 }
 
-/**
- * Clean up idle clients (run periodically)
- */
+/** Clean up idle clients (run periodically) */
 export async function cleanupIdleClients(): Promise<void> {
   const now = Date.now();
   for (const [name, state] of clientStates) {
@@ -347,9 +322,7 @@ export async function cleanupIdleClients(): Promise<void> {
   }
 }
 
-/**
- * Get list of currently connected clients
- */
+/** Get list of currently connected clients */
 export function getConnectedClients(): string[] {
   const connected: string[] = [];
   for (const [name, state] of clientStates) {
@@ -360,16 +333,12 @@ export function getConnectedClients(): string[] {
   return connected;
 }
 
-/**
- * Get list of all available clients (connected or not)
- */
+/** Get list of all available clients (connected or not) */
 export function getAvailableClients(): string[] {
   return SERVER_CONFIGS.map((config) => config.name);
 }
 
-/**
- * Log an MCP call for auditing
- */
+/** Log an MCP call for auditing */
 export function logMcpCall(entry: AuditLogEntry): void {
   auditLog.push(entry);
 
@@ -379,16 +348,12 @@ export function logMcpCall(entry: AuditLogEntry): void {
   }
 }
 
-/**
- * Get recent audit log entries
- */
+/** Get recent audit log entries */
 export function getAuditLog(limit = AUDIT_LOG_DEFAULT_LIMIT): AuditLogEntry[] {
   return auditLog.slice(-limit);
 }
 
-/**
- * Start the idle cleanup interval
- */
+/** Start the idle cleanup interval */
 let cleanupInterval: NodeJS.Timeout | null = null;
 
 export function startLifecycleManagement(): void {
@@ -430,9 +395,7 @@ export function startLifecycleManagement(): void {
   process.on("SIGTERM", onSignal);
 }
 
-/**
- * Stop lifecycle management (for testing)
- */
+/** Stop lifecycle management (for testing) */
 export function stopLifecycleManagement(): void {
   if (cleanupInterval) {
     clearInterval(cleanupInterval);

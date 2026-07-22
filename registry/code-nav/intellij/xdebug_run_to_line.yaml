@@ -51,7 +51,7 @@ inputSchema:
       description: Target line number (1-based).
     timeout:
       type: integer
-      description: 'Timeout in milliseconds waiting for paused/stopped result. Default: 30000.'
+      description: "Timeout in milliseconds waiting for paused/stopped result. Default: 30000."
     projectPath:
       type: string
       description: |2-

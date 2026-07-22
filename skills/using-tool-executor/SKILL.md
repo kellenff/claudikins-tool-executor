@@ -8,19 +8,19 @@ You have BOTH basic Claude Code tools AND specialized MCP tools via tool-executo
 
 **Use the right tool for the job:**
 
-| Task | Use This | NOT This |
-|------|----------|----------|
-| Read a file | `Read` tool | MCP |
-| Search for literal string | `Grep` tool | MCP |
-| Find files by pattern | `Glob` tool | MCP |
-| Run shell commands | `Bash` tool | MCP |
-| **Semantic code search** | MCP (Serena) | Grep |
-| **Refactor/rename symbols** | MCP (Serena) | Edit |
-| **Deep research** | MCP (Gemini) | WebSearch |
-| **AI-powered analysis** | MCP (Gemini) | - |
-| **Generate images/video** | MCP (Gemini) | - |
-| **Library documentation** | MCP (Context7) | WebFetch |
-| **Multi-step reasoning** | MCP (Sequential) | - |
+| Task                        | Use This         | NOT This  |
+| --------------------------- | ---------------- | --------- |
+| Read a file                 | `Read` tool      | MCP       |
+| Search for literal string   | `Grep` tool      | MCP       |
+| Find files by pattern       | `Glob` tool      | MCP       |
+| Run shell commands          | `Bash` tool      | MCP       |
+| **Semantic code search**    | MCP (Serena)     | Grep      |
+| **Refactor/rename symbols** | MCP (Serena)     | Edit      |
+| **Deep research**           | MCP (Gemini)     | WebSearch |
+| **AI-powered analysis**     | MCP (Gemini)     | -         |
+| **Generate images/video**   | MCP (Gemini)     | -         |
+| **Library documentation**   | MCP (Context7)   | WebFetch  |
+| **Multi-step reasoning**    | MCP (Sequential) | -         |
 
 **Basic tools are great for basic tasks. MCP is for capabilities that don't exist in basic tools.**
 </IMPORTANT>
@@ -63,36 +63,36 @@ digraph tool_flow {
 
 ## Available MCP Categories
 
-| Category | Server | Capabilities |
-|----------|--------|--------------|
-| code-nav | Serena (29 tools) | Symbol search, refactoring, code analysis, persistent memory |
+| Category       | Server                     | Capabilities                                                                              |
+| -------------- | -------------------------- | ----------------------------------------------------------------------------------------- |
+| code-nav       | Serena (29 tools)          | Symbol search, refactoring, code analysis, persistent memory                              |
 | graph-analysis | codebase-memory (14 tools) | Code graph indexing, symbol search, call/data-flow traversal, blast-radius analysis, ADRs |
-| knowledge | Context7, NotebookLM | Library docs lookup, notebook Q&A, research |
-| ai-models | Gemini (37 tools) | Deep research, brainstorming, image gen, video gen, structured output |
-| reasoning | Sequential-thinking | Multi-step reasoning with thought chains |
-| ui | shadcn | Component search, examples, implementation |
-| web | Apify | Web scraping, RAG browser, data extraction |
+| knowledge      | Context7, NotebookLM       | Library docs lookup, notebook Q&A, research                                               |
+| ai-models      | Gemini (37 tools)          | Deep research, brainstorming, image gen, video gen, structured output                     |
+| reasoning      | Sequential-thinking        | Multi-step reasoning with thought chains                                                  |
+| ui             | shadcn                     | Component search, examples, implementation                                                |
+| web            | Apify                      | Web scraping, RAG browser, data extraction                                                |
 
 ## Red Flags
 
 **When deciding WHETHER to use MCP:**
 
-| Thought | Reality |
-|---------|---------|
-| "I'll use Serena to read this file" | Just use Read tool. Serena is for semantic search. |
-| "I need MCP to search for 'TODO'" | Grep is fine for literal strings. |
+| Thought                               | Reality                                            |
+| ------------------------------------- | -------------------------------------------------- |
+| "I'll use Serena to read this file"   | Just use Read tool. Serena is for semantic search. |
+| "I need MCP to search for 'TODO'"     | Grep is fine for literal strings.                  |
 | "Let me use Gemini to check the file" | Read it yourself. Gemini is for analysis/research. |
 
 **When you ARE using MCP:**
 
-| Thought | Reality |
-|---------|---------|
-| "I remember the tool name" | Tool names change. Search first. |
-| "I know the schema" | Schemas evolve. Get fresh schema. |
-| "Let me just try execute_code" | Without search/schema = guaranteed failure. |
-| "I'll console.log the result" | Large outputs truncate. Use workspace. |
-| "Let me Read that _savedTo path" | Workspace isn't filesystem. Use workspace.readJSON(). |
-| "search_tools is overhead" | search_tools prevents 10x more overhead from failures. |
+| Thought                           | Reality                                                |
+| --------------------------------- | ------------------------------------------------------ |
+| "I remember the tool name"        | Tool names change. Search first.                       |
+| "I know the schema"               | Schemas evolve. Get fresh schema.                      |
+| "Let me just try execute_code"    | Without search/schema = guaranteed failure.            |
+| "I'll console.log the result"     | Large outputs truncate. Use workspace.                 |
+| "Let me Read that \_savedTo path" | Workspace isn't filesystem. Use workspace.readJSON().  |
+| "search_tools is overhead"        | search_tools prevents 10x more overhead from failures. |
 
 ## Workspace Pattern (CRITICAL)
 
@@ -120,13 +120,14 @@ if (result._savedTo) {
   const full = await workspace.readJSON(result._savedTo);
   // Process full data...
   await workspace.writeJSON("my-analysis.json", processedData);
-  console.log("Saved to my-analysis.json");  // Minimal console output
+  console.log("Saved to my-analysis.json"); // Minimal console output
 }
 ```
 
 ## Quick Reference
 
 **Use basic tools for:**
+
 - Reading files → `Read`
 - Literal text search → `Grep`
 - Finding files by name → `Glob`
@@ -134,6 +135,7 @@ if (result._savedTo) {
 - Simple file edits → `Edit`
 
 **Use MCP for (via search_tools first!):**
+
 - "Find where X is defined" → Serena (`find_symbol`)
 - "Trace code relationships/blast radius" → codebase-memory (`search_graph`, `trace_path`, `detect_changes`)
 - "Rename this function everywhere" → Serena (`rename_symbol`)
@@ -153,7 +155,7 @@ Before ANY tool-executor usage:
 - [ ] Did I search_tools first? (not guess)
 - [ ] Did I get_tool_schema? (not assume)
 - [ ] Am I saving large outputs to workspace? (not console.log)
-- [ ] Am I using workspace.readJSON for _savedTo? (not Read tool)
+- [ ] Am I using workspace.readJSON for \_savedTo? (not Read tool)
 
 ## The Rule
 

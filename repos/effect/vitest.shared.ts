@@ -1,24 +1,19 @@
-import path from "node:path"
-import aliases from "vite-tsconfig-paths"
-import type { ViteUserConfig } from "vitest/config"
+import path from "node:path";
+import aliases from "vite-tsconfig-paths";
+import type { ViteUserConfig } from "vitest/config";
 
 const config: ViteUserConfig = {
   esbuild: {
-    target: "es2020"
+    target: "es2020",
   },
   optimizeDeps: {
-    exclude: ["bun:sqlite"]
+    exclude: ["bun:sqlite"],
   },
   plugins: [aliases()],
   server: {
     watch: {
-      ignored: [
-        "**/.context/**",
-        "**/.direnv/**",
-        "**/.lalph/**",
-        "**/.repos/**"
-      ]
-    }
+      ignored: ["**/.context/**", "**/.direnv/**", "**/.lalph/**", "**/.repos/**"],
+    },
   },
   test: {
     exclude: [
@@ -26,14 +21,14 @@ const config: ViteUserConfig = {
       "**/.direnv/**",
       "**/.lalph/**",
       "**/.repos/**",
-      "**/node_modules/**"
+      "**/node_modules/**",
     ],
     setupFiles: [path.join(__dirname, "vitest.setup.ts")],
     fakeTimers: {
-      toFake: undefined
+      toFake: undefined,
     },
     sequence: {
-      concurrent: true
+      concurrent: true,
     },
     include: ["test/**/*.test.{ts,tsx}"],
     coverage: {
@@ -52,10 +47,10 @@ const config: ViteUserConfig = {
         "**/*.d.ts",
         "**/*.config.*",
         "**/vitest.setup.*",
-        "**/vitest.shared.*"
-      ]
-    }
-  }
-}
+        "**/vitest.shared.*",
+      ],
+    },
+  },
+};
 
-export default config
+export default config;

@@ -1,43 +1,40 @@
 /**
  * Defines reusable rules for merging two values of the same type.
  *
- * A `Combiner<A>` contains one operation, `combine(self, that)`, which returns
- * the merged value. It does not define an initial value for reducing a
- * collection; use a `Reducer` when you need that. This module includes the
- * `Combiner` interface, a constructor for custom combining logic, and common
- * combiners for choosing or ordering values.
+ * A `Combiner<A>` contains one operation, `combine(self, that)`, which returns the merged value. It
+ * does not define an initial value for reducing a collection; use a `Reducer` when you need that.
+ * This module includes the `Combiner` interface, a constructor for custom combining logic, and
+ * common combiners for choosing or ordering values.
  *
  * @since 4.0.0
  */
-import type * as Order from "./Order.ts"
+import type * as Order from "./Order.ts";
 
 /**
- * Represents a strategy for combining two values of the same type `A`. A
- * `Combiner` contains a single `combine` method that takes two values and
- * returns a merged result. It does not include an identity/empty value; use
- * `Reducer` when you need one.
+ * Represents a strategy for combining two values of the same type `A`. A `Combiner` contains a
+ * single `combine` method that takes two values and returns a merged result. It does not include an
+ * identity/empty value; use `Reducer` when you need one.
  *
  * **When to use**
  *
- * Use when you need to describe how two values of the same type
- * merge, pass a reusable combining strategy to library functions like
- * `Struct.makeCombiner` or `Option.makeCombinerFailFast`, or define the
- * combining step for a `Reducer`.
+ * Use when you need to describe how two values of the same type merge, pass a reusable combining
+ * strategy to library functions like `Struct.makeCombiner` or `Option.makeCombinerFailFast`, or
+ * define the combining step for a `Reducer`.
  *
  * **Example** (Combining numbers with addition)
  *
  * ```ts
- * import { Combiner } from "effect"
+ * import { Combiner } from "effect";
  *
- * const Sum = Combiner.make<number>((self, that) => self + that)
+ * const Sum = Combiner.make<number>((self, that) => self + that);
  *
- * console.log(Sum.combine(3, 4))
+ * console.log(Sum.combine(3, 4));
  * // Output: 7
  * ```
  *
- * @see {@link make} – create a `Combiner` from a function
- * @category models
  * @since 4.0.0
+ * @category Models
+ * @see {@link make} – create a `Combiner` from a function
  */
 export interface Combiner<A> {
   /**
@@ -47,7 +44,7 @@ export interface Combiner<A> {
    *
    * Use to merge two values according to this combining strategy.
    */
-  readonly combine: (self: A, that: A) => A
+  readonly combine: (self: A, that: A) => A;
 }
 
 /**
@@ -55,31 +52,31 @@ export interface Combiner<A> {
  *
  * **When to use**
  *
- * Use when you have a custom combining operation that is not covered by
- * the built-in constructors (`min`, `max`, `first`, `last`, `constant`).
+ * Use when you have a custom combining operation that is not covered by the built-in constructors
+ * (`min`, `max`, `first`, `last`, `constant`).
  *
  * **Details**
  *
- * The returned combiner's `combine` method delegates to the provided function.
- * Any purity, associativity, or mutation behavior comes from that function.
+ * The returned combiner's `combine` method delegates to the provided function. Any purity,
+ * associativity, or mutation behavior comes from that function.
  *
  * **Example** (Multiplying numbers)
  *
  * ```ts
- * import { Combiner } from "effect"
+ * import { Combiner } from "effect";
  *
- * const Product = Combiner.make<number>((self, that) => self * that)
+ * const Product = Combiner.make<number>((self, that) => self * that);
  *
- * console.log(Product.combine(3, 5))
+ * console.log(Product.combine(3, 5));
  * // Output: 15
  * ```
  *
- * @see {@link Combiner} – the interface this creates
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
+ * @see {@link Combiner} – the interface this creates
  */
 export function make<A>(combine: (self: A, that: A) => A): Combiner<A> {
-  return { combine }
+  return { combine };
 }
 
 /**
@@ -87,103 +84,101 @@ export function make<A>(combine: (self: A, that: A) => A): Combiner<A> {
  *
  * **When to use**
  *
- * Use when you want the right-hand value to act as the accumulator, or need to
- * reverse a non-commutative combiner such as string concatenation.
+ * Use when you want the right-hand value to act as the accumulator, or need to reverse a
+ * non-commutative combiner such as string concatenation.
  *
  * **Details**
  *
- * Returns a new `Combiner` where `combine(self, that)` calls the original
- * combiner as `combine(that, self)`.
+ * Returns a new `Combiner` where `combine(self, that)` calls the original combiner as
+ * `combine(that, self)`.
  *
  * **Example** (Reversing string concatenation)
  *
  * ```ts
- * import { Combiner, String } from "effect"
+ * import { Combiner, String } from "effect";
  *
- * const Prepend = Combiner.flip(String.ReducerConcat)
+ * const Prepend = Combiner.flip(String.ReducerConcat);
  *
- * console.log(Prepend.combine("a", "b"))
+ * console.log(Prepend.combine("a", "b"));
  * // Output: "ba"
  * ```
  *
- * @see {@link make}
- * @category combinators
  * @since 4.0.0
+ * @category Combinators
+ * @see {@link make}
  */
 export function flip<A>(combiner: Combiner<A>): Combiner<A> {
-  return make((self, that) => combiner.combine(that, self))
+  return make((self, that) => combiner.combine(that, self));
 }
 
 /**
- * Creates a `Combiner` that returns the smaller of two values according to
- * the provided `Order`.
+ * Creates a `Combiner` that returns the smaller of two values according to the provided `Order`.
  *
  * **When to use**
  *
- * Use when you want to accumulate the minimum value across a collection or
- * build a `Reducer` that tracks the running minimum.
+ * Use when you want to accumulate the minimum value across a collection or build a `Reducer` that
+ * tracks the running minimum.
  *
  * **Details**
  *
- * The combiner compares values using the given `Order`. When values are equal,
- * it returns `that` (the second argument).
+ * The combiner compares values using the given `Order`. When values are equal, it returns `that`
+ * (the second argument).
  *
  * **Example** (Selecting the minimum of two numbers)
  *
  * ```ts
- * import { Combiner, Number } from "effect"
+ * import { Combiner, Number } from "effect";
  *
- * const Min = Combiner.min(Number.Order)
+ * const Min = Combiner.min(Number.Order);
  *
- * console.log(Min.combine(3, 1))
+ * console.log(Min.combine(3, 1));
  * // Output: 1
  *
- * console.log(Min.combine(1, 3))
+ * console.log(Min.combine(1, 3));
  * // Output: 1
  * ```
  *
- * @see {@link max}
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
+ * @see {@link max}
  */
 export function min<A>(order: Order.Order<A>): Combiner<A> {
-  return make((self, that) => order(self, that) === -1 ? self : that)
+  return make((self, that) => (order(self, that) === -1 ? self : that));
 }
 
 /**
- * Creates a `Combiner` that returns the larger of two values according to
- * the provided `Order`.
+ * Creates a `Combiner` that returns the larger of two values according to the provided `Order`.
  *
  * **When to use**
  *
- * Use when you want to accumulate the maximum value across a collection or
- * build a `Reducer` that tracks the running maximum.
+ * Use when you want to accumulate the maximum value across a collection or build a `Reducer` that
+ * tracks the running maximum.
  *
  * **Details**
  *
- * The combiner compares values using the given `Order`. When values are equal,
- * it returns `that` (the second argument).
+ * The combiner compares values using the given `Order`. When values are equal, it returns `that`
+ * (the second argument).
  *
  * **Example** (Selecting the maximum of two numbers)
  *
  * ```ts
- * import { Combiner, Number } from "effect"
+ * import { Combiner, Number } from "effect";
  *
- * const Max = Combiner.max(Number.Order)
+ * const Max = Combiner.max(Number.Order);
  *
- * console.log(Max.combine(3, 1))
+ * console.log(Max.combine(3, 1));
  * // Output: 3
  *
- * console.log(Max.combine(1, 3))
+ * console.log(Max.combine(1, 3));
  * // Output: 3
  * ```
  *
- * @see {@link min}
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
+ * @see {@link min}
  */
 export function max<A>(order: Order.Order<A>): Combiner<A> {
-  return make((self, that) => order(self, that) === 1 ? self : that)
+  return make((self, that) => (order(self, that) === 1 ? self : that));
 }
 
 /**
@@ -200,20 +195,20 @@ export function max<A>(order: Order.Order<A>): Combiner<A> {
  * **Example** (Keeping the first value)
  *
  * ```ts
- * import { Combiner } from "effect"
+ * import { Combiner } from "effect";
  *
- * const First = Combiner.first<number>()
+ * const First = Combiner.first<number>();
  *
- * console.log(First.combine(1, 2))
+ * console.log(First.combine(1, 2));
  * // Output: 1
  * ```
  *
- * @see {@link last}
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
+ * @see {@link last}
  */
 export function first<A>(): Combiner<A> {
-  return make((self, _) => self)
+  return make((self, _) => self);
 }
 
 /**
@@ -230,30 +225,29 @@ export function first<A>(): Combiner<A> {
  * **Example** (Keeping the last value)
  *
  * ```ts
- * import { Combiner } from "effect"
+ * import { Combiner } from "effect";
  *
- * const Last = Combiner.last<number>()
+ * const Last = Combiner.last<number>();
  *
- * console.log(Last.combine(1, 2))
+ * console.log(Last.combine(1, 2));
  * // Output: 2
  * ```
  *
- * @see {@link first}
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
+ * @see {@link first}
  */
 export function last<A>(): Combiner<A> {
-  return make((_, that) => that)
+  return make((_, that) => that);
 }
 
 /**
- * Creates a `Combiner` that ignores both arguments and always returns the
- * given constant value.
+ * Creates a `Combiner` that ignores both arguments and always returns the given constant value.
  *
  * **When to use**
  *
- * Use when you need a combiner that always returns a fixed value, including
- * when a generic API requires a combiner but the result is predetermined.
+ * Use when you need a combiner that always returns a fixed value, including when a generic API
+ * requires a combiner but the result is predetermined.
  *
  * **Details**
  *
@@ -262,55 +256,53 @@ export function last<A>(): Combiner<A> {
  * **Example** (Always returning zero)
  *
  * ```ts
- * import { Combiner } from "effect"
+ * import { Combiner } from "effect";
  *
- * const Zero = Combiner.constant(0)
+ * const Zero = Combiner.constant(0);
  *
- * console.log(Zero.combine(42, 99))
+ * console.log(Zero.combine(42, 99));
  * // Output: 0
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link first}
  * @see {@link last}
- * @category constructors
- * @since 4.0.0
  */
 export function constant<A>(a: A): Combiner<A> {
-  return make(() => a)
+  return make(() => a);
 }
 
 /**
- * Wraps a `Combiner` so that a separator value is inserted between every
- * pair of combined elements.
+ * Wraps a `Combiner` so that a separator value is inserted between every pair of combined elements.
  *
  * **When to use**
  *
- * Use when you need to inject a fixed separator between accumulated values,
- * such as when building delimited strings, paths, or CSV-like output by
- * repeated combination.
+ * Use when you need to inject a fixed separator between accumulated values, such as when building
+ * delimited strings, paths, or CSV-like output by repeated combination.
  *
  * **Details**
  *
- * `intercalate(middle)(combiner).combine(self, that)` is equivalent to
- * `combiner.combine(self, combiner.combine(middle, that))`. This function is
- * curried: first provide the separator, then the base combiner.
+ * `intercalate(middle)(combiner).combine(self, that)` is equivalent to `combiner.combine(self,
+ * combiner.combine(middle, that))`. This function is curried: first provide the separator, then the
+ * base combiner.
  *
  * **Example** (Joining strings with a separator)
  *
  * ```ts
- * import { Combiner, String } from "effect"
+ * import { Combiner, String } from "effect";
  *
- * const commaSep = Combiner.intercalate(",")(String.ReducerConcat)
+ * const commaSep = Combiner.intercalate(",")(String.ReducerConcat);
  *
- * console.log(commaSep.combine("a", "b"))
+ * console.log(commaSep.combine("a", "b"));
  * // Output: "a,b"
  * ```
  *
- * @see {@link make}
- * @category combinators
  * @since 4.0.0
+ * @category Combinators
+ * @see {@link make}
  */
 export function intercalate<A>(middle: A) {
   return (combiner: Combiner<A>): Combiner<A> =>
-    make((self, that) => combiner.combine(self, combiner.combine(middle, that)))
+    make((self, that) => combiner.combine(self, combiner.combine(middle, that)));
 }

@@ -1,16 +1,16 @@
-import * as SchemaRepresentation from "effect/SchemaRepresentation"
+import * as SchemaRepresentation from "effect/SchemaRepresentation";
 
 const doc = SchemaRepresentation.fromJsonSchemaDocument({
-  "dialect": "draft-2020-12",
-  "schema": {
-    "type": "object",
-    "properties": {
-      "a": {
-        "type": "string"
-      }
-    }
+  dialect: "draft-2020-12",
+  schema: {
+    type: "object",
+    properties: {
+      a: {
+        type: "string",
+      },
+    },
   },
-  "definitions": {}
-})
+  definitions: {},
+});
 
-console.dir(doc, { depth: null })
+console.dir(doc, { depth: null });

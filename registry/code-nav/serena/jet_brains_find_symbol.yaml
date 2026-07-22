@@ -48,7 +48,7 @@ inputSchema:
     relative_path:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Relative Path
       description: |-

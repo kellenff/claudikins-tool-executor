@@ -16,7 +16,7 @@ inputSchema:
   properties:
     category:
       type: string
-      description: 'Filter patterns by category: ''General'', ''Expressions'', ''Suspicious''. If not specified, returns all patterns.'
+      description: "Filter patterns by category: 'General', 'Expressions', 'Suspicious'. If not specified, returns all patterns."
     projectPath:
       type: string
       description: |2-

@@ -1,35 +1,34 @@
 /**
- * Reads and updates focused parts of values without mutating the original
- * value.
+ * Reads and updates focused parts of values without mutating the original value.
  *
- * An optic describes where to look inside a value, such as a record field, a
- * union variant, an optional value, or several values in a collection. Different
- * optic types describe different kinds of focus: some always find a value,
- * some may not, and some can find many. This module includes the optic types,
- * constructors, focusing helpers, and operations for replacing, modifying, or
+ * An optic describes where to look inside a value, such as a record field, a union variant, an
+ * optional value, or several values in a collection. Different optic types describe different kinds
+ * of focus: some always find a value, some may not, and some can find many. This module includes
+ * the optic types, constructors, focusing helpers, and operations for replacing, modifying, or
  * collecting focused values.
  *
  * @since 4.0.0
  */
 
-import { format } from "./Formatter.ts"
-import { identity, memoize } from "./Function.ts"
-import * as Option from "./Option.ts"
-import * as Predicate from "./Predicate.ts"
-import * as Result from "./Result.ts"
-import type * as Schema from "./Schema.ts"
-import * as SchemaAST from "./SchemaAST.ts"
-import type * as SchemaIssue from "./SchemaIssue.ts"
-import * as Struct from "./Struct.ts"
-import type { IsUnion } from "./Types.ts"
+import { format } from "./Formatter.ts";
+import { identity, memoize } from "./Function.ts";
+import * as Option from "./Option.ts";
+import * as Predicate from "./Predicate.ts";
+import * as Result from "./Result.ts";
+import type * as Schema from "./Schema.ts";
+import * as SchemaAST from "./SchemaAST.ts";
+import type * as SchemaIssue from "./SchemaIssue.ts";
+import * as Struct from "./Struct.ts";
+import type { IsUnion } from "./Types.ts";
 
 /**
  * A lossless, reversible conversion between types `S` and `A`.
  *
  * **When to use**
  *
- * Use when you have a pair of functions that convert back and forth without losing
- *   information (e.g. `Record ↔ entries`, `Celsius ↔ Fahrenheit`).
+ * Use when you have a pair of functions that convert back and forth without losing information
+ * (e.g. `Record ↔ entries`, `Celsius ↔ Fahrenheit`).
+ *
  * - You want the strongest optic that can be composed with any other.
  *
  * **Details**
@@ -42,26 +41,25 @@ import type { IsUnion } from "./Types.ts"
  * **Example** (Converting between Celsius and Fahrenheit)
  *
  * ```ts
- * import { Optic } from "effect"
+ * import { Optic } from "effect";
  *
  * const fahrenheit = Optic.makeIso<number, number>(
- *   (c) => c * 9 / 5 + 32,
- *   (f) => (f - 32) * 5 / 9
- * )
+ *   (c) => (c * 9) / 5 + 32,
+ *   (f) => ((f - 32) * 5) / 9,
+ * );
  *
- * console.log(fahrenheit.get(100))
+ * console.log(fahrenheit.get(100));
  * // Output: 212
  *
- * console.log(fahrenheit.set(32))
+ * console.log(fahrenheit.set(32));
  * // Output: 0
  * ```
  *
+ * @since 4.0.0
+ * @category Iso
  * @see {@link makeIso} — constructor
  * @see {@link Lens} — when you only need a one-directional focus into a whole
  * @see {@link Prism} — when the focus may not be present
- *
- * @category Iso
- * @since 4.0.0
  */
 export interface Iso<in out S, in out A> extends Lens<S, A>, Prism<S, A> {}
 
@@ -70,8 +68,8 @@ export interface Iso<in out S, in out A> extends Lens<S, A>, Prism<S, A> {}
  *
  * **When to use**
  *
- * Use when you have two pure conversion functions that preserve all information
- * between `S` and `A`.
+ * Use when you have two pure conversion functions that preserve all information between `S` and
+ * `A`.
  *
  * **Details**
  *
@@ -80,29 +78,28 @@ export interface Iso<in out S, in out A> extends Lens<S, A>, Prism<S, A> {}
  * **Example** (Wrapping and unwrapping a branded type)
  *
  * ```ts
- * import { Optic } from "effect"
+ * import { Optic } from "effect";
  *
- * type Meters = { readonly value: number }
+ * type Meters = { readonly value: number };
  * const meters = Optic.makeIso<Meters, number>(
  *   (m) => m.value,
- *   (n) => ({ value: n })
- * )
+ *   (n) => ({ value: n }),
+ * );
  *
- * console.log(meters.get({ value: 100 }))
+ * console.log(meters.get({ value: 100 }));
  * // Output: 100
  *
- * console.log(meters.set(42))
+ * console.log(meters.set(42));
  * // Output: { value: 42 }
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link Iso} — the type this function returns
  * @see {@link id} — identity iso (no conversion)
- *
- * @category constructors
- * @since 4.0.0
  */
 export function makeIso<S, A>(get: (s: S) => A, set: (a: A) => S): Iso<S, A> {
-  return make(new IsoNode(get, set))
+  return make(new IsoNode(get, set));
 }
 
 /**
@@ -110,39 +107,37 @@ export function makeIso<S, A>(get: (s: S) => A, set: (a: A) => S): Iso<S, A> {
  *
  * **When to use**
  *
- * Use when you always have a value to read and need the original `S` to produce
- * the updated whole, unlike `Iso`.
+ * Use when you always have a value to read and need the original `S` to produce the updated whole,
+ * unlike `Iso`.
  *
  * **Details**
  *
  * - `get(s)` always succeeds and returns `A`.
  * - `replace(a, s)` returns a new `S` with the focused part replaced.
  * - Extends {@link Optional}.
- * - Composing a Lens with a {@link Prism} or {@link Optional} produces an
- *   {@link Optional}.
+ * - Composing a Lens with a {@link Prism} or {@link Optional} produces an {@link Optional}.
  *
  * **Example** (Focusing on a struct field)
  *
  * ```ts
- * import { Optic } from "effect"
+ * import { Optic } from "effect";
  *
- * type Person = { readonly name: string; readonly age: number }
+ * type Person = { readonly name: string; readonly age: number };
  *
- * const _name = Optic.id<Person>().key("name")
+ * const _name = Optic.id<Person>().key("name");
  *
- * console.log(_name.get({ name: "Alice", age: 30 }))
+ * console.log(_name.get({ name: "Alice", age: 30 }));
  * // Output: "Alice"
  * ```
  *
+ * @since 4.0.0
+ * @category Lens
  * @see {@link makeLens} — constructor
  * @see {@link Iso} — when conversion is lossless in both directions
  * @see {@link Optional} — when reading can also fail
- *
- * @category Lens
- * @since 4.0.0
  */
 export interface Lens<in out S, in out A> extends Optional<S, A> {
-  readonly get: (s: S) => A
+  readonly get: (s: S) => A;
 }
 
 /**
@@ -150,87 +145,83 @@ export interface Lens<in out S, in out A> extends Optional<S, A> {
  *
  * **When to use**
  *
- * Use when you can always extract `A` from `S` and produce a new `S` by
- *   substituting a new `A`.
+ * Use when you can always extract `A` from `S` and produce a new `S` by substituting a new `A`.
  *
  * **Details**
  *
- * - `replace(a, s)` should return a structurally new `S` with `a` in place
- *   of the old focus.
+ * - `replace(a, s)` should return a structurally new `S` with `a` in place of the old focus.
  *
  * **Example** (Focusing on the first element of a pair)
  *
  * ```ts
- * import { Optic } from "effect"
+ * import { Optic } from "effect";
  *
  * const _first = Optic.makeLens<readonly [string, number], string>(
  *   (pair) => pair[0],
- *   (s, pair) => [s, pair[1]]
- * )
+ *   (s, pair) => [s, pair[1]],
+ * );
  *
- * console.log(_first.get(["hello", 42]))
+ * console.log(_first.get(["hello", 42]));
  * // Output: "hello"
  *
- * console.log(_first.replace("world", ["hello", 42]))
+ * console.log(_first.replace("world", ["hello", 42]));
  * // Output: ["world", 42]
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link Lens} — the type this function returns
  * @see {@link makeIso} — when no original `S` is needed for `set`
- *
- * @category constructors
- * @since 4.0.0
  */
 export function makeLens<S, A>(get: (s: S) => A, replace: (a: A, s: S) => S): Lens<S, A> {
-  return make(new LensNode(get, replace))
+  return make(new LensNode(get, replace));
 }
 
 /**
- * Focuses on a part `A` of `S` that may not be present (e.g. a union
- * variant or a validated subset).
+ * Focuses on a part `A` of `S` that may not be present (e.g. a union variant or a validated
+ * subset).
  *
  * **When to use**
  *
- * Use when the focus is conditional — reading can fail (wrong variant, failed
- *   validation).
+ * Use when the focus is conditional — reading can fail (wrong variant, failed validation).
+ *
  * - Building a new `S` from `A` does **not** require the original `S`.
  *
  * **Details**
  *
- * - `getResult(s)` returns `Result.Success<A>` when the focus matches, or
- *   `Result.Failure<string>` with an error message.
+ * - `getResult(s)` returns `Result.Success<A>` when the focus matches, or `Result.Failure<string>`
+ *   with an error message.
  * - `set(a)` always succeeds and returns a new `S`.
  * - Extends {@link Optional}.
- * - Composing two Prisms produces a Prism; composing a Prism with a
- *   {@link Lens} produces an {@link Optional}.
+ * - Composing two Prisms produces a Prism; composing a Prism with a {@link Lens} produces an
+ *   {@link Optional}.
  *
  * **Example** (Narrowing a tagged union)
  *
  * ```ts
- * import { Optic, Result } from "effect"
+ * import { Optic, Result } from "effect";
  *
  * type Shape =
  *   | { readonly _tag: "Circle"; readonly radius: number }
- *   | { readonly _tag: "Rect"; readonly width: number }
+ *   | { readonly _tag: "Rect"; readonly width: number };
  *
- * const _circle = Optic.id<Shape>().tag("Circle")
+ * const _circle = Optic.id<Shape>().tag("Circle");
  *
- * console.log(Result.isSuccess(_circle.getResult({ _tag: "Circle", radius: 5 })))
+ * console.log(Result.isSuccess(_circle.getResult({ _tag: "Circle", radius: 5 })));
  * // Output: true
  *
- * console.log(Result.isFailure(_circle.getResult({ _tag: "Rect", width: 10 })))
+ * console.log(Result.isFailure(_circle.getResult({ _tag: "Rect", width: 10 })));
  * // Output: true
  * ```
  *
+ * @since 4.0.0
+ * @category Prism
  * @see {@link makePrism} — constructor
  * @see {@link fromChecks} — build a Prism from schema checks
  * @see {@link Lens} — when reading always succeeds
- *
- * @category Prism
- * @since 4.0.0
  */
 export interface Prism<in out S, in out A> extends Optional<S, A> {
-  readonly set: (a: A) => S
+  readonly set: (a: A) => S;
 }
 
 /**
@@ -238,8 +229,8 @@ export interface Prism<in out S, in out A> extends Optional<S, A> {
  *
  * **When to use**
  *
- * Use when reading can fail (the part may not exist in `S`), but building `S`
- *   from `A` always succeeds.
+ * Use when reading can fail (the part may not exist in `S`), but building `S` from `A` always
+ * succeeds.
  *
  * **Details**
  *
@@ -248,31 +239,30 @@ export interface Prism<in out S, in out A> extends Optional<S, A> {
  * **Example** (Parsing a string to a number)
  *
  * ```ts
- * import { Optic, Result } from "effect"
+ * import { Optic, Result } from "effect";
  *
- * const numeric = Optic.makePrism<string, number>(
- *   (s) => {
- *     const n = Number(s)
- *     return Number.isNaN(n) ? Result.fail("not a number") : Result.succeed(n)
- *   },
- *   String
- * )
+ * const numeric = Optic.makePrism<string, number>((s) => {
+ *   const n = Number(s);
+ *   return Number.isNaN(n) ? Result.fail("not a number") : Result.succeed(n);
+ * }, String);
  *
- * console.log(Result.isSuccess(numeric.getResult("42")))
+ * console.log(Result.isSuccess(numeric.getResult("42")));
  * // Output: true
  *
- * console.log(numeric.set(42))
+ * console.log(numeric.set(42));
  * // Output: "42"
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link Prism} — the type this function returns
  * @see {@link fromChecks} — build from `Schema` checks instead
- *
- * @category constructors
- * @since 4.0.0
  */
-export function makePrism<S, A>(getResult: (s: S) => Result.Result<A, string>, set: (a: A) => S): Prism<S, A> {
-  return make(new PrismNode(getResult, set))
+export function makePrism<S, A>(
+  getResult: (s: S) => Result.Result<A, string>,
+  set: (a: A) => S,
+): Prism<S, A> {
+  return make(new PrismNode(getResult, set));
 }
 
 /**
@@ -280,41 +270,39 @@ export function makePrism<S, A>(getResult: (s: S) => Result.Result<A, string>, s
  *
  * **When to use**
  *
- * Use when you want to narrow `T` to the subset that passes certain validation
- *   rules (e.g. positive integer).
+ * Use when you want to narrow `T` to the subset that passes certain validation rules (e.g. positive
+ * integer).
+ *
  * - You already have `Schema.isGreaterThan`, `Schema.isInt`, etc.
  *
  * **Details**
  *
- * - `getResult` runs all checks; fails with a combined error message when
- *   any check fails.
+ * - `getResult` runs all checks; fails with a combined error message when any check fails.
  * - `set` is identity — the value passes through unchanged.
  *
  * **Example** (Creating a positive integer prism)
  *
  * ```ts
- * import { Optic, Result, Schema } from "effect"
+ * import { Optic, Result, Schema } from "effect";
  *
- * const posInt = Optic.fromChecks<number>(
- *   Schema.isGreaterThan(0),
- *   Schema.isInt()
- * )
+ * const posInt = Optic.fromChecks<number>(Schema.isGreaterThan(0), Schema.isInt());
  *
- * console.log(Result.isSuccess(posInt.getResult(3)))
+ * console.log(Result.isSuccess(posInt.getResult(3)));
  * // Output: true
  *
- * console.log(Result.isFailure(posInt.getResult(-1)))
+ * console.log(Result.isFailure(posInt.getResult(-1)));
  * // Output: true
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link makePrism} — constructor with custom getter/setter
  * @see {@link Prism} — the type this function returns
- *
- * @category constructors
- * @since 4.0.0
  */
-export function fromChecks<T>(...checks: readonly [SchemaAST.Check<T>, ...Array<SchemaAST.Check<T>>]): Prism<T, T> {
-  return make(new CheckNode(checks))
+export function fromChecks<T>(
+  ...checks: readonly [SchemaAST.Check<T>, ...Array<SchemaAST.Check<T>>]
+): Prism<T, T> {
+  return make(new CheckNode(checks));
 }
 
 type Node =
@@ -325,150 +313,151 @@ type Node =
   | OptionalNode<any, any>
   | PathNode
   | CheckNode<any>
-  | CompositionNode
+  | CompositionNode;
 
 class IdentityNode {
-  readonly _tag = "IdentityNode"
+  readonly _tag = "IdentityNode";
 }
 
-const identityNode = new IdentityNode()
+const identityNode = new IdentityNode();
 
 class CompositionNode {
-  readonly _tag = "CompositionNode"
-  readonly nodes: readonly [Node, ...Array<Node>]
+  readonly _tag = "CompositionNode";
+  readonly nodes: readonly [Node, ...Array<Node>];
 
   constructor(nodes: readonly [Node, ...Array<Node>]) {
-    this.nodes = nodes
+    this.nodes = nodes;
   }
 }
 
 class IsoNode<S, A> {
-  readonly _tag = "IsoNode"
-  readonly get: (s: S) => A
-  readonly set: (a: A) => S
+  readonly _tag = "IsoNode";
+  readonly get: (s: S) => A;
+  readonly set: (a: A) => S;
 
   constructor(get: (s: S) => A, set: (a: A) => S) {
-    this.get = get
-    this.set = set
+    this.get = get;
+    this.set = set;
   }
 }
 
 class LensNode<S, A> {
-  readonly _tag = "LensNode"
-  readonly get: (s: S) => A
-  readonly set: (a: A, s: S) => S
+  readonly _tag = "LensNode";
+  readonly get: (s: S) => A;
+  readonly set: (a: A, s: S) => S;
 
   constructor(get: (s: S) => A, set: (a: A, s: S) => S) {
-    this.get = get
-    this.set = set
+    this.get = get;
+    this.set = set;
   }
 }
 
 class PrismNode<S, A> {
-  readonly _tag = "PrismNode"
-  readonly get: (s: S) => Result.Result<A, string>
-  readonly set: (a: A) => S
+  readonly _tag = "PrismNode";
+  readonly get: (s: S) => Result.Result<A, string>;
+  readonly set: (a: A) => S;
 
   constructor(get: (s: S) => Result.Result<A, string>, set: (a: A) => S) {
-    this.get = get
-    this.set = set
+    this.get = get;
+    this.set = set;
   }
 }
 
 class OptionalNode<S, A> {
-  readonly _tag = "OptionalNode"
-  readonly get: (s: S) => Result.Result<A, string>
-  readonly set: (a: A, s: S) => Result.Result<S, string>
+  readonly _tag = "OptionalNode";
+  readonly get: (s: S) => Result.Result<A, string>;
+  readonly set: (a: A, s: S) => Result.Result<S, string>;
 
-  constructor(get: (s: S) => Result.Result<A, string>, set: (a: A, s: S) => Result.Result<S, string>) {
-    this.get = get
-    this.set = set
+  constructor(
+    get: (s: S) => Result.Result<A, string>,
+    set: (a: A, s: S) => Result.Result<S, string>,
+  ) {
+    this.get = get;
+    this.set = set;
   }
 }
 
 class PathNode {
-  readonly _tag = "PathNode"
-  readonly path: ReadonlyArray<PropertyKey>
+  readonly _tag = "PathNode";
+  readonly path: ReadonlyArray<PropertyKey>;
 
   constructor(path: ReadonlyArray<PropertyKey>) {
-    this.path = path
+    this.path = path;
   }
 }
 
 class CheckNode<T> {
-  readonly _tag = "CheckNode"
-  readonly checks: readonly [SchemaAST.Check<T>, ...Array<SchemaAST.Check<T>>]
+  readonly _tag = "CheckNode";
+  readonly checks: readonly [SchemaAST.Check<T>, ...Array<SchemaAST.Check<T>>];
 
   constructor(checks: readonly [SchemaAST.Check<T>, ...Array<SchemaAST.Check<T>>]) {
-    this.checks = checks
+    this.checks = checks;
   }
 }
 
 // Nodes that can appear in a normalized chain (no Identity/Composition)
-type NormalizedNode = Exclude<Node, IdentityNode | CompositionNode>
+type NormalizedNode = Exclude<Node, IdentityNode | CompositionNode>;
 
 // Fuse with tail when possible, else push.
 function pushNormalized(acc: Array<NormalizedNode>, node: NormalizedNode): void {
-  const last = acc[acc.length - 1]
+  const last = acc[acc.length - 1];
   if (last) {
     if (last._tag === "PathNode" && node._tag === "PathNode") {
       // fuse Path
-      acc[acc.length - 1] = new PathNode([...last.path, ...node.path])
-      return
+      acc[acc.length - 1] = new PathNode([...last.path, ...node.path]);
+      return;
     }
     if (last._tag === "CheckNode" && node._tag === "CheckNode") {
       // fuse Checks
-      acc[acc.length - 1] = new CheckNode<any>([...last.checks, ...node.checks])
-      return
+      acc[acc.length - 1] = new CheckNode<any>([...last.checks, ...node.checks]);
+      return;
     }
   }
-  acc.push(node)
+  acc.push(node);
 }
 
 // Collect nodes from a node into `acc`, flattening & normalizing on the fly.
 function collect(node: Node, acc: Array<NormalizedNode>): void {
-  if (node._tag === "IdentityNode") return
+  if (node._tag === "IdentityNode") return;
   if (node._tag === "CompositionNode") {
     // flatten without extra arrays
-    for (let i = 0; i < node.nodes.length; i++) collect(node.nodes[i], acc)
-    return
+    for (let i = 0; i < node.nodes.length; i++) collect(node.nodes[i], acc);
+    return;
   }
   // primitive node
-  pushNormalized(acc, node)
+  pushNormalized(acc, node);
 }
 
 function compose(a: Node, b: Node): Node {
-  const nodes: Array<NormalizedNode> = []
-  collect(a, nodes)
-  collect(b, nodes)
+  const nodes: Array<NormalizedNode> = [];
+  collect(a, nodes);
+  collect(b, nodes);
 
   switch (nodes.length) {
     case 0:
-      return identityNode
+      return identityNode;
     case 1:
-      return nodes[0]
+      return nodes[0];
     default:
-      return new CompositionNode(nodes as [Node, ...Array<Node>])
+      return new CompositionNode(nodes as [Node, ...Array<Node>]);
   }
 }
 
-type ForbidUnion<A, Message extends string> = IsUnion<A> extends true ? [Message] : []
+type ForbidUnion<A, Message extends string> = IsUnion<A> extends true ? [Message] : [];
 
 /**
  * The most general optic — both reading and writing can fail.
  *
  * **When to use**
  *
- * Use when the focus may not exist in `S` and writing a new `A` back may also
- * fail, for example when the source no longer matches the expected shape. This
- * is the base type extended by {@link Iso}, {@link Lens}, {@link Prism}, and
- * {@link Traversal}.
+ * Use when the focus may not exist in `S` and writing a new `A` back may also fail, for example
+ * when the source no longer matches the expected shape. This is the base type extended by
+ * {@link Iso}, {@link Lens}, {@link Prism}, and {@link Traversal}.
  *
  * **Details**
  *
  * - `getResult(s)` returns `Result.Success<A>` or `Result.Failure<string>`.
- * - `replaceResult(a, s)` returns `Result.Success<S>` or
- *   `Result.Failure<string>`.
+ * - `replaceResult(a, s)` returns `Result.Success<S>` or `Result.Failure<string>`.
  * - `replace(a, s)` returns the original `s` on failure (never throws).
  * - `modify(f)` returns the original `s` on failure (never throws).
  * - All operations are pure; inputs are never mutated.
@@ -476,87 +465,82 @@ type ForbidUnion<A, Message extends string> = IsUnion<A> extends true ? [Message
  * **Example** (Focusing on an optional record key)
  *
  * ```ts
- * import { Optic, Result } from "effect"
+ * import { Optic, Result } from "effect";
  *
- * type Env = { [key: string]: string }
- * const _home = Optic.id<Env>().at("HOME")
+ * type Env = { [key: string]: string };
+ * const _home = Optic.id<Env>().at("HOME");
  *
- * console.log(Result.isSuccess(_home.getResult({ HOME: "/root" })))
+ * console.log(Result.isSuccess(_home.getResult({ HOME: "/root" })));
  * // Output: true
  *
- * console.log(Result.isFailure(_home.getResult({ PATH: "/bin" })))
+ * console.log(Result.isFailure(_home.getResult({ PATH: "/bin" })));
  * // Output: true
  *
  * // replace returns original on failure
- * console.log(_home.replace("/new", { PATH: "/bin" }))
+ * console.log(_home.replace("/new", { PATH: "/bin" }));
  * // Output: { PATH: "/bin" }
  * ```
  *
+ * @since 4.0.0
+ * @category Optional
  * @see {@link makeOptional} — constructor
  * @see {@link Lens} — when reading always succeeds
  * @see {@link Prism} — when writing always succeeds
- *
- * @category Optional
- * @since 4.0.0
  */
 export interface Optional<in out S, in out A> {
-  readonly node: Node
+  readonly node: Node;
   /**
-   * Attempts to read the focus `A` from the whole `S`. Returns
-   * `Result.Success<A>` when the focus exists, or
-   * `Result.Failure<string>` with a descriptive error otherwise.
+   * Attempts to read the focus `A` from the whole `S`. Returns `Result.Success<A>` when the focus
+   * exists, or `Result.Failure<string>` with a descriptive error otherwise.
    */
-  readonly getResult: (s: S) => Result.Result<A, string>
+  readonly getResult: (s: S) => Result.Result<A, string>;
   /**
-   * Replaces the focus in `S` with a new `A`. Returns the original `s`
-   * unchanged when the optic cannot focus (never throws).
+   * Replaces the focus in `S` with a new `A`. Returns the original `s` unchanged when the optic
+   * cannot focus (never throws).
    */
-  readonly replace: (a: A, s: S) => S
+  readonly replace: (a: A, s: S) => S;
+  /** Like {@link replace}, but returns an explicit `Result` so callers can detect and handle failure. */
+  readonly replaceResult: (a: A, s: S) => Result.Result<S, string>;
   /**
-   * Like {@link replace}, but returns an explicit `Result` so callers can
-   * detect and handle failure.
-   */
-  readonly replaceResult: (a: A, s: S) => Result.Result<S, string>
-  /**
-   * Composes this optic with another. The result type is the weakest of
-   * the two: Iso + Iso = Iso, Lens + Prism = Optional, etc.
+   * Composes this optic with another. The result type is the weakest of the two: Iso + Iso = Iso,
+   * Lens + Prism = Optional, etc.
    *
    * **Example** (Composing a lens with a prism)
    *
    * ```ts
-   * import { Optic, Option } from "effect"
+   * import { Optic, Option } from "effect";
    *
-   * type State = { value: Option.Option<number> }
+   * type State = { value: Option.Option<number> };
    *
-   * const _inner = Optic.id<State>().key("value").compose(Optic.some())
+   * const _inner = Optic.id<State>().key("value").compose(Optic.some());
    * // _inner is Optional<State, number>
    * ```
    *
    * @see {@link id} — start a composition chain
    */
-  compose<B>(this: Iso<S, A>, that: Iso<A, B>): Iso<S, B>
-  compose<B>(this: Lens<S, A>, that: Lens<A, B>): Lens<S, B>
-  compose<B>(this: Prism<S, A>, that: Prism<A, B>): Prism<S, B>
-  compose<B>(this: Optional<S, A>, that: Optional<A, B>): Optional<S, B>
+  compose<B>(this: Iso<S, A>, that: Iso<A, B>): Iso<S, B>;
+  compose<B>(this: Lens<S, A>, that: Lens<A, B>): Lens<S, B>;
+  compose<B>(this: Prism<S, A>, that: Prism<A, B>): Prism<S, B>;
+  compose<B>(this: Optional<S, A>, that: Optional<A, B>): Optional<S, B>;
 
   /**
-   * Returns a function `(s: S) => S` that applies `f` to the focused value.
-   * If the optic cannot focus, the original `s` is returned unchanged.
+   * Returns a function `(s: S) => S` that applies `f` to the focused value. If the optic cannot
+   * focus, the original `s` is returned unchanged.
    *
    * **Example** (Incrementing a nested field)
    *
    * ```ts
-   * import { Optic } from "effect"
+   * import { Optic } from "effect";
    *
-   * type S = { readonly a: { readonly b: number } }
-   * const _b = Optic.id<S>().key("a").key("b")
+   * type S = { readonly a: { readonly b: number } };
+   * const _b = Optic.id<S>().key("a").key("b");
    *
-   * const inc = _b.modify((n) => n + 1)
-   * console.log(inc({ a: { b: 1 } }))
+   * const inc = _b.modify((n) => n + 1);
+   * console.log(inc({ a: { b: 1 } }));
    * // Output: { a: { b: 2 } }
    * ```
    */
-  modify(f: (a: A) => A): (s: S) => S
+  modify(f: (a: A) => A): (s: S) => S;
 
   /**
    * Focuses on a property of the current struct/tuple focus.
@@ -570,12 +554,12 @@ export interface Optional<in out S, in out A> {
    * **Example** (Drilling into nested structs)
    *
    * ```ts
-   * import { Optic } from "effect"
+   * import { Optic } from "effect";
    *
-   * type S = { readonly a: { readonly b: number } }
-   * const _b = Optic.id<S>().key("a").key("b")
+   * type S = { readonly a: { readonly b: number } };
+   * const _b = Optic.id<S>().key("a").key("b");
    *
-   * console.log(_b.get({ a: { b: 42 } }))
+   * console.log(_b.get({ a: { b: 42 } }));
    * // Output: 42
    * ```
    */
@@ -583,16 +567,16 @@ export interface Optional<in out S, in out A> {
     this: Lens<S, A>,
     key: Key,
     ..._err: ForbidUnion<A, "cannot use `key` on a union type">
-  ): Lens<S, A[Key]>
+  ): Lens<S, A[Key]>;
   key<S, A extends object, Key extends keyof A>(
     this: Optional<S, A>,
     key: Key,
     ..._err: ForbidUnion<A, "cannot use `key` on a union type">
-  ): Optional<S, A[Key]>
+  ): Optional<S, A[Key]>;
 
   /**
-   * Focuses on a key where setting `undefined` **removes** the key from the
-   * struct (or splices the element from an array/tuple).
+   * Focuses on a key where setting `undefined` **removes** the key from the struct (or splices the
+   * element from an array/tuple).
    *
    * **Details**
    *
@@ -602,15 +586,15 @@ export interface Optional<in out S, in out A> {
    * **Example** (Deleting an optional key)
    *
    * ```ts
-   * import { Optic } from "effect"
+   * import { Optic } from "effect";
    *
-   * type S = { readonly a?: number }
-   * const _a = Optic.id<S>().optionalKey("a")
+   * type S = { readonly a?: number };
+   * const _a = Optic.id<S>().optionalKey("a");
    *
-   * console.log(_a.replace(undefined, { a: 1 }))
+   * console.log(_a.replace(undefined, { a: 1 }));
    * // Output: {}
    *
-   * console.log(_a.replace(2, {}))
+   * console.log(_a.replace(2, {}));
    * // Output: { a: 2 }
    * ```
    */
@@ -618,16 +602,16 @@ export interface Optional<in out S, in out A> {
     this: Lens<S, A>,
     key: Key,
     ..._err: ForbidUnion<A, "cannot use `optionalKey` on a union type">
-  ): Lens<S, A[Key] | undefined>
+  ): Lens<S, A[Key] | undefined>;
   optionalKey<S, A extends object, Key extends keyof A>(
     this: Optional<S, A>,
     key: Key,
     ..._err: ForbidUnion<A, "cannot use `optionalKey` on a union type">
-  ): Optional<S, A[Key] | undefined>
+  ): Optional<S, A[Key] | undefined>;
 
   /**
-   * Adds one or more `Schema` validation checks to the optic chain.
-   * `getResult` fails when any check fails; `set` passes through unchanged.
+   * Adds one or more `Schema` validation checks to the optic chain. `getResult` fails when any
+   * check fails; `set` passes through unchanged.
    *
    * **Details**
    *
@@ -637,24 +621,27 @@ export interface Optional<in out S, in out A> {
    * **Example** (Focusing only on positive numbers)
    *
    * ```ts
-   * import { Optic, Result, Schema } from "effect"
+   * import { Optic, Result, Schema } from "effect";
    *
-   * const _pos = Optic.id<number>().check(Schema.isGreaterThan(0))
+   * const _pos = Optic.id<number>().check(Schema.isGreaterThan(0));
    *
-   * console.log(Result.isSuccess(_pos.getResult(5)))
+   * console.log(Result.isSuccess(_pos.getResult(5)));
    * // Output: true
    *
-   * console.log(Result.isFailure(_pos.getResult(-1)))
+   * console.log(Result.isFailure(_pos.getResult(-1)));
    * // Output: true
    * ```
    *
    * @see {@link fromChecks} — standalone prism from checks
    */
-  check<S, A>(this: Prism<S, A>, ...checks: readonly [SchemaAST.Check<A>, ...Array<SchemaAST.Check<A>>]): Prism<S, A>
+  check<S, A>(
+    this: Prism<S, A>,
+    ...checks: readonly [SchemaAST.Check<A>, ...Array<SchemaAST.Check<A>>]
+  ): Prism<S, A>;
   check<S, A>(
     this: Optional<S, A>,
     ...checks: readonly [SchemaAST.Check<A>, ...Array<SchemaAST.Check<A>>]
-  ): Optional<S, A>
+  ): Optional<S, A>;
 
   /**
    * Narrows the focus to a subtype `B` using a type guard.
@@ -668,17 +655,14 @@ export interface Optional<in out S, in out A> {
    * **Example** (Narrowing a union)
    *
    * ```ts
-   * import { Optic, Result } from "effect"
+   * import { Optic, Result } from "effect";
    *
-   * type B = { readonly _tag: "b"; readonly b: number }
-   * type S = { readonly _tag: "a"; readonly a: string } | B
+   * type B = { readonly _tag: "b"; readonly b: number };
+   * type S = { readonly _tag: "a"; readonly a: string } | B;
    *
-   * const _b = Optic.id<S>().refine(
-   *   (s: S): s is B => s._tag === "b",
-   *   { expected: `"b" tag` }
-   * )
+   * const _b = Optic.id<S>().refine((s: S): s is B => s._tag === "b", { expected: `"b" tag` });
    *
-   * console.log(Result.isSuccess(_b.getResult({ _tag: "b", b: 1 })))
+   * console.log(Result.isSuccess(_b.getResult({ _tag: "b", b: 1 })));
    * // Output: true
    * ```
    *
@@ -687,17 +671,16 @@ export interface Optional<in out S, in out A> {
   refine<S, A, B extends A>(
     this: Prism<S, A>,
     refinement: (a: A) => a is B,
-    annotations?: Schema.Annotations.Filter
-  ): Prism<S, B>
+    annotations?: Schema.Annotations.Filter,
+  ): Prism<S, B>;
   refine<S, A, B extends A>(
     this: Optional<S, A>,
     refinement: (a: A) => a is B,
-    annotations?: Schema.Annotations.Filter
-  ): Optional<S, B>
+    annotations?: Schema.Annotations.Filter,
+  ): Optional<S, B>;
 
   /**
-   * Narrows the focus to the variant of a tagged union with the given
-   * `_tag` value.
+   * Narrows the focus to the variant of a tagged union with the given `_tag` value.
    *
    * **Details**
    *
@@ -708,18 +691,18 @@ export interface Optional<in out S, in out A> {
    * **Example** (Focusing a tagged variant)
    *
    * ```ts
-   * import { Optic, Result } from "effect"
+   * import { Optic, Result } from "effect";
    *
    * type Shape =
    *   | { readonly _tag: "Circle"; readonly radius: number }
-   *   | { readonly _tag: "Rect"; readonly width: number }
+   *   | { readonly _tag: "Rect"; readonly width: number };
    *
-   * const _radius = Optic.id<Shape>().tag("Circle").key("radius")
+   * const _radius = Optic.id<Shape>().tag("Circle").key("radius");
    *
-   * console.log(Result.isSuccess(_radius.getResult({ _tag: "Circle", radius: 5 })))
+   * console.log(Result.isSuccess(_radius.getResult({ _tag: "Circle", radius: 5 })));
    * // Output: true
    *
-   * console.log(Result.isFailure(_radius.getResult({ _tag: "Rect", width: 10 })))
+   * console.log(Result.isFailure(_radius.getResult({ _tag: "Rect", width: 10 })));
    * // Output: true
    * ```
    *
@@ -727,21 +710,21 @@ export interface Optional<in out S, in out A> {
    */
   tag<S, A extends { readonly _tag: SchemaAST.LiteralValue }, Tag extends A["_tag"]>(
     this: Prism<S, A>,
-    tag: Tag
-  ): Prism<S, Extract<A, { readonly _tag: Tag }>>
+    tag: Tag,
+  ): Prism<S, Extract<A, { readonly _tag: Tag }>>;
   tag<S, A extends { readonly _tag: SchemaAST.LiteralValue }, Tag extends A["_tag"]>(
     this: Optional<S, A>,
-    tag: Tag
-  ): Optional<S, Extract<A, { readonly _tag: Tag }>>
+    tag: Tag,
+  ): Optional<S, Extract<A, { readonly _tag: Tag }>>;
 
   /**
-   * Focuses on a key only if it exists (`Object.hasOwn`). Both
-   * `getResult` and `replaceResult` fail when the key is absent.
+   * Focuses on a key only if it exists (`Object.hasOwn`). Both `getResult` and `replaceResult` fail
+   * when the key is absent.
    *
    * **Details**
    *
-   * Unlike `.key()`, which always succeeds on the read side, `.at()` is
-   * useful for Records or arrays where the key/index may not be present.
+   * Unlike `.key()`, which always succeeds on the read side, `.at()` is useful for Records or
+   * arrays where the key/index may not be present.
    *
    * - Always returns an {@link Optional}.
    * - Does **not** work on union types (compile error).
@@ -749,15 +732,15 @@ export interface Optional<in out S, in out A> {
    * **Example** (Accessing records safely)
    *
    * ```ts
-   * import { Optic, Result } from "effect"
+   * import { Optic, Result } from "effect";
    *
-   * type Env = { [key: string]: number }
-   * const _x = Optic.id<Env>().at("x")
+   * type Env = { [key: string]: number };
+   * const _x = Optic.id<Env>().at("x");
    *
-   * console.log(Result.isSuccess(_x.getResult({ x: 1 })))
+   * console.log(Result.isSuccess(_x.getResult({ x: 1 })));
    * // Output: true
    *
-   * console.log(Result.isFailure(_x.getResult({ y: 2 })))
+   * console.log(Result.isFailure(_x.getResult({ y: 2 })));
    * // Output: true
    * ```
    *
@@ -767,7 +750,7 @@ export interface Optional<in out S, in out A> {
     this: Optional<S, A>,
     key: Key,
     ..._err: ForbidUnion<A, "cannot use `at` on a union type">
-  ): Optional<S, A[Key]>
+  ): Optional<S, A[Key]>;
 
   /**
    * Focuses on a subset of keys of the current struct focus.
@@ -781,13 +764,13 @@ export interface Optional<in out S, in out A> {
    * **Example** (Picking keys)
    *
    * ```ts
-   * import { Optic } from "effect"
+   * import { Optic } from "effect";
    *
-   * type S = { readonly a: string; readonly b: number; readonly c: boolean }
+   * type S = { readonly a: string; readonly b: number; readonly c: boolean };
    *
-   * const _ac = Optic.id<S>().pick(["a", "c"])
+   * const _ac = Optic.id<S>().pick(["a", "c"]);
    *
-   * console.log(_ac.get({ a: "hi", b: 1, c: true }))
+   * console.log(_ac.get({ a: "hi", b: 1, c: true }));
    * // Output: { a: "hi", c: true }
    * ```
    *
@@ -797,12 +780,12 @@ export interface Optional<in out S, in out A> {
     this: Lens<S, A>,
     keys: Keys,
     ..._err: ForbidUnion<A, "cannot use `pick` on a union type">
-  ): Lens<S, Pick<A, Keys[number]>>
+  ): Lens<S, Pick<A, Keys[number]>>;
   pick<S, A, Keys extends ReadonlyArray<keyof A>>(
     this: Optional<S, A>,
     keys: Keys,
     ..._err: ForbidUnion<A, "cannot use `pick` on a union type">
-  ): Optional<S, Pick<A, Keys[number]>>
+  ): Optional<S, Pick<A, Keys[number]>>;
 
   /**
    * Focuses on all keys **except** the specified ones.
@@ -816,129 +799,130 @@ export interface Optional<in out S, in out A> {
    * **Example** (Omitting keys)
    *
    * ```ts
-   * import { Optic } from "effect"
+   * import { Optic } from "effect";
    *
-   * type S = { readonly a: string; readonly b: number; readonly c: boolean }
+   * type S = { readonly a: string; readonly b: number; readonly c: boolean };
    *
-   * const _ac = Optic.id<S>().omit(["b"])
+   * const _ac = Optic.id<S>().omit(["b"]);
    *
-   * console.log(_ac.get({ a: "hi", b: 1, c: true }))
+   * console.log(_ac.get({ a: "hi", b: 1, c: true }));
    * // Output: { a: "hi", c: true }
    * ```
    *
-   * @see `.pick()` — the inverse operation
-   *
    * @since 4.0.0
+   * @see `.pick()` — the inverse operation
    */
   omit<S, A, Keys extends ReadonlyArray<keyof A>>(
     this: Lens<S, A>,
     keys: Keys,
     ..._err: ForbidUnion<A, "cannot use `omit` on a union type">
-  ): Lens<S, Omit<A, Keys[number]>>
+  ): Lens<S, Omit<A, Keys[number]>>;
   omit<S, A, Keys extends ReadonlyArray<keyof A>>(
     this: Optional<S, A>,
     keys: Keys,
     ..._err: ForbidUnion<A, "cannot use `omit` on a union type">
-  ): Optional<S, Omit<A, Keys[number]>>
+  ): Optional<S, Omit<A, Keys[number]>>;
 
   /**
-   * Filters out `undefined` from the focus, producing a {@link Prism}.
-   * `getResult` fails when the focus is `undefined`.
+   * Filters out `undefined` from the focus, producing a {@link Prism}. `getResult` fails when the
+   * focus is `undefined`.
    *
    * **Example** (Filtering undefined values)
    *
    * ```ts
-   * import { Optic, Result } from "effect"
+   * import { Optic, Result } from "effect";
    *
-   * const _defined = Optic.id<number | undefined>().notUndefined()
+   * const _defined = Optic.id<number | undefined>().notUndefined();
    *
-   * console.log(Result.isSuccess(_defined.getResult(42)))
+   * console.log(Result.isSuccess(_defined.getResult(42)));
    * // Output: true
    *
-   * console.log(Result.isFailure(_defined.getResult(undefined)))
+   * console.log(Result.isFailure(_defined.getResult(undefined)));
    * // Output: true
    * ```
    *
    * @since 4.0.0
    */
-  notUndefined(): Prism<S, Exclude<A, undefined>>
-  notUndefined(): Optional<S, Exclude<A, undefined>>
+  notUndefined(): Prism<S, Exclude<A, undefined>>;
+  notUndefined(): Optional<S, Exclude<A, undefined>>;
 
   /**
-   * Focuses **all elements** of an array-like focus and optionally narrows
-   * to a subset using an element-level optic.
-   * Available only on {@link Traversal} (i.e. when `A` is
-   * `ReadonlyArray<Element>`). Returns a new Traversal focused on the
-   * selected elements.
+   * Focuses **all elements** of an array-like focus and optionally narrows to a subset using an
+   * element-level optic. Available only on {@link Traversal} (i.e. when `A` is
+   * `ReadonlyArray<Element>`). Returns a new Traversal focused on the selected elements.
    *
    * **Details**
    *
-   * - **getResult** collects the values focused by `f(id<A>())` for each
-   *   element. Non-focusable elements are skipped.
-   * - **replaceResult** expects exactly as many values as were collected by
-   *   `getResult` and writes them back in order. Fails with a
-   *   length-mismatch error if counts differ.
+   * - **getResult** collects the values focused by `f(id<A>())` for each element. Non-focusable
+   *   elements are skipped.
+   * - **replaceResult** expects exactly as many values as were collected by `getResult` and writes
+   *   them back in order. Fails with a length-mismatch error if counts differ.
    *
    * **Example** (Incrementing liked posts)
    *
    * ```ts
-   * import { Optic, Schema } from "effect"
+   * import { Optic, Schema } from "effect";
    *
-   * type Post = { title: string; likes: number }
-   * type S = { user: { posts: ReadonlyArray<Post> } }
+   * type Post = { title: string; likes: number };
+   * type S = { user: { posts: ReadonlyArray<Post> } };
    *
    * const _likes = Optic.id<S>()
    *   .key("user")
    *   .key("posts")
-   *   .forEach((post) => post.key("likes").check(Schema.isGreaterThan(0)))
+   *   .forEach((post) => post.key("likes").check(Schema.isGreaterThan(0)));
    *
-   * const addLike = _likes.modifyAll((n) => n + 1)
+   * const addLike = _likes.modifyAll((n) => n + 1);
    *
    * console.log(
    *   addLike({
-   *     user: { posts: [{ title: "a", likes: 0 }, { title: "b", likes: 1 }] }
-   *   })
-   * )
+   *     user: {
+   *       posts: [
+   *         { title: "a", likes: 0 },
+   *         { title: "b", likes: 1 },
+   *       ],
+   *     },
+   *   }),
+   * );
    * // Output: { user: { posts: [{ title: "a", likes: 0 }, { title: "b", likes: 2 }] } }
    * ```
    *
    * @see {@link getAll} — extract all focused elements as an array
    * @see `.modifyAll()` — apply a function to every focused element
    */
-  forEach<S, A, B>(this: Traversal<S, A>, f: (iso: Iso<A, A>) => Optional<A, B>): Traversal<S, B>
+  forEach<S, A, B>(this: Traversal<S, A>, f: (iso: Iso<A, A>) => Optional<A, B>): Traversal<S, B>;
 
   /**
    * Applies a function to **every** element focused by the traversal.
    *
    * **Details**
    *
-   * Available only on {@link Traversal}. Returns a function `(s: S) => S`.
-   * If the traversal cannot focus, the original `s` is returned unchanged.
+   * Available only on {@link Traversal}. Returns a function `(s: S) => S`. If the traversal cannot
+   * focus, the original `s` is returned unchanged.
    *
-   * Unlike `.modify()`, which operates on the whole array, `modifyAll`
-   * maps `f` over each individual element.
+   * Unlike `.modify()`, which operates on the whole array, `modifyAll` maps `f` over each
+   * individual element.
    *
    * **Example** (Doubling all focused values)
    *
    * ```ts
-   * import { Optic, Schema } from "effect"
+   * import { Optic, Schema } from "effect";
    *
-   * type S = { readonly items: ReadonlyArray<number> }
+   * type S = { readonly items: ReadonlyArray<number> };
    *
    * const _positive = Optic.id<S>()
    *   .key("items")
-   *   .forEach((n) => n.check(Schema.isGreaterThan(0)))
+   *   .forEach((n) => n.check(Schema.isGreaterThan(0)));
    *
-   * const doubled = _positive.modifyAll((n) => n * 2)
+   * const doubled = _positive.modifyAll((n) => n * 2);
    *
-   * console.log(doubled({ items: [1, -2, 3] }))
+   * console.log(doubled({ items: [1, -2, 3] }));
    * // Output: { items: [2, -2, 6] }
    * ```
    *
    * @see `.forEach()` — create a sub-traversal
    * @see {@link getAll} — extract focused elements
    */
-  modifyAll<S, A>(this: Traversal<S, A>, f: (a: A) => A): (s: S) => S
+  modifyAll<S, A>(this: Traversal<S, A>, f: (a: A) => A): (s: S) => S;
 }
 
 /**
@@ -946,48 +930,44 @@ export interface Optional<in out S, in out A> {
  *
  * **When to use**
  *
- * Use when you need an optic for a focus that may be missing on read and may
- * reject updates on write.
+ * Use when you need an optic for a focus that may be missing on read and may reject updates on
+ * write.
  *
  * **Details**
  *
  * - `getResult` should return `Result.fail(message)` on mismatch.
- * - `set` should return `Result.fail(message)` when the update cannot be
- *   applied.
+ * - `set` should return `Result.fail(message)` when the update cannot be applied.
  *
  * **Example** (Accessing record keys safely)
  *
  * ```ts
- * import { Optic, Result } from "effect"
+ * import { Optic, Result } from "effect";
  *
  * const atKey = (key: string) =>
  *   Optic.makeOptional<Record<string, number>, number>(
  *     (s) =>
- *       Object.hasOwn(s, key)
- *         ? Result.succeed(s[key])
- *         : Result.fail(`Key "${key}" not found`),
+ *       Object.hasOwn(s, key) ? Result.succeed(s[key]) : Result.fail(`Key "${key}" not found`),
  *     (a, s) =>
  *       Object.hasOwn(s, key)
  *         ? Result.succeed({ ...s, [key]: a })
- *         : Result.fail(`Key "${key}" not found`)
- *   )
+ *         : Result.fail(`Key "${key}" not found`),
+ *   );
  *
- * console.log(Result.isSuccess(atKey("x").getResult({ x: 1 })))
+ * console.log(Result.isSuccess(atKey("x").getResult({ x: 1 })));
  * // Output: true
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link Optional} — the type this function returns
  * @see {@link makeLens} — when reading always succeeds
  * @see {@link makePrism} — when writing always succeeds
- *
- * @category constructors
- * @since 4.0.0
  */
 export function makeOptional<S, A>(
   getResult: (s: S) => Result.Result<A, string>,
-  set: (a: A, s: S) => Result.Result<S, string>
+  set: (a: A, s: S) => Result.Result<S, string>,
 ): Optional<S, A> {
-  return make(new OptionalNode(getResult, set))
+  return make(new OptionalNode(getResult, set));
 }
 
 /**
@@ -995,67 +975,69 @@ export function makeOptional<S, A>(
  *
  * **When to use**
  *
- * Use when you want to read/update multiple elements at once (e.g. all items in
- *   an array, or a filtered subset).
+ * Use when you want to read/update multiple elements at once (e.g. all items in an array, or a
+ * filtered subset).
  *
  * **Details**
  *
- * - Technically `Optional<S, ReadonlyArray<A>>` — the focused value is an
- *   array of all matched elements.
- * - Use `.forEach()` to add per-element sub-optics (filtering, drilling
- *   deeper).
+ * - Technically `Optional<S, ReadonlyArray<A>>` — the focused value is an array of all matched
+ *   elements.
+ * - Use `.forEach()` to add per-element sub-optics (filtering, drilling deeper).
  * - Use `.modifyAll(f)` to map a function over every focused element.
  * - Use {@link getAll} to extract all focused elements as a plain array.
  *
  * **Example** (Traversing array elements with a filter)
  *
  * ```ts
- * import { Optic, Schema } from "effect"
+ * import { Optic, Schema } from "effect";
  *
- * type S = { readonly items: ReadonlyArray<number> }
+ * type S = { readonly items: ReadonlyArray<number> };
  *
  * const _positive = Optic.id<S>()
  *   .key("items")
- *   .forEach((n) => n.check(Schema.isGreaterThan(0)))
+ *   .forEach((n) => n.check(Schema.isGreaterThan(0)));
  *
- * const getPositive = Optic.getAll(_positive)
+ * const getPositive = Optic.getAll(_positive);
  *
- * console.log(getPositive({ items: [1, -2, 3] }))
+ * console.log(getPositive({ items: [1, -2, 3] }));
  * // Output: [1, 3]
  * ```
  *
+ * @since 4.0.0
+ * @category Traversal
  * @see {@link getAll} — extract focused elements
  * @see {@link Optional} — the base type
- *
- * @category Traversal
- * @since 4.0.0
  */
 export interface Traversal<in out S, in out A> extends Optional<S, ReadonlyArray<A>> {}
 
 class OptionalImpl<S, A> implements Optional<S, A> {
-  readonly node: Node
-  readonly getResult: (s: S) => Result.Result<A, string>
-  readonly replaceResult: (a: A, s: S) => Result.Result<S, string>
+  readonly node: Node;
+  readonly getResult: (s: S) => Result.Result<A, string>;
+  readonly replaceResult: (a: A, s: S) => Result.Result<S, string>;
   constructor(
     node: Node,
     getResult: (s: S) => Result.Result<A, string>,
-    replaceResult: (a: A, s: S) => Result.Result<S, string>
+    replaceResult: (a: A, s: S) => Result.Result<S, string>,
   ) {
-    this.node = node
-    this.getResult = getResult
-    this.replaceResult = replaceResult
+    this.node = node;
+    this.getResult = getResult;
+    this.replaceResult = replaceResult;
   }
   replace(a: A, s: S): S {
-    return Result.getOrElse(this.replaceResult(a, s), () => s)
+    return Result.getOrElse(this.replaceResult(a, s), () => s);
   }
   modify(f: (a: A) => A): (s: S) => S {
-    return (s) => Result.getOrElse(Result.flatMap(this.getResult(s), (a) => this.replaceResult(f(a), s)), () => s)
+    return (s) =>
+      Result.getOrElse(
+        Result.flatMap(this.getResult(s), (a) => this.replaceResult(f(a), s)),
+        () => s,
+      );
   }
   compose(that: any): any {
-    return make(compose(this.node, that.node))
+    return make(compose(this.node, that.node));
   }
   key(key: PropertyKey): any {
-    return make(compose(this.node, new PathNode([key])))
+    return make(compose(this.node, new PathNode([key])));
   }
   optionalKey(key: PropertyKey): any {
     return make(
@@ -1064,27 +1046,29 @@ class OptionalImpl<S, A> implements Optional<S, A> {
         new LensNode(
           (s) => s[key],
           (a, s) => {
-            const copy = cloneShallow(s)
+            const copy = cloneShallow(s);
             if (a === undefined) {
               if (Array.isArray(copy) && typeof key === "number") {
-                copy.splice(key, 1)
+                copy.splice(key, 1);
               } else {
-                delete copy[key]
+                delete copy[key];
               }
             } else {
-              copy[key] = a
+              copy[key] = a;
             }
-            return copy
-          }
-        )
-      )
-    )
+            return copy;
+          },
+        ),
+      ),
+    );
   }
   check(...checks: readonly [SchemaAST.Check<any>, ...Array<SchemaAST.Check<any>>]): any {
-    return make(compose(this.node, new CheckNode(checks)))
+    return make(compose(this.node, new CheckNode(checks)));
   }
   refine<B extends A>(refinement: (a: A) => a is B, annotations?: Schema.Annotations.Filter): any {
-    return make(compose(this.node, new CheckNode([SchemaAST.makeFilterByGuard(refinement, annotations)])))
+    return make(
+      compose(this.node, new CheckNode([SchemaAST.makeFilterByGuard(refinement, annotations)])),
+    );
   }
   tag(tag: string): any {
     return make(
@@ -1095,288 +1079,300 @@ class OptionalImpl<S, A> implements Optional<S, A> {
             s._tag === tag
               ? Result.succeed(s)
               : Result.fail(`Expected ${format(tag)} tag, got ${format(s._tag)}`),
-          identity
-        )
-      )
-    )
+          identity,
+        ),
+      ),
+    );
   }
   at(key: PropertyKey, ..._rest: Array<any>): any {
-    const err = Result.fail(`Key ${format(key)} not found`)
+    const err = Result.fail(`Key ${format(key)} not found`);
     return make(
       compose(
         this.node,
         new OptionalNode(
-          (s) => Object.hasOwn(s, key) ? Result.succeed(s[key]) : err,
+          (s) => (Object.hasOwn(s, key) ? Result.succeed(s[key]) : err),
           (a, s) => {
             if (Object.hasOwn(s, key)) {
-              const copy = cloneShallow(s)
-              copy[key] = a
-              return Result.succeed(copy)
+              const copy = cloneShallow(s);
+              copy[key] = a;
+              return Result.succeed(copy);
             } else {
-              return err
+              return err;
             }
-          }
-        )
-      )
-    )
+          },
+        ),
+      ),
+    );
   }
   pick(keys: any) {
-    return this.compose(makeLens(Struct.pick(keys), (p, a) => ({ ...a, ...p })))
+    return this.compose(makeLens(Struct.pick(keys), (p, a) => ({ ...a, ...p })));
   }
   omit(keys: any) {
-    return this.compose(makeLens(Struct.omit(keys), (o, a) => ({ ...a, ...o })))
+    return this.compose(makeLens(Struct.omit(keys), (o, a) => ({ ...a, ...o })));
   }
   notUndefined(): Prism<S, Exclude<A, undefined>> {
-    return this.refine(Predicate.isNotUndefined, { expected: "a value other than `undefined`" })
+    return this.refine(Predicate.isNotUndefined, { expected: "a value other than `undefined`" });
   }
   forEach<S, A, B>(this: Traversal<S, A>, f: (iso: Iso<A, A>) => Optional<A, B>): Traversal<S, B> {
-    const inner = f(id<A>())
+    const inner = f(id<A>());
     return makeOptional<S, ReadonlyArray<B>>(
       // GET: collect focused Bs
       (s) =>
         Result.map(this.getResult(s), (as) => {
-          const bs: Array<B> = []
+          const bs: Array<B> = [];
           for (let i = 0; i < as.length; i++) {
-            const r = inner.getResult(as[i])
-            if (Result.isSuccess(r)) bs.push(r.success)
+            const r = inner.getResult(as[i]);
+            if (Result.isSuccess(r)) bs.push(r.success);
           }
-          return bs
+          return bs;
         }),
       // SET: bs must match the number of focusable elements
       (bs, s) =>
         Result.flatMap(this.getResult(s), (as) => {
           // 1) collect focusable indices
-          const idxs: Array<number> = []
+          const idxs: Array<number> = [];
           for (let i = 0; i < as.length; i++) {
-            if (Result.isSuccess(inner.getResult(as[i]))) idxs.push(i)
+            if (Result.isSuccess(inner.getResult(as[i]))) idxs.push(i);
           }
 
           // 2) arity check
           if (bs.length !== idxs.length) {
             return Result.fail(
-              `each: replacement length mismatch: ${bs.length} !== ${idxs.length}`
-            )
+              `each: replacement length mismatch: ${bs.length} !== ${idxs.length}`,
+            );
           }
 
           // 3) update those indices
-          const out: Array<A> = as.slice()
+          const out: Array<A> = as.slice();
           for (let k = 0; k < idxs.length; k++) {
-            const i = idxs[k]
-            const r = inner.replaceResult(bs[k], as[i])
+            const i = idxs[k];
+            const r = inner.replaceResult(bs[k], as[i]);
             if (Result.isFailure(r)) {
-              return Result.fail(`each: could not set element ${i}`)
+              return Result.fail(`each: could not set element ${i}`);
             }
-            out[i] = r.success
+            out[i] = r.success;
           }
-          return this.replaceResult(out, s)
-        })
-    )
+          return this.replaceResult(out, s);
+        }),
+    );
   }
   modifyAll<S, A>(this: Traversal<S, A>, f: (a: A) => A): (s: S) => S {
     return (s) =>
       Result.getOrElse(
         Result.flatMap(this.getResult(s), (as) => this.replaceResult(as.map(f), s)),
-        () => s
-      )
+        () => s,
+      );
   }
 }
 
 class IsoImpl<S, A> extends OptionalImpl<S, A> implements Iso<S, A> {
-  readonly get: (s: S) => A
-  readonly set: (a: A) => S
+  readonly get: (s: S) => A;
+  readonly set: (a: A) => S;
   constructor(node: Node, get: (s: S) => A, set: (a: A) => S) {
-    super(node, (s) => Result.succeed(get(s)), (a) => Result.succeed(set(a)))
-    this.get = get
-    this.set = set
+    super(
+      node,
+      (s) => Result.succeed(get(s)),
+      (a) => Result.succeed(set(a)),
+    );
+    this.get = get;
+    this.set = set;
   }
   override replace(a: A, _: S): S {
-    return this.set(a)
+    return this.set(a);
   }
   override modify(f: (a: A) => A): (s: S) => S {
-    return (s) => this.set(f(this.get(s)))
+    return (s) => this.set(f(this.get(s)));
   }
 }
 
 class LensImpl<S, A> extends OptionalImpl<S, A> implements Lens<S, A> {
-  readonly get: (s: S) => A
+  readonly get: (s: S) => A;
   constructor(node: Node, get: (s: S) => A, replace: (a: A, s: S) => S) {
-    super(node, (s) => Result.succeed(get(s)), (a, s) => Result.succeed(replace(a, s)))
-    this.get = get
-    this.replace = replace
+    super(
+      node,
+      (s) => Result.succeed(get(s)),
+      (a, s) => Result.succeed(replace(a, s)),
+    );
+    this.get = get;
+    this.replace = replace;
   }
   override modify(f: (a: A) => A): (s: S) => S {
-    return (s) => this.replace(f(this.get(s)), s)
+    return (s) => this.replace(f(this.get(s)), s);
   }
 }
 
 class PrismImpl<S, A> extends OptionalImpl<S, A> implements Prism<S, A> {
-  readonly set: (a: A) => S
+  readonly set: (a: A) => S;
   constructor(node: Node, getResult: (s: S) => Result.Result<A, string>, set: (a: A) => S) {
-    super(node, getResult, (a, _) => Result.succeed(set(a)))
-    this.set = set
+    super(node, getResult, (a, _) => Result.succeed(set(a)));
+    this.set = set;
   }
   override replace(a: A, _: S): S {
-    return this.set(a)
+    return this.set(a);
   }
   override modify(f: (a: A) => A): (s: S) => S {
-    return (s) => Result.getOrElse(Result.map(this.getResult(s), (a) => this.set(f(a))), () => s)
+    return (s) =>
+      Result.getOrElse(
+        Result.map(this.getResult(s), (a) => this.set(f(a))),
+        () => s,
+      );
   }
 }
 
 function make(node: Node): any {
-  const op = recur(node)
+  const op = recur(node);
   switch (op._tag) {
     case "IsoNode":
-      return new IsoImpl(node, op.get, op.set)
+      return new IsoImpl(node, op.get, op.set);
     case "LensNode":
-      return new LensImpl(node, op.get, op.set)
+      return new LensImpl(node, op.get, op.set);
     case "PrismNode":
-      return new PrismImpl(node, op.get, op.set)
+      return new PrismImpl(node, op.get, op.set);
     case "OptionalNode":
-      return new OptionalImpl(node, op.get, op.set)
+      return new OptionalImpl(node, op.get, op.set);
   }
 }
 
 function cloneShallow<T>(pojo: T): T {
-  if (Array.isArray(pojo)) return pojo.slice() as T
+  if (Array.isArray(pojo)) return pojo.slice() as T;
   if (typeof pojo === "object" && pojo !== null) {
-    const proto = Object.getPrototypeOf(pojo)
+    const proto = Object.getPrototypeOf(pojo);
     if (proto !== Object.prototype && proto !== null) {
-      throw new Error("Cannot clone object with non-Object constructor or null prototype")
+      throw new Error("Cannot clone object with non-Object constructor or null prototype");
     }
-    return { ...pojo } as T
+    return { ...pojo } as T;
   }
-  return pojo
+  return pojo;
 }
 
 type Op = {
-  readonly _tag: "IsoNode" | "LensNode" | "PrismNode" | "OptionalNode"
-  readonly get: (s: unknown) => any
-  readonly set: (a: unknown, s?: unknown) => any
-}
+  readonly _tag: "IsoNode" | "LensNode" | "PrismNode" | "OptionalNode";
+  readonly get: (s: unknown) => any;
+  readonly set: (a: unknown, s?: unknown) => any;
+};
 
 const recur = memoize((node: Node): Op => {
   switch (node._tag) {
     case "IdentityNode":
-      return { _tag: "IsoNode", get: identity, set: identity }
+      return { _tag: "IsoNode", get: identity, set: identity };
     case "IsoNode":
     case "LensNode":
     case "PrismNode":
     case "OptionalNode":
-      return { _tag: node._tag, get: node.get, set: node.set }
+      return { _tag: node._tag, get: node.get, set: node.set };
     case "PathNode": {
       return {
         _tag: "LensNode",
         get: (s: any) => {
-          const path = node.path
-          let out: any = s
+          const path = node.path;
+          let out: any = s;
           for (let i = 0, n = path.length; i < n; i++) {
-            out = out[path[i]]
+            out = out[path[i]];
           }
-          return out
+          return out;
         },
         set: (a: any, s: any) => {
-          const path = node.path
-          const out = cloneShallow(s)
+          const path = node.path;
+          const out = cloneShallow(s);
 
-          let current = out
-          let i = 0
+          let current = out;
+          let i = 0;
           for (; i < path.length - 1; i++) {
-            const key = path[i]
-            current[key] = cloneShallow(current[key])
-            current = current[key]
+            const key = path[i];
+            current[key] = cloneShallow(current[key]);
+            current = current[key];
           }
 
-          const finalKey = path[i]
-          current[finalKey] = a
+          const finalKey = path[i];
+          current[finalKey] = a;
 
-          return out
-        }
-      }
+          return out;
+        },
+      };
     }
     case "CheckNode":
       return {
         _tag: "PrismNode",
         get: (s: any) => Result.mapError(SchemaAST.runChecks(node.checks, s), String),
-        set: identity
-      }
+        set: identity,
+      };
     case "CompositionNode": {
-      const ops = node.nodes.map(recur)
-      const _tag = ops.reduce<Op["_tag"]>((tag, op) => getCompositionTag(tag, op._tag), "IsoNode")
+      const ops = node.nodes.map(recur);
+      const _tag = ops.reduce<Op["_tag"]>((tag, op) => getCompositionTag(tag, op._tag), "IsoNode");
       return {
         _tag,
         get: (s: any) => {
           for (let i = 0; i < ops.length; i++) {
-            const op = ops[i]
-            const result = op.get(s)
+            const op = ops[i];
+            const result = op.get(s);
             if (hasFailingGet(op._tag)) {
               if (Result.isFailure(result)) {
-                return result
+                return result;
               }
-              s = result.success
+              s = result.success;
             } else {
-              s = result
+              s = result;
             }
           }
-          return hasFailingGet(_tag) ? Result.succeed(s) : s
+          return hasFailingGet(_tag) ? Result.succeed(s) : s;
         },
         set: (a: any, s: any) => {
-          const source = s
-          const len = ops.length
-          const ss = new Array(len + 1)
-          ss[0] = s
+          const source = s;
+          const len = ops.length;
+          const ss = new Array(len + 1);
+          ss[0] = s;
           for (let i = 0; i < len; i++) {
-            const op = ops[i]
+            const op = ops[i];
             if (hasFailingGet(op._tag)) {
-              const result = op.get(s)
+              const result = op.get(s);
               if (Result.isFailure(result)) {
-                return _tag === "OptionalNode" ? result : source
+                return _tag === "OptionalNode" ? result : source;
               }
-              s = result.success
+              s = result.success;
             } else {
-              s = op.get(s)
+              s = op.get(s);
             }
-            ss[i + 1] = s
+            ss[i + 1] = s;
           }
           for (let i = len - 1; i >= 0; i--) {
-            const op = ops[i]
+            const op = ops[i];
             if (hasSet(op._tag)) {
-              a = op.set(a)
+              a = op.set(a);
             } else if (op._tag === "LensNode") {
-              a = op.set(a, ss[i])
+              a = op.set(a, ss[i]);
             } else {
-              const result = op.set(a, ss[i])
+              const result = op.set(a, ss[i]);
               if (Result.isFailure(result)) {
-                return result
+                return result;
               }
-              a = result.success
+              a = result.success;
             }
           }
-          return _tag === "OptionalNode" ? Result.succeed(a) : a
-        }
-      }
+          return _tag === "OptionalNode" ? Result.succeed(a) : a;
+        },
+      };
     }
   }
-})
+});
 
 function hasFailingGet(tag: Op["_tag"]): boolean {
-  return tag === "PrismNode" || tag === "OptionalNode"
+  return tag === "PrismNode" || tag === "OptionalNode";
 }
 
 function hasSet(tag: Op["_tag"]): boolean {
-  return tag === "IsoNode" || tag === "PrismNode"
+  return tag === "IsoNode" || tag === "PrismNode";
 }
 
 function getCompositionTag(a: Op["_tag"], b: Op["_tag"]): Op["_tag"] {
   switch (a) {
     case "IsoNode":
-      return b
+      return b;
     case "LensNode":
-      return hasFailingGet(b) ? "OptionalNode" : "LensNode"
+      return hasFailingGet(b) ? "OptionalNode" : "LensNode";
     case "PrismNode":
-      return hasSet(b) ? "PrismNode" : "OptionalNode"
+      return hasSet(b) ? "PrismNode" : "OptionalNode";
     case "OptionalNode":
-      return "OptionalNode"
+      return "OptionalNode";
   }
 }
 // ---------------------------------------------
@@ -1384,13 +1380,12 @@ function getCompositionTag(a: Op["_tag"], b: Op["_tag"]): Op["_tag"] {
 // ---------------------------------------------
 
 /**
- * Returns a function that extracts all elements focused by a
- * {@link Traversal} as a plain mutable array.
+ * Returns a function that extracts all elements focused by a {@link Traversal} as a plain mutable
+ * array.
  *
  * **When to use**
  *
- * Use when you need the focused values as a simple `Array<A>` for further
- *   processing.
+ * Use when you need the focused values as a simple `Array<A>` for further processing.
  *
  * **Details**
  *
@@ -1400,41 +1395,40 @@ function getCompositionTag(a: Op["_tag"], b: Op["_tag"]): Op["_tag"] {
  * **Example** (Collecting positive numbers)
  *
  * ```ts
- * import { Optic, Schema } from "effect"
+ * import { Optic, Schema } from "effect";
  *
- * type S = { readonly values: ReadonlyArray<number> }
+ * type S = { readonly values: ReadonlyArray<number> };
  *
  * const _pos = Optic.id<S>()
  *   .key("values")
- *   .forEach((n) => n.check(Schema.isGreaterThan(0)))
+ *   .forEach((n) => n.check(Schema.isGreaterThan(0)));
  *
- * const getPositive = Optic.getAll(_pos)
+ * const getPositive = Optic.getAll(_pos);
  *
- * console.log(getPositive({ values: [3, -1, 5] }))
+ * console.log(getPositive({ values: [3, -1, 5] }));
  * // Output: [3, 5]
  *
- * console.log(getPositive({ values: [-1, -2] }))
+ * console.log(getPositive({ values: [-1, -2] }));
  * // Output: []
  * ```
  *
- * @see {@link Traversal} — the optic type this operates on
- *
- * @category Traversal
  * @since 4.0.0
+ * @category Traversal
+ * @see {@link Traversal} — the optic type this operates on
  */
 export function getAll<S, A>(traversal: Traversal<S, A>): (s: S) => Array<A> {
   return (s) =>
     Result.match(traversal.getResult(s), {
       onFailure: () => [],
-      onSuccess: (as) => [...as]
-    })
+      onSuccess: (as) => [...as],
+    });
 }
 
 // ---------------------------------------------
 // Built-in Optics
 // ---------------------------------------------
 
-const identityIso = make(identityNode)
+const identityIso = make(identityNode);
 
 /**
  * Iso that focuses on the whole value unchanged.
@@ -1452,33 +1446,30 @@ const identityIso = make(identityNode)
  * **Example** (Starting an optic chain)
  *
  * ```ts
- * import { Optic } from "effect"
+ * import { Optic } from "effect";
  *
- * type S = { readonly x: number }
+ * type S = { readonly x: number };
  *
- * const _x = Optic.id<S>().key("x")
+ * const _x = Optic.id<S>().key("x");
  *
- * console.log(_x.get({ x: 42 }))
+ * console.log(_x.get({ x: 42 }));
  * // Output: 42
  * ```
  *
- * @see {@link Iso} — the type this function returns
- *
- * @category Iso
  * @since 4.0.0
+ * @category Iso
+ * @see {@link Iso} — the type this function returns
  */
 export function id<S>(): Iso<S, S> {
-  return identityIso
+  return identityIso;
 }
 
 /**
- * Iso that converts a `Record<string, A>` to an array of
- * `[key, value]` entries and back.
+ * Iso that converts a `Record<string, A>` to an array of `[key, value]` entries and back.
  *
  * **When to use**
  *
- * Use when you want to traverse or manipulate record entries as an array (e.g.
- *   with `.forEach()`).
+ * Use when you want to traverse or manipulate record entries as an array (e.g. with `.forEach()`).
  *
  * **Details**
  *
@@ -1489,25 +1480,25 @@ export function id<S>(): Iso<S, S> {
  * **Example** (Traversing record values)
  *
  * ```ts
- * import { Optic, Schema } from "effect"
+ * import { Optic, Schema } from "effect";
  *
- * const _positiveValues = Optic.entries<number>()
- *   .forEach((entry) => entry.key(1).check(Schema.isGreaterThan(0)))
+ * const _positiveValues = Optic.entries<number>().forEach((entry) =>
+ *   entry.key(1).check(Schema.isGreaterThan(0)),
+ * );
  *
- * const inc = _positiveValues.modifyAll((n) => n + 1)
+ * const inc = _positiveValues.modifyAll((n) => n + 1);
  *
- * console.log(inc({ a: 0, b: 3, c: -1 }))
+ * console.log(inc({ a: 0, b: 3, c: -1 }));
  * // Output: { a: 0, b: 4, c: -1 }
  * ```
  *
+ * @since 4.0.0
+ * @category Iso
  * @see {@link Iso} — the type this function returns
  * @see {@link id} — identity iso
- *
- * @category Iso
- * @since 4.0.0
  */
 export function entries<A>(): Iso<Record<string, A>, ReadonlyArray<readonly [string, A]>> {
-  return make(new IsoNode(Object.entries, Object.fromEntries))
+  return make(new IsoNode(Object.entries, Object.fromEntries));
 }
 
 /**
@@ -1515,8 +1506,7 @@ export function entries<A>(): Iso<Record<string, A>, ReadonlyArray<readonly [str
  *
  * **When to use**
  *
- * Use when you have an `Option<A>` and want to read/update the inner value only
- *   when it is `Some`.
+ * Use when you have an `Option<A>` and want to read/update the inner value only when it is `Some`.
  *
  * **Details**
  *
@@ -1526,36 +1516,35 @@ export function entries<A>(): Iso<Record<string, A>, ReadonlyArray<readonly [str
  * **Example** (Accessing Some value)
  *
  * ```ts
- * import { Optic, Option, Result } from "effect"
+ * import { Optic, Option, Result } from "effect";
  *
- * const _some = Optic.id<Option.Option<number>>().compose(Optic.some())
+ * const _some = Optic.id<Option.Option<number>>().compose(Optic.some());
  *
- * console.log(Result.isSuccess(_some.getResult(Option.some(42))))
+ * console.log(Result.isSuccess(_some.getResult(Option.some(42))));
  * // Output: true
  *
- * console.log(Result.isFailure(_some.getResult(Option.none())))
+ * console.log(Result.isFailure(_some.getResult(Option.none())));
  * // Output: true
  *
- * console.log(_some.set(10))
+ * console.log(_some.set(10));
  * // Output: { _tag: "Some", value: 10 }
  * ```
  *
+ * @since 4.0.0
+ * @category Prism
  * @see {@link none} — focuses on `None` instead
  * @see {@link Prism} — the type this function returns
- *
- * @category Prism
- * @since 4.0.0
  */
 export function some<A>(): Prism<Option.Option<A>, A> {
-  const run = runRefinement(Option.isSome, { expected: "a Some value" })
+  const run = runRefinement(Option.isSome, { expected: "a Some value" });
   return makePrism(
     (s) =>
       Result.mapBoth(run(s), {
         onFailure: String,
-        onSuccess: (s) => s.value
+        onSuccess: (s) => s.value,
       }),
-    Option.some
-  )
+    Option.some,
+  );
 }
 
 /**
@@ -1574,33 +1563,32 @@ export function some<A>(): Prism<Option.Option<A>, A> {
  * **Example** (Matching None)
  *
  * ```ts
- * import { Optic, Option, Result } from "effect"
+ * import { Optic, Option, Result } from "effect";
  *
- * const _none = Optic.id<Option.Option<number>>().compose(Optic.none())
+ * const _none = Optic.id<Option.Option<number>>().compose(Optic.none());
  *
- * console.log(Result.isSuccess(_none.getResult(Option.none())))
+ * console.log(Result.isSuccess(_none.getResult(Option.none())));
  * // Output: true
  *
- * console.log(Result.isFailure(_none.getResult(Option.some(1))))
+ * console.log(Result.isFailure(_none.getResult(Option.some(1))));
  * // Output: true
  * ```
  *
+ * @since 4.0.0
+ * @category Prism
  * @see {@link some} — focuses on `Some` instead
  * @see {@link Prism} — the type this function returns
- *
- * @category Prism
- * @since 4.0.0
  */
 export function none<A>(): Prism<Option.Option<A>, undefined> {
-  const run = runRefinement(Option.isNone, { expected: "a None value" })
+  const run = runRefinement(Option.isNone, { expected: "a None value" });
   return makePrism(
     (s) =>
       Result.mapBoth(run(s), {
         onFailure: String,
-        onSuccess: () => undefined
+        onSuccess: () => undefined,
       }),
-    () => Option.none()
-  )
+    () => Option.none(),
+  );
 }
 
 /**
@@ -1608,8 +1596,7 @@ export function none<A>(): Prism<Option.Option<A>, undefined> {
  *
  * **When to use**
  *
- * Use when you have a `Result<A, E>` and want to read/update `A` only when it
- *   is a `Success`.
+ * Use when you have a `Result<A, E>` and want to read/update `A` only when it is a `Success`.
  *
  * **Details**
  *
@@ -1619,33 +1606,32 @@ export function none<A>(): Prism<Option.Option<A>, undefined> {
  * **Example** (Accessing success)
  *
  * ```ts
- * import { Optic, Result } from "effect"
+ * import { Optic, Result } from "effect";
  *
- * const _ok = Optic.id<Result.Result<number, string>>().compose(Optic.success())
+ * const _ok = Optic.id<Result.Result<number, string>>().compose(Optic.success());
  *
- * console.log(Result.isSuccess(_ok.getResult(Result.succeed(42))))
+ * console.log(Result.isSuccess(_ok.getResult(Result.succeed(42))));
  * // Output: true
  *
- * console.log(Result.isFailure(_ok.getResult(Result.fail("err"))))
+ * console.log(Result.isFailure(_ok.getResult(Result.fail("err"))));
  * // Output: true
  * ```
  *
+ * @since 4.0.0
+ * @category Prism
  * @see {@link failure} — focuses on the failure side
  * @see {@link Prism} — the type this function returns
- *
- * @category Prism
- * @since 4.0.0
  */
 export function success<A, E>(): Prism<Result.Result<A, E>, A> {
-  const run = runRefinement(Result.isSuccess, { expected: "a Result.Success value" })
+  const run = runRefinement(Result.isSuccess, { expected: "a Result.Success value" });
   return makePrism(
     (s) =>
       Result.mapBoth(run(s), {
         onFailure: String,
-        onSuccess: (s) => s.success
+        onSuccess: (s) => s.success,
       }),
-    Result.succeed
-  )
+    Result.succeed,
+  );
 }
 
 /**
@@ -1653,8 +1639,7 @@ export function success<A, E>(): Prism<Result.Result<A, E>, A> {
  *
  * **When to use**
  *
- * Use when you have a `Result<A, E>` and want to read/update `E` only when it
- *   is a `Failure`.
+ * Use when you have a `Result<A, E>` and want to read/update `E` only when it is a `Failure`.
  *
  * **Details**
  *
@@ -1664,38 +1649,38 @@ export function success<A, E>(): Prism<Result.Result<A, E>, A> {
  * **Example** (Accessing failure)
  *
  * ```ts
- * import { Optic, Result } from "effect"
+ * import { Optic, Result } from "effect";
  *
- * const _err = Optic.id<Result.Result<number, string>>().compose(Optic.failure())
+ * const _err = Optic.id<Result.Result<number, string>>().compose(Optic.failure());
  *
- * console.log(Result.isSuccess(_err.getResult(Result.fail("oops"))))
+ * console.log(Result.isSuccess(_err.getResult(Result.fail("oops"))));
  * // Output: true
  *
- * console.log(Result.isFailure(_err.getResult(Result.succeed(42))))
+ * console.log(Result.isFailure(_err.getResult(Result.succeed(42))));
  * // Output: true
  * ```
  *
+ * @since 4.0.0
+ * @category Prism
  * @see {@link success} — focuses on the success side
  * @see {@link Prism} — the type this function returns
- *
- * @category Prism
- * @since 4.0.0
  */
 export function failure<A, E>(): Prism<Result.Result<A, E>, E> {
-  const run = runRefinement(Result.isFailure, { expected: "a Result.Failure value" })
+  const run = runRefinement(Result.isFailure, { expected: "a Result.Failure value" });
   return makePrism(
     (s) =>
       Result.mapBoth(run(s), {
         onFailure: String,
-        onSuccess: (s) => s.failure
+        onSuccess: (s) => s.failure,
       }),
-    Result.fail
-  )
+    Result.fail,
+  );
 }
 
 function runRefinement<T extends E, E>(
   refinement: (e: E) => e is T,
-  annotations?: Schema.Annotations.Filter
+  annotations?: Schema.Annotations.Filter,
 ): (e: E) => Result.Result<T, SchemaIssue.Issue> {
-  return (e) => SchemaAST.runChecks([SchemaAST.makeFilterByGuard(refinement, annotations)], e) as any
+  return (e) =>
+    SchemaAST.runChecks([SchemaAST.makeFilterByGuard(refinement, annotations)], e) as any;
 }

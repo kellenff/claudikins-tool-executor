@@ -12,10 +12,10 @@
 
 ## File Structure
 
-| File | Action | Responsibility |
-|---|---|---|
-| `src/search.ts` | Modify | Add five pure helpers + one internal `loadToolResult` helper; rewrite `searchWithSerena` body |
-| `src/search.test.ts` | Modify | Add three `describe` blocks for the pure helpers tested in isolation |
+| File                 | Action | Responsibility                                                                                |
+| -------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| `src/search.ts`      | Modify | Add five pure helpers + one internal `loadToolResult` helper; rewrite `searchWithSerena` body |
+| `src/search.test.ts` | Modify | Add three `describe` blocks for the pure helpers tested in isolation                          |
 
 No new files. No changes outside `src/search.ts` and `src/search.test.ts`.
 
@@ -28,6 +28,7 @@ The orchestration needs a `matchContext` value for each result. The simplest for
 ### Task 1: Add `escapeRegexTerm` (TDD)
 
 **Files:**
+
 - Modify: `src/search.test.ts` (add a new `describe` block at end of file)
 - Modify: `src/search.ts` (add helper near other top-level helpers, after `loadToolDefinition`)
 
@@ -102,6 +103,7 @@ git commit -m "feat(search): add escapeRegexTerm pure helper (TDD)"
 ### Task 2: Add `tokenizeQuery` (TDD)
 
 **Files:**
+
 - Modify: `src/search.test.ts`
 - Modify: `src/search.ts`
 
@@ -110,17 +112,17 @@ git commit -m "feat(search): add escapeRegexTerm pure helper (TDD)"
 Extend the `"search pure helpers"` `describe` block in `src/search.test.ts` with:
 
 ```typescript
-  describe("tokenizeQuery", () => {
-    it("splits on whitespace and drops empties", () => {
-      expect(tokenizeQuery("generate image")).toStrictEqual(["generate", "image"]);
-      expect(tokenizeQuery("  a   b   c  ")).toStrictEqual(["a", "b", "c"]);
-    });
-
-    it("returns empty array for whitespace-only input", () => {
-      expect(tokenizeQuery("")).toStrictEqual([]);
-      expect(tokenizeQuery("   ")).toStrictEqual([]);
-    });
+describe("tokenizeQuery", () => {
+  it("splits on whitespace and drops empties", () => {
+    expect(tokenizeQuery("generate image")).toStrictEqual(["generate", "image"]);
+    expect(tokenizeQuery("  a   b   c  ")).toStrictEqual(["a", "b", "c"]);
   });
+
+  it("returns empty array for whitespace-only input", () => {
+    expect(tokenizeQuery("")).toStrictEqual([]);
+    expect(tokenizeQuery("   ")).toStrictEqual([]);
+  });
+});
 ```
 
 Add `tokenizeQuery` to the named import from `./search.js` at the top of the file.
@@ -142,8 +144,7 @@ In `src/search.ts`, immediately below `escapeRegexTerm`, add:
  * @param {string} query - Free-text query string.
  * @returns {string[]} Non-empty term fragments in original order.
  */
-export const tokenizeQuery = (query: string): string[] =>
-  query.split(/\s+/).filter(Boolean);
+export const tokenizeQuery = (query: string): string[] => query.split(/\s+/).filter(Boolean);
 ```
 
 - [ ] **Step 4: Run the test to verify it passes (GREEN)**
@@ -168,6 +169,7 @@ git commit -m "feat(search): add tokenizeQuery pure helper (TDD)"
 ### Task 3: Add `buildLookaheadPattern` (TDD)
 
 **Files:**
+
 - Modify: `src/search.test.ts`
 - Modify: `src/search.ts`
 
@@ -176,21 +178,19 @@ git commit -m "feat(search): add tokenizeQuery pure helper (TDD)"
 Extend the `"search pure helpers"` `describe` block in `src/search.test.ts` with:
 
 ```typescript
-  describe("buildLookaheadPattern", () => {
-    it("uses a single term directly", () => {
-      expect(buildLookaheadPattern(["generate"])).toBe("generate");
-    });
-
-    it("joins multiple terms with lookaheads", () => {
-      expect(buildLookaheadPattern(["generate", "diagram"])).toBe(
-        "(?=.*generate)(?=.*diagram).*",
-      );
-    });
-
-    it("returns .* for empty terms", () => {
-      expect(buildLookaheadPattern([])).toBe(".*");
-    });
+describe("buildLookaheadPattern", () => {
+  it("uses a single term directly", () => {
+    expect(buildLookaheadPattern(["generate"])).toBe("generate");
   });
+
+  it("joins multiple terms with lookaheads", () => {
+    expect(buildLookaheadPattern(["generate", "diagram"])).toBe("(?=.*generate)(?=.*diagram).*");
+  });
+
+  it("returns .* for empty terms", () => {
+    expect(buildLookaheadPattern([])).toBe(".*");
+  });
+});
 ```
 
 Add `buildLookaheadPattern` to the named import from `./search.js` at the top of the file.
@@ -251,6 +251,7 @@ git commit -m "feat(search): add buildLookaheadPattern pure helper (TDD)"
 These two helpers are pure and exercised transitively by the existing `searchTools` integration tests. No new direct tests are added.
 
 **Files:**
+
 - Modify: `src/search.ts`
 
 - [ ] **Step 1: Implement `extractRegistryPaths`**
@@ -307,6 +308,7 @@ git commit -m "feat(search): add extractRegistryPaths and dedupePaths pure helpe
 This helper is internal (not exported) — it bridges the pure pipeline to the existing async `loadToolDefinition`. It is exercised transitively by the existing `searchTools` tests after Task 6.
 
 **Files:**
+
 - Modify: `src/search.ts`
 
 - [ ] **Step 1: Implement `loadToolResult`**
@@ -357,6 +359,7 @@ git commit -m "feat(search): add loadToolResult internal helper"
 This is the load-bearing task. The orchestration body is replaced wholesale. All 9 existing `searchTools` integration tests must pass without modification.
 
 **Files:**
+
 - Modify: `src/search.ts` (replace the body of `searchWithSerena`)
 
 - [ ] **Step 1: Replace the `searchWithSerena` body**
@@ -410,6 +413,7 @@ const searchWithSerena = async (query: string, limit: number): Promise<SearchRes
 
 Run: `yarn test:unit`
 Expected: All tests pass — including:
+
 - "returns Serena results when registry search succeeds" (multi-term lookahead, dedupe, matchContext).
 - "paginates Serena results and stops loading at requested limit" (limit cap on `loadToolDefinition` calls).
 - "escapes single-term Serena search patterns" (single-term pattern format).
@@ -489,6 +493,7 @@ git commit -m "chore(search): post-refactor lint+format pass"
 - [ ] **Step 5: Final summary**
 
 Report to the user:
+
 - Test count (before vs after).
 - Number of pure helpers extracted (`escapeRegexTerm`, `tokenizeQuery`, `buildLookaheadPattern`, `extractRegistryPaths`, `dedupePaths`).
 - One internal helper added (`loadToolResult`).

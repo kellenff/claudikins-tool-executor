@@ -1,93 +1,91 @@
 /**
  * Persists cluster mailbox messages and replies in SQL.
  *
- * The SQL-backed `MessageStorage` stores encoded cluster envelopes and reply
- * chunks so runners can recover mailbox state after restarts. It supports
- * redelivering unprocessed messages, deduplicating requests by primary key, and
- * replaying reply chunks until they are acknowledged. This module includes the
- * storage constructor, layers, migrations, optional table prefixes, and the row
- * mapping needed by encoded message storage.
+ * The SQL-backed `MessageStorage` stores encoded cluster envelopes and reply chunks so runners can
+ * recover mailbox state after restarts. It supports redelivering unprocessed messages,
+ * deduplicating requests by primary key, and replaying reply chunks until they are acknowledged.
+ * This module includes the storage constructor, layers, migrations, optional table prefixes, and
+ * the row mapping needed by encoded message storage.
  *
  * @since 4.0.0
  */
 // eslint-disable effect/no-bigint-literals
-import * as Arr from "../../Array.ts"
-import * as Effect from "../../Effect.ts"
-import * as Layer from "../../Layer.ts"
-import * as Option from "../../Option.ts"
-import * as Schedule from "../../Schedule.ts"
-import * as Migrator from "../sql/Migrator.ts"
-import * as SqlClient from "../sql/SqlClient.ts"
-import type { Row } from "../sql/SqlConnection.ts"
-import { isSqlError, type SqlError } from "../sql/SqlError.ts"
-import { PersistenceError } from "./ClusterError.ts"
-import type * as Envelope from "./Envelope.ts"
-import * as MessageStorage from "./MessageStorage.ts"
-import { SaveResultEncoded } from "./MessageStorage.ts"
-import type * as Reply from "./Reply.ts"
-import * as ShardId from "./ShardId.ts"
-import type { ShardingConfig } from "./ShardingConfig.ts"
-import * as Snowflake from "./Snowflake.ts"
+import * as Arr from "../../Array.ts";
+import * as Effect from "../../Effect.ts";
+import * as Layer from "../../Layer.ts";
+import * as Option from "../../Option.ts";
+import * as Schedule from "../../Schedule.ts";
+import * as Migrator from "../sql/Migrator.ts";
+import * as SqlClient from "../sql/SqlClient.ts";
+import type { Row } from "../sql/SqlConnection.ts";
+import { isSqlError, type SqlError } from "../sql/SqlError.ts";
+import { PersistenceError } from "./ClusterError.ts";
+import type * as Envelope from "./Envelope.ts";
+import * as MessageStorage from "./MessageStorage.ts";
+import { SaveResultEncoded } from "./MessageStorage.ts";
+import type * as Reply from "./Reply.ts";
+import * as ShardId from "./ShardId.ts";
+import type { ShardingConfig } from "./ShardingConfig.ts";
+import * as Snowflake from "./Snowflake.ts";
 
-const withTracerDisabled = Effect.withTracerEnabled(false)
+const withTracerDisabled = Effect.withTracerEnabled(false);
 
 /**
- * Creates a SQL-backed `MessageStorage` implementation, running its migrations
- * and using the optional table prefix.
+ * Creates a SQL-backed `MessageStorage` implementation, running its migrations and using the
+ * optional table prefix.
  *
  * **When to use**
  *
- * Use when you need the SQL-backed `MessageStorage` service directly, such as
- * when composing a custom layer or providing your own `Snowflake.Generator`.
+ * Use when you need the SQL-backed `MessageStorage` service directly, such as when composing a
+ * custom layer or providing your own `Snowflake.Generator`.
  *
  * **Details**
  *
- * The optional `prefix` controls the table names for messages, replies, and
- * migrations; when omitted, `cluster` is used.
+ * The optional `prefix` controls the table names for messages, replies, and migrations; when
+ * omitted, `cluster` is used.
  *
  * **Gotchas**
  *
- * Changing `prefix` after deployment points the runtime at a different set of
- * tables, including the migration history table.
+ * Changing `prefix` after deployment points the runtime at a different set of tables, including the
+ * migration history table.
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link layer} for a ready-made layer using the default prefix and generator
  * @see {@link layerWith} for a ready-made layer with a custom table prefix
- *
- * @category constructors
- * @since 4.0.0
  */
 export const make: (options?: {
-  readonly prefix?: string | undefined
+  readonly prefix?: string | undefined;
 }) => Effect.Effect<
   MessageStorage.MessageStorage["Service"],
   never,
   SqlClient.SqlClient | Snowflake.Generator
-> = Effect.fnUntraced(function*(options) {
-  const sql = (yield* SqlClient.SqlClient).withoutTransforms()
-  const prefix = options?.prefix ?? "cluster"
-  const table = (name: string) => `${prefix}_${name}`
+> = Effect.fnUntraced(function* (options) {
+  const sql = (yield* SqlClient.SqlClient).withoutTransforms();
+  const prefix = options?.prefix ?? "cluster";
+  const table = (name: string) => `${prefix}_${name}`;
 
   yield* Effect.orDie(
     Migrator.make({})({
       loader: migrations(options),
-      table: table("migrations")
-    })
-  )
+      table: table("migrations"),
+    }),
+  );
 
-  const messageKindAckChunk = sql.literal(String(messageKind.AckChunk))
-  const messageKindInterrupt = sql.literal(String(messageKind.Interrupt))
-  const replyKindWithExit = sql.literal(String(replyKind.WithExit))
+  const messageKindAckChunk = sql.literal(String(messageKind.AckChunk));
+  const messageKindInterrupt = sql.literal(String(messageKind.Interrupt));
+  const replyKindWithExit = sql.literal(String(replyKind.WithExit));
 
-  const messagesTable = table("messages")
-  const messagesTableSql = sql(messagesTable)
+  const messagesTable = table("messages");
+  const messagesTableSql = sql(messagesTable);
 
-  const repliesTable = table("replies")
-  const repliesTableSql = sql(repliesTable)
+  const repliesTable = table("replies");
+  const repliesTableSql = sql(repliesTable);
 
   const envelopeToRow = (
     envelope: Envelope.Encoded,
     message_id: string | null,
-    deliver_at: number | null
+    deliver_at: number | null,
   ): MessageRow => {
     switch (envelope._tag) {
       case "Request":
@@ -103,17 +101,18 @@ export const make: (options?: {
           headers: JSON.stringify(envelope.headers),
           trace_id: envelope.traceId ?? null,
           span_id: envelope.spanId ?? null,
-          sampled: envelope.sampled === undefined
-            ? null
-            : supportsBooleans
-            ? envelope.sampled
-            : envelope.sampled
-            ? 1
-            : 0,
+          sampled:
+            envelope.sampled === undefined
+              ? null
+              : supportsBooleans
+                ? envelope.sampled
+                : envelope.sampled
+                  ? 1
+                  : 0,
           request_id: envelope.requestId,
           reply_id: null,
-          deliver_at
-        }
+          deliver_at,
+        };
       case "AckChunk":
         return {
           id: envelope.id,
@@ -130,8 +129,8 @@ export const make: (options?: {
           sampled: null,
           request_id: envelope.requestId,
           reply_id: envelope.replyId,
-          deliver_at
-        }
+          deliver_at,
+        };
       case "Interrupt":
         return {
           id: envelope.id,
@@ -148,28 +147,30 @@ export const make: (options?: {
           sampled: null,
           request_id: envelope.requestId,
           reply_id: null,
-          deliver_at
-        }
+          deliver_at,
+        };
     }
-  }
+  };
 
   const replyToRow = (reply: Reply.Encoded): ReplyRow => ({
     id: reply.id,
     kind: replyKind[reply._tag],
     request_id: reply.requestId,
     payload: reply._tag === "WithExit" ? JSON.stringify(reply.exit) : JSON.stringify(reply.values),
-    sequence: reply._tag === "Chunk" ? reply.sequence : null
-  })
+    sequence: reply._tag === "Chunk" ? reply.sequence : null,
+  });
 
   const supportsBooleans = sql.onDialectOrElse({
     mssql: () => false,
     sqlite: () => false,
-    orElse: () => true
-  })
+    orElse: () => true,
+  });
 
-  const messageFromRow = (row: MessageRow & ReplyJoinRow): {
-    readonly envelope: Envelope.Encoded
-    readonly lastSentReply: Option.Option<Reply.Encoded>
+  const messageFromRow = (
+    row: MessageRow & ReplyJoinRow,
+  ): {
+    readonly envelope: Envelope.Encoded;
+    readonly lastSentReply: Option.Option<Reply.Encoded>;
   } => {
     switch (Number(row.kind) as 0 | 1 | 2) {
       case 0:
@@ -180,29 +181,29 @@ export const make: (options?: {
             address: {
               shardId: ShardId.fromStringEncoded(row.shard_id),
               entityType: row.entity_type,
-              entityId: row.entity_id
+              entityId: row.entity_id,
             },
             tag: row.tag!,
             payload: JSON.parse(row.payload!),
             headers: JSON.parse(row.headers!),
-            ...(row.trace_id ?
-              ({
-                traceId: row.trace_id,
-                spanId: row.span_id!,
-                sampled: !!row.sampled
-              }) :
-              undefined)
+            ...(row.trace_id
+              ? {
+                  traceId: row.trace_id,
+                  spanId: row.span_id!,
+                  sampled: !!row.sampled,
+                }
+              : undefined),
           },
-          lastSentReply: row.reply_reply_id ?
-            Option.some({
-              _tag: "Chunk",
-              id: String(row.reply_reply_id),
-              requestId: String(row.request_id),
-              sequence: Number(row.reply_sequence!),
-              values: JSON.parse(row.reply_payload!)
-            }) :
-            Option.none()
-        }
+          lastSentReply: row.reply_reply_id
+            ? Option.some({
+                _tag: "Chunk",
+                id: String(row.reply_reply_id),
+                requestId: String(row.request_id),
+                sequence: Number(row.reply_sequence!),
+                values: JSON.parse(row.reply_payload!),
+              })
+            : Option.none(),
+        };
       case 1:
         return {
           envelope: {
@@ -213,11 +214,11 @@ export const make: (options?: {
             address: {
               shardId: ShardId.fromStringEncoded(row.shard_id),
               entityType: row.entity_type,
-              entityId: row.entity_id
-            }
+              entityId: row.entity_id,
+            },
           },
-          lastSentReply: Option.none()
-        }
+          lastSentReply: Option.none(),
+        };
       case 2:
         return {
           envelope: {
@@ -227,50 +228,52 @@ export const make: (options?: {
             address: {
               shardId: ShardId.fromStringEncoded(row.shard_id),
               entityType: row.entity_type,
-              entityId: row.entity_id
-            }
+              entityId: row.entity_id,
+            },
           },
-          lastSentReply: Option.none()
-        }
+          lastSentReply: Option.none(),
+        };
     }
-  }
+  };
 
-  const sqlFalse = sql.literal(supportsBooleans ? "FALSE" : "0")
-  const sqlTrue = sql.literal(supportsBooleans ? "TRUE" : "1")
+  const sqlFalse = sql.literal(supportsBooleans ? "FALSE" : "0");
+  const sqlTrue = sql.literal(supportsBooleans ? "TRUE" : "1");
 
   const insertEnvelope: (
     row: MessageRow,
-    message_id: string
+    message_id: string,
   ) => Effect.Effect<ReadonlyArray<Row>, SqlError> = sql.onDialectOrElse({
     pg: () => (row, message_id) =>
       sql`
         INSERT INTO ${messagesTableSql} ${sql.insert(row)}
         ON CONFLICT (message_id) DO NOTHING
         RETURNING id
-      `.pipe(Effect.flatMap((rows) => {
-        // inserted a new row
-        if (rows.length > 0) return Effect.succeed([])
-        return sql`
+      `.pipe(
+        Effect.flatMap((rows) => {
+          // inserted a new row
+          if (rows.length > 0) return Effect.succeed([]);
+          return sql`
           SELECT m.id, r.id as reply_id, r.kind as reply_kind, r.payload as reply_payload, r.sequence as reply_sequence
           FROM ${messagesTableSql} m
           LEFT JOIN ${repliesTableSql} r ON r.id = m.last_reply_id
           WHERE m.message_id = ${message_id}
-        `
-      })),
+        `;
+        }),
+      ),
     mysql: () => (row, message_id) =>
       Effect.flatMap(
         sql`INSERT IGNORE INTO ${messagesTableSql} ${sql.insert(row)}`.raw,
         (row: any) => {
           if (row.affectedRows > 0) {
-            return Effect.succeed([])
+            return Effect.succeed([]);
           }
           return sql`
             SELECT m.id, r.id as reply_id, r.kind as reply_kind, r.payload as reply_payload, r.sequence as reply_sequence
             FROM ${messagesTableSql} m
             LEFT JOIN ${repliesTableSql} r ON r.id = m.last_reply_id
             WHERE m.message_id = ${message_id}
-          `
-        }
+          `;
+        },
       ),
     mssql: () => (row, message_id) =>
       sql`
@@ -319,32 +322,32 @@ export const make: (options?: {
       `.pipe(
         Effect.tap(sql`INSERT OR IGNORE INTO ${messagesTableSql} ${sql.insert(row)}`),
         sql.withTransaction,
-        Effect.retry({ times: 3 })
-      )
-  })
+        Effect.retry({ times: 3 }),
+      ),
+  });
 
   const tenMinutesAgo = sql.onDialectOrElse({
     mssql: () => sql.literal(`DATEADD(MINUTE, -10, GETDATE())`),
     mysql: () => sql.literal(`NOW() - INTERVAL 10 MINUTE`),
     pg: () => sql.literal(`NOW() - INTERVAL '10 minutes'`),
-    orElse: () => sql.literal(`DATETIME('now', '-10 minute')`)
-  })
+    orElse: () => sql.literal(`DATETIME('now', '-10 minute')`),
+  });
   const sqlNowString = sql.onDialectOrElse({
     pg: () => "NOW()",
     mysql: () => "NOW()",
     mssql: () => "GETDATE()",
-    orElse: () => "CURRENT_TIMESTAMP"
-  })
-  const sqlNow = sql.literal(sqlNowString)
+    orElse: () => "CURRENT_TIMESTAMP",
+  });
+  const sqlNow = sql.literal(sqlNowString);
 
   const wrapString = sql.onDialectOrElse({
     mssql: () => (s: string) => `N'${s}'`,
-    orElse: () => (s: string) => `'${s}'`
-  })
+    orElse: () => (s: string) => `'${s}'`,
+  });
   const forUpdate = sql.onDialectOrElse({
     sqlite: () => sql.literal(""),
-    orElse: () => sql.literal("FOR UPDATE")
-  })
+    orElse: () => sql.literal("FOR UPDATE"),
+  });
 
   const getUnprocessedMessages = sql.onDialectOrElse({
     pg: () => (shardIds: ReadonlyArray<string>, now: number) =>
@@ -391,108 +394,109 @@ export const make: (options?: {
       `.unprepared.pipe(
         Effect.tap((rows) => {
           if (rows.length === 0) {
-            return Effect.void
+            return Effect.void;
           }
           return sql`
             UPDATE ${messagesTableSql}
             SET last_read = ${sqlNow}
             WHERE id IN (${sql.literal(rows.map((row) => row.id).join(","))})
-          `.unprepared
+          `.unprepared;
         }),
-        sql.withTransaction
-      )
-  })
+        sql.withTransaction,
+      ),
+  });
 
   return yield* MessageStorage.makeEncoded({
     saveEnvelope: ({ deliverAt, envelope, primaryKey }) =>
       Effect.suspend(() => {
-        const row = envelopeToRow(envelope, primaryKey, deliverAt)
+        const row = envelopeToRow(envelope, primaryKey, deliverAt);
         let insert = primaryKey
           ? insertEnvelope(row, primaryKey)
-          : Effect.as(sql`INSERT INTO ${messagesTableSql} ${sql.insert(row)}`.unprepared, [])
+          : Effect.as(sql`INSERT INTO ${messagesTableSql} ${sql.insert(row)}`.unprepared, []);
         if (envelope._tag === "AckChunk") {
-          insert = sql`UPDATE ${repliesTableSql} SET acked = ${sqlTrue} WHERE id = ${envelope.replyId}`.pipe(
-            Effect.andThen(
-              sql`UPDATE ${messagesTableSql} SET processed = ${sqlTrue} WHERE processed = ${sqlFalse} AND request_id = ${envelope.requestId} AND kind = ${messageKindAckChunk}`
-            ),
-            Effect.andThen(insert),
-            sql.withTransaction
-          )
+          insert =
+            sql`UPDATE ${repliesTableSql} SET acked = ${sqlTrue} WHERE id = ${envelope.replyId}`.pipe(
+              Effect.andThen(
+                sql`UPDATE ${messagesTableSql} SET processed = ${sqlTrue} WHERE processed = ${sqlFalse} AND request_id = ${envelope.requestId} AND kind = ${messageKindAckChunk}`,
+              ),
+              Effect.andThen(insert),
+              sql.withTransaction,
+            );
         }
         return insert.pipe(
           Effect.map((rows) => {
             if (rows.length === 0) {
-              return SaveResultEncoded.Success()
+              return SaveResultEncoded.Success();
             }
-            const row = rows[0]
-            const replyKindNum = typeof row.reply_kind === "bigint" ? Number(row.reply_kind) : row.reply_kind
+            const row = rows[0];
+            const replyKindNum =
+              typeof row.reply_kind === "bigint" ? Number(row.reply_kind) : row.reply_kind;
             const lastReceivedReply: Option.Option<Reply.Encoded> = row.reply_id
               ? Option.some(
-                replyKindNum === replyKind.WithExit
-                  ? {
-                    id: String(row.reply_id),
-                    requestId: String(row.id),
-                    _tag: "WithExit",
-                    exit: JSON.parse(row.reply_payload as string)
-                  }
-                  : {
-                    id: String(row.reply_id),
-                    requestId: String(row.id),
-                    _tag: "Chunk",
-                    sequence: Number(row.reply_sequence),
-                    values: JSON.parse(row.reply_payload as string)
-                  }
-              )
-              : Option.none()
+                  replyKindNum === replyKind.WithExit
+                    ? {
+                        id: String(row.reply_id),
+                        requestId: String(row.id),
+                        _tag: "WithExit",
+                        exit: JSON.parse(row.reply_payload as string),
+                      }
+                    : {
+                        id: String(row.reply_id),
+                        requestId: String(row.id),
+                        _tag: "Chunk",
+                        sequence: Number(row.reply_sequence),
+                        values: JSON.parse(row.reply_payload as string),
+                      },
+                )
+              : Option.none();
             return SaveResultEncoded.Duplicate({
               originalId: Snowflake.Snowflake(row.id as any),
-              lastReceivedReply
-            })
-          })
-        )
+              lastReceivedReply,
+            });
+          }),
+        );
       }).pipe(
         Effect.provideService(SqlClient.SafeIntegers, true),
         PersistenceError.refail,
-        withTracerDisabled
+        withTracerDisabled,
       ),
 
     saveReply: (reply) =>
       Effect.suspend(() => {
-        const row = replyToRow(reply)
-        const update = reply._tag === "Chunk" ?
-          sql`UPDATE ${messagesTableSql} SET last_reply_id = ${reply.id} WHERE id = ${reply.requestId}` :
-          sql`UPDATE ${messagesTableSql} SET processed = ${sqlTrue}, last_reply_id = ${reply.id} WHERE request_id = ${reply.requestId}`
+        const row = replyToRow(reply);
+        const update =
+          reply._tag === "Chunk"
+            ? sql`UPDATE ${messagesTableSql} SET last_reply_id = ${reply.id} WHERE id = ${reply.requestId}`
+            : sql`UPDATE ${messagesTableSql} SET processed = ${sqlTrue}, last_reply_id = ${reply.id} WHERE request_id = ${reply.requestId}`;
         return update.unprepared.pipe(
           Effect.andThen(sql`INSERT INTO ${repliesTableSql} ${sql.insert(row)}`),
-          sql.withTransaction
-        )
-      }).pipe(
-        Effect.asVoid,
-        PersistenceError.refail,
-        withTracerDisabled
-      ),
+          sql.withTransaction,
+        );
+      }).pipe(Effect.asVoid, PersistenceError.refail, withTracerDisabled),
 
     clearReplies: Effect.fnUntraced(
-      function*(requestId) {
-        yield* sql`DELETE FROM ${repliesTableSql} WHERE request_id = ${String(requestId)} AND kind = 0`
-        yield* sql`DELETE FROM ${messagesTableSql} WHERE request_id = ${
-          String(requestId)
-        } AND kind = ${messageKindInterrupt}`
-        yield* sql`UPDATE ${messagesTableSql} SET processed = ${sqlFalse}, last_reply_id = NULL, last_read = NULL WHERE request_id = ${
-          String(requestId)
-        }`
+      function* (requestId) {
+        yield* sql`DELETE FROM ${repliesTableSql} WHERE request_id = ${String(requestId)} AND kind = 0`;
+        yield* sql`DELETE FROM ${messagesTableSql} WHERE request_id = ${String(
+          requestId,
+        )} AND kind = ${messageKindInterrupt}`;
+        yield* sql`UPDATE ${messagesTableSql} SET processed = ${sqlFalse}, last_reply_id = NULL, last_read = NULL WHERE request_id = ${String(
+          requestId,
+        )}`;
       },
       sql.withTransaction,
       PersistenceError.refail,
-      withTracerDisabled
+      withTracerDisabled,
     ),
 
     requestIdForPrimaryKey: (primaryKey) =>
-      sql<{ id: string | bigint }>`SELECT id FROM ${messagesTableSql} WHERE message_id = ${primaryKey}`.pipe(
+      sql<{
+        id: string | bigint;
+      }>`SELECT id FROM ${messagesTableSql} WHERE message_id = ${primaryKey}`.pipe(
         Effect.map((rows) => Option.map(Option.fromNullishOr(rows[0]?.id), Snowflake.Snowflake)),
         Effect.provideService(SqlClient.SafeIntegers, true),
         PersistenceError.refail,
-        withTracerDisabled
+        withTracerDisabled,
       ),
 
     repliesFor: (requestIds) =>
@@ -516,7 +520,7 @@ export const make: (options?: {
         Effect.provideService(SqlClient.SafeIntegers, true),
         Effect.map(Arr.map(replyFromRow)),
         PersistenceError.refail,
-        withTracerDisabled
+        withTracerDisabled,
       ),
 
     repliesForUnfiltered: (requestIds) =>
@@ -529,33 +533,33 @@ export const make: (options?: {
         Effect.provideService(SqlClient.SafeIntegers, true),
         Effect.map(Arr.map(replyFromRow)),
         PersistenceError.refail,
-        withTracerDisabled
+        withTracerDisabled,
       ),
 
     unprocessedMessages: Effect.fnUntraced(
-      function*(shardIds, now) {
-        const rows = yield* getUnprocessedMessages(shardIds, now)
+      function* (shardIds, now) {
+        const rows = yield* getUnprocessedMessages(shardIds, now);
         if (rows.length === 0) {
-          return []
+          return [];
         }
         const messages: Array<{
-          readonly envelope: Envelope.Encoded
-          readonly lastSentReply: Option.Option<Reply.Encoded>
-        }> = new Array(rows.length)
-        const ids = new Array<string>(rows.length)
+          readonly envelope: Envelope.Encoded;
+          readonly lastSentReply: Option.Option<Reply.Encoded>;
+        }> = new Array(rows.length);
+        const ids = new Array<string>(rows.length);
         for (let i = 0; i < rows.length; i++) {
-          messages[i] = messageFromRow(rows[i])
-          ids[i] = String(rows[i].id)
+          messages[i] = messageFromRow(rows[i]);
+          ids[i] = String(rows[i].id);
         }
-        return messages
+        return messages;
       },
       Effect.provideService(SqlClient.SafeIntegers, true),
       PersistenceError.refail,
-      withTracerDisabled
+      withTracerDisabled,
     ),
 
     unprocessedMessagesById(ids, now) {
-      const idArr = Array.from(ids, (id) => String(id))
+      const idArr = Array.from(ids, (id) => String(id));
       return sql<MessageRow & ReplyJoinRow>`
         SELECT m.*, r.id as reply_id, r.kind as reply_kind, r.payload as reply_payload, r.sequence as reply_sequence
         FROM ${messagesTableSql} m
@@ -573,8 +577,8 @@ export const make: (options?: {
         Effect.map(Arr.map(messageFromRow)),
         Effect.provideService(SqlClient.SafeIntegers, true),
         PersistenceError.refail,
-        withTracerDisabled
-      )
+        withTracerDisabled,
+      );
     },
 
     resetAddress: (address) =>
@@ -585,11 +589,7 @@ export const make: (options?: {
         AND shard_id = ${address.shardId.toString()}
         AND entity_type = ${address.entityType}
         AND entity_id = ${address.entityId}
-      `.pipe(
-        Effect.asVoid,
-        PersistenceError.refail,
-        withTracerDisabled
-      ),
+      `.pipe(Effect.asVoid, PersistenceError.refail, withTracerDisabled),
 
     clearAddress: (address) =>
       sql`
@@ -605,12 +605,12 @@ export const make: (options?: {
             DELETE FROM ${messagesTableSql}
             WHERE entity_type = ${address.entityType}
             AND entity_id = ${address.entityId}
-          `
+          `,
         ),
         sql.withTransaction,
         Effect.asVoid,
         PersistenceError.refail,
-        withTracerDisabled
+        withTracerDisabled,
       ),
 
     resetShards: (shardIds) =>
@@ -619,84 +619,74 @@ export const make: (options?: {
         SET last_read = NULL
         WHERE processed = ${sqlFalse}
         AND shard_id IN (${sql.literal(shardIds.map(wrapString).join(","))})
-      `.pipe(
-        Effect.asVoid,
-        PersistenceError.refail,
-        withTracerDisabled
-      ),
+      `.pipe(Effect.asVoid, PersistenceError.refail, withTracerDisabled),
 
     withTransaction: (effect) =>
-      sql.withTransaction(effect).pipe(
-        Effect.catchIf(isSqlError, Effect.die)
-      )
-  })
-}, withTracerDisabled)
+      sql.withTransaction(effect).pipe(Effect.catchIf(isSqlError, Effect.die)),
+  });
+}, withTracerDisabled);
 
 /**
- * Layer that provides SQL-backed `MessageStorage` using the default table prefix
- * and the default snowflake generator.
+ * Layer that provides SQL-backed `MessageStorage` using the default table prefix and the default
+ * snowflake generator.
  *
  * **When to use**
  *
- * Use when a cluster should persist mailbox messages and replies in SQL using
- * the default `cluster` table prefix and the standard snowflake generator.
+ * Use when a cluster should persist mailbox messages and replies in SQL using the default `cluster`
+ * table prefix and the standard snowflake generator.
  *
  * **Details**
  *
- * The layer runs the SQL migrations through `make`, provides `MessageStorage`,
- * and supplies `Snowflake.layerGenerator` internally. Callers still provide
- * `SqlClient` and `ShardingConfig`.
+ * The layer runs the SQL migrations through `make`, provides `MessageStorage`, and supplies
+ * `Snowflake.layerGenerator` internally. Callers still provide `SqlClient` and `ShardingConfig`.
  *
  * **Gotchas**
  *
- * This layer always uses the `cluster` table prefix. Use `layerWith` before
- * deployment if you need a different stable prefix, because changing prefixes
- * later points the runtime at a different set of tables.
+ * This layer always uses the `cluster` table prefix. Use `layerWith` before deployment if you need
+ * a different stable prefix, because changing prefixes later points the runtime at a different set
+ * of tables.
  *
+ * @since 4.0.0
+ * @category Layers
  * @see {@link layerWith} for the same SQL storage layer with a custom table prefix
  * @see {@link make} for the lower-level service constructor that uses an existing `Snowflake.Generator`
- *
- * @category layers
- * @since 4.0.0
  */
 export const layer: Layer.Layer<
   MessageStorage.MessageStorage,
   never,
   SqlClient.SqlClient | ShardingConfig
 > = Layer.effect(MessageStorage.MessageStorage, make()).pipe(
-  Layer.provide(Snowflake.layerGenerator)
-)
+  Layer.provide(Snowflake.layerGenerator),
+);
 
 /**
  * Layer that provides SQL-backed `MessageStorage` using a custom table prefix.
  *
- * @category layers
  * @since 4.0.0
+ * @category Layers
  */
 export const layerWith = (options: {
-  readonly prefix?: string | undefined
+  readonly prefix?: string | undefined;
 }): Layer.Layer<MessageStorage.MessageStorage, never, SqlClient.SqlClient | ShardingConfig> =>
   Layer.effect(MessageStorage.MessageStorage, make(options)).pipe(
-    Layer.provide(Snowflake.layerGenerator)
-  )
+    Layer.provide(Snowflake.layerGenerator),
+  );
 
 // -------------------------------------------------------------------------------------------------
 // internal
 // -------------------------------------------------------------------------------------------------
 
-const migrations = (options?: {
-  readonly prefix?: string | undefined
-}) => {
-  const prefix = options?.prefix ?? "cluster"
-  const table = (name: string) => `${prefix}_${name}`
-  const messagesTable = table("messages")
-  const repliesTable = table("replies")
+const migrations = (options?: { readonly prefix?: string | undefined }) => {
+  const prefix = options?.prefix ?? "cluster";
+  const table = (name: string) => `${prefix}_${name}`;
+  const messagesTable = table("messages");
+  const repliesTable = table("replies");
 
   return Migrator.fromRecord({
-    "0001_create_tables": Effect.gen(function*() {
-      const sql = (yield* SqlClient.SqlClient).withoutTransforms()
-      const messagesTableSql = sql(messagesTable)
-      const repliesTableSql = sql(repliesTable)
+    "0001_create_tables": Effect.gen(function* () {
+      const sql = (yield* SqlClient.SqlClient).withoutTransforms();
+      const messagesTableSql = sql(messagesTable);
+      const repliesTableSql = sql(repliesTable);
 
       yield* sql.onDialectOrElse({
         mssql: () =>
@@ -800,12 +790,12 @@ const migrations = (options?: {
               deliver_at INTEGER,
               UNIQUE (message_id)
             )
-          `
-      })
+          `,
+      });
 
       // Add message indexes optimized for the specific query patterns
-      const shardLookupIndex = `${messagesTable}_shard_idx`
-      const requestIdLookupIndex = `${messagesTable}_request_id_idx`
+      const shardLookupIndex = `${messagesTable}_shard_idx`;
+      const requestIdLookupIndex = `${messagesTable}_request_id_idx`;
       yield* sql.onDialectOrElse({
         mssql: () =>
           sql`
@@ -836,12 +826,12 @@ const migrations = (options?: {
             Effect.tapDefect((error) =>
               Effect.annotateLogs(Effect.logDebug("Failed to create indexes", error), {
                 package: "@effect/cluster",
-                module: "SqlMessageStorage"
-              })
+                module: "SqlMessageStorage",
+              }),
             ),
             Effect.retry({
-              schedule: Schedule.spaced(1000)
-            })
+              schedule: Schedule.spaced(1000),
+            }),
           ),
         orElse: () =>
           // sqlite
@@ -853,9 +843,9 @@ const migrations = (options?: {
             sql`
               CREATE INDEX IF NOT EXISTS ${sql(requestIdLookupIndex)}
               ON ${messagesTableSql} (request_id)
-            `
-          ]).pipe(sql.withTransaction)
-      })
+            `,
+          ]).pipe(sql.withTransaction),
+      });
 
       yield* sql.onDialectOrElse({
         mssql: () =>
@@ -915,11 +905,11 @@ const migrations = (options?: {
               UNIQUE (request_id, kind),
               UNIQUE (request_id, sequence)
             )
-          `
-      })
+          `,
+      });
 
       // Add reply indexes optimized for request_id lookups
-      const replyLookupIndex = `${repliesTable}_request_lookup_idx`
+      const replyLookupIndex = `${repliesTable}_request_lookup_idx`;
       yield* sql.onDialectOrElse({
         mssql: () =>
           sql`
@@ -940,24 +930,24 @@ const migrations = (options?: {
             Effect.tapDefect((error) =>
               Effect.annotateLogs(Effect.logDebug("Failed to create indexes", error), {
                 package: "@effect/cluster",
-                module: "SqlMessageStorage"
-              })
+                module: "SqlMessageStorage",
+              }),
             ),
             Effect.retry({
-              schedule: Schedule.spaced(1000)
-            })
+              schedule: Schedule.spaced(1000),
+            }),
           ),
         orElse: () =>
           // sqlite
           sql`
             CREATE INDEX IF NOT EXISTS ${sql(replyLookupIndex)}
             ON ${repliesTableSql} (request_id, kind, acked);
-          `
-      })
+          `,
+      });
     }),
-    "0002_entity_type_size": Effect.gen(function*() {
-      const sql = (yield* SqlClient.SqlClient).withoutTransforms()
-      const messagesTableSql = sql(messagesTable)
+    "0002_entity_type_size": Effect.gen(function* () {
+      const sql = (yield* SqlClient.SqlClient).withoutTransforms();
+      const messagesTableSql = sql(messagesTable);
 
       // resize entity_type to 150 characters
       yield* sql.onDialectOrElse({
@@ -975,71 +965,72 @@ const migrations = (options?: {
           `,
         orElse: () =>
           // sqlite
-          Effect.void
-      })
-    })
-  })
-}
+          Effect.void,
+      });
+    }),
+  });
+};
 
 const messageKind = {
-  "Request": 0,
-  "AckChunk": 1,
-  "Interrupt": 2
-} as const satisfies Record<Envelope.Envelope.Any["_tag"], number>
+  Request: 0,
+  AckChunk: 1,
+  Interrupt: 2,
+} as const satisfies Record<Envelope.Envelope.Any["_tag"], number>;
 
 const replyKind = {
-  "WithExit": 0,
-  "Chunk": null
-} as const satisfies Record<Reply.Reply<any>["_tag"], number | null>
+  WithExit: 0,
+  Chunk: null,
+} as const satisfies Record<Reply.Reply<any>["_tag"], number | null>;
 
 const replyFromRow = (row: ReplyRow): Reply.Encoded =>
-  Number(row.kind) === replyKind.WithExit ?
-    {
-      _tag: "WithExit",
-      id: String(row.id),
-      requestId: String(row.request_id),
-      exit: JSON.parse(row.payload)
-    } :
-    {
-      _tag: "Chunk",
-      id: String(row.id),
-      requestId: String(row.request_id),
-      values: JSON.parse(row.payload),
-      sequence: Number(row.sequence!)
-    }
+  Number(row.kind) === replyKind.WithExit
+    ? {
+        _tag: "WithExit",
+        id: String(row.id),
+        requestId: String(row.request_id),
+        exit: JSON.parse(row.payload),
+      }
+    : {
+        _tag: "Chunk",
+        id: String(row.id),
+        requestId: String(row.request_id),
+        values: JSON.parse(row.payload),
+        sequence: Number(row.sequence!),
+      };
 
 type MessageRow = {
-  readonly id: string | bigint
-  readonly message_id: string | null
-  readonly shard_id: string
-  readonly entity_type: string
-  readonly entity_id: string
-  readonly kind: 0 | 1 | 2 | 0n | 1n | 2n
-  readonly tag: string | null
-  readonly payload: string | null
-  readonly headers: string | null
-  readonly trace_id: string | null
-  readonly span_id: string | null
-  readonly sampled: boolean | number | bigint | null
-  readonly request_id: string | bigint | null
-  readonly reply_id: string | bigint | null
-  readonly deliver_at: number | bigint | null
-}
+  readonly id: string | bigint;
+  readonly message_id: string | null;
+  readonly shard_id: string;
+  readonly entity_type: string;
+  readonly entity_id: string;
+  readonly kind: 0 | 1 | 2 | 0n | 1n | 2n;
+  readonly tag: string | null;
+  readonly payload: string | null;
+  readonly headers: string | null;
+  readonly trace_id: string | null;
+  readonly span_id: string | null;
+  readonly sampled: boolean | number | bigint | null;
+  readonly request_id: string | bigint | null;
+  readonly reply_id: string | bigint | null;
+  readonly deliver_at: number | bigint | null;
+};
 
 type ReplyRow = {
-  readonly id: string | bigint
-  readonly kind: 0 | null | 0n
-  readonly request_id: string | bigint
-  readonly payload: string
-  readonly sequence: number | bigint | null
-}
+  readonly id: string | bigint;
+  readonly kind: 0 | null | 0n;
+  readonly request_id: string | bigint;
+  readonly payload: string;
+  readonly sequence: number | bigint | null;
+};
 
 type ReplyJoinRow = {
-  readonly reply_reply_id: string | bigint | null
-  readonly reply_payload: string | null
-  readonly reply_sequence: number | bigint | null
-}
+  readonly reply_reply_id: string | bigint | null;
+  readonly reply_payload: string | null;
+  readonly reply_sequence: number | bigint | null;
+};
 
-type MessageJoinRow = MessageRow & ReplyJoinRow & {
-  readonly sequence: number | bigint
-}
+type MessageJoinRow = MessageRow &
+  ReplyJoinRow & {
+    readonly sequence: number | bigint;
+  };

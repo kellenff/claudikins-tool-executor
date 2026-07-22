@@ -1,6 +1,4 @@
-/**
- * Context management constants - AGGRESSIVE limits to minimize context usage
- */
+/** Context management constants - AGGRESSIVE limits to minimize context usage */
 // Maximum characters to return in console.log output (keep minimal!)
 export const MAX_LOG_CHARS = 500;
 

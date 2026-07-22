@@ -26,7 +26,7 @@ inputSchema:
         - full
         - files
       default: compact
-      description: 'compact: signatures+metadata (default). full: with source. files: just file list.'
+      description: "compact: signatures+metadata (default). full: with source. files: just file list."
     context:
       type: integer
       description: Lines of context around each match (like grep -C). Only used in compact mode.

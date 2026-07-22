@@ -1,28 +1,27 @@
 /**
  * Parses and edits platform `URL` values.
  *
- * The HTTP modules use the standard `URL` object as their URL representation.
- * This module adds safe parsing and helpers that return updated copies when
- * changing credentials, host, path, protocol, query, or hash parts. Query
- * strings can also be read or updated through `UrlParams`.
+ * The HTTP modules use the standard `URL` object as their URL representation. This module adds safe
+ * parsing and helpers that return updated copies when changing credentials, host, path, protocol,
+ * query, or hash parts. Query strings can also be read or updated through `UrlParams`.
  *
  * @since 4.0.0
  */
-import * as Cause from "../../Cause.ts"
-import * as Data from "../../Data.ts"
-import { dual } from "../../Function.ts"
-import * as Redacted from "../../Redacted.ts"
-import * as Result from "../../Result.ts"
-import * as UrlParams from "./UrlParams.ts"
+import * as Cause from "../../Cause.ts";
+import * as Data from "../../Data.ts";
+import { dual } from "../../Function.ts";
+import * as Redacted from "../../Redacted.ts";
+import * as Result from "../../Result.ts";
+import * as UrlParams from "./UrlParams.ts";
 
 /**
  * Error returned when constructing a `URL` fails.
  *
- * @category errors
  * @since 4.0.0
+ * @category Errors
  */
 export class UrlError extends Data.TaggedError("UrlError")<{
-  readonly cause: unknown
+  readonly cause: unknown;
 }> {}
 
 /**
@@ -32,30 +31,30 @@ export class UrlError extends Data.TaggedError("UrlError")<{
  *
  * Returns a `Result` that fails with `UrlError` if the URL cannot be constructed.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const make = (
   url: string,
   params: UrlParams.UrlParams,
-  hash: string | undefined
+  hash: string | undefined,
 ): Result.Result<URL, UrlError> =>
   Result.try({
     try: () => {
-      const urlInstance = new URL(url, baseUrl())
+      const urlInstance = new URL(url, baseUrl());
       for (let i = 0; i < params.params.length; i++) {
-        const [key, value] = params.params[i]
+        const [key, value] = params.params[i];
         if (value !== undefined) {
-          urlInstance.searchParams.append(key, value)
+          urlInstance.searchParams.append(key, value);
         }
       }
       if (hash !== undefined) {
-        urlInstance.hash = hash
+        urlInstance.hash = hash;
       }
-      return urlInstance
+      return urlInstance;
     },
-    catch: (cause) => new UrlError({ cause })
-  })
+    catch: (cause) => new UrlError({ cause }),
+  });
 
 const baseUrl = (): string | undefined => {
   if (
@@ -64,69 +63,68 @@ const baseUrl = (): string | undefined => {
     globalThis.location.origin !== undefined &&
     globalThis.location.pathname !== undefined
   ) {
-    return location.origin + location.pathname
+    return location.origin + location.pathname;
   }
-  return undefined
-}
+  return undefined;
+};
 
 /**
- * Parses a URL string safely into a `URL` object, returning a `Result` type for
- * error handling.
+ * Parses a URL string safely into a `URL` object, returning a `Result` type for error handling.
  *
  * **Details**
  *
- * This function converts a string into a `URL` object, enabling safe URL
- * parsing with built-in error handling. If the string is invalid or fails to
- * parse, this function does not throw an error; instead, it wraps the error in
- * a `IllegalArgumentError` and returns it as the `Failure` value of an
- * `Result`. The `Success` value contains the successfully parsed `URL`.
+ * This function converts a string into a `URL` object, enabling safe URL parsing with built-in
+ * error handling. If the string is invalid or fails to parse, this function does not throw an
+ * error; instead, it wraps the error in a `IllegalArgumentError` and returns it as the `Failure`
+ * value of an `Result`. The `Success` value contains the successfully parsed `URL`.
  *
- * An optional `base` parameter can be provided to resolve relative URLs. If
- * specified, the function interprets the input `url` as relative to this
- * `base`. This is especially useful when dealing with URLs that might not be
- * fully qualified.
+ * An optional `base` parameter can be provided to resolve relative URLs. If specified, the function
+ * interprets the input `url` as relative to this `base`. This is especially useful when dealing
+ * with URLs that might not be fully qualified.
  *
  * **Example** (Parsing absolute and relative URLs)
  *
  * ```ts
- * import { Result } from "effect"
- * import { Url } from "effect/unstable/http"
+ * import { Result } from "effect";
+ * import { Url } from "effect/unstable/http";
  *
  * // Parse an absolute URL
  * //
  * //      ┌─── Result<URL, IllegalArgumentError>
  * //      ▼
- * const parsed = Url.fromString("https://example.com/path")
+ * const parsed = Url.fromString("https://example.com/path");
  *
  * if (Result.isSuccess(parsed)) {
- *   console.log("Parsed URL:", parsed.success.toString())
+ *   console.log("Parsed URL:", parsed.success.toString());
  * } else {
- *   console.log("Error:", parsed.failure.message)
+ *   console.log("Error:", parsed.failure.message);
  * }
  * // Output: Parsed URL: https://example.com/path
  *
  * // Parse a relative URL with a base
- * const relativeParsed = Url.fromString("/relative-path", "https://example.com")
+ * const relativeParsed = Url.fromString("/relative-path", "https://example.com");
  *
  * if (Result.isSuccess(relativeParsed)) {
- *   console.log("Parsed relative URL:", relativeParsed.success.toString())
+ *   console.log("Parsed relative URL:", relativeParsed.success.toString());
  * } else {
- *   console.log("Error:", relativeParsed.failure.message)
+ *   console.log("Error:", relativeParsed.failure.message);
  * }
  * // Output: Parsed relative URL: https://example.com/relative-path
  * ```
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const fromString: {
-  (url: string, base?: string | URL | undefined): Result.Result<URL, Cause.IllegalArgumentError>
+  (url: string, base?: string | URL | undefined): Result.Result<URL, Cause.IllegalArgumentError>;
 } = (url, base) =>
   Result.try({
     try: () => new URL(url, base),
     catch: () =>
-      new Cause.IllegalArgumentError(`Invalid URL: "${url}"${base !== undefined ? ` with base "${base}"` : ""}`)
-  })
+      new Cause.IllegalArgumentError(
+        `Invalid URL: "${url}"${base !== undefined ? ` with base "${base}"` : ""}`,
+      ),
+  });
 
 /**
  * Updates a cloned `URL` with a callback, allowing multiple changes at once.
@@ -134,252 +132,251 @@ export const fromString: {
  * **Example** (Mutating URL credentials)
  *
  * ```ts
- * import { Url } from "effect/unstable/http"
+ * import { Url } from "effect/unstable/http";
  *
- * const myUrl = new URL("https://example.com")
+ * const myUrl = new URL("https://example.com");
  *
  * const mutatedUrl = Url.mutate(myUrl, (url) => {
- *   url.username = "user"
- *   url.password = "pass"
- * })
+ *   url.username = "user";
+ *   url.password = "pass";
+ * });
  *
- * console.log("Mutated:", mutatedUrl.toString())
+ * console.log("Mutated:", mutatedUrl.toString());
  * // Output: Mutated: https://user:pass@example.com/
  * ```
  *
- * @category modifiers
  * @since 4.0.0
+ * @category Modifiers
  */
 export const mutate: {
-  (f: (url: URL) => void): (self: URL) => URL
-  (self: URL, f: (url: URL) => void): URL
+  (f: (url: URL) => void): (self: URL) => URL;
+  (self: URL, f: (url: URL) => void): URL;
 } = dual(2, (self: URL, f: (url: URL) => void) => {
-  const copy = new URL(self)
-  f(copy)
-  return copy
-})
+  const copy = new URL(self);
+  f(copy);
+  return copy;
+});
 
 /** @internal */
-const immutableURLSetter = <P extends keyof URL, A = never>(property: P): {
-  (value: URL[P] | A): (url: URL) => URL
-  (url: URL, value: URL[P] | A): URL
+const immutableURLSetter = <P extends keyof URL, A = never>(
+  property: P,
+): {
+  (value: URL[P] | A): (url: URL) => URL;
+  (url: URL, value: URL[P] | A): URL;
 } =>
   dual(2, (url: URL, value: URL[P]) =>
     mutate(url, (url) => {
-      url[property] = value
-    }))
+      url[property] = value;
+    }),
+  );
 
 /**
  * Updates the hash fragment of the URL.
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setHash: {
-  (hash: string): (url: URL) => URL
-  (url: URL, hash: string): URL
-} = immutableURLSetter("hash")
+  (hash: string): (url: URL) => URL;
+  (url: URL, hash: string): URL;
+} = immutableURLSetter("hash");
 
 /**
  * Updates the host (domain and port) of the URL.
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setHost: {
-  (host: string): (url: URL) => URL
-  (url: URL, host: string): URL
-} = immutableURLSetter("host")
+  (host: string): (url: URL) => URL;
+  (url: URL, host: string): URL;
+} = immutableURLSetter("host");
 
 /**
  * Updates the domain of the URL without modifying the port.
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setHostname: {
-  (hostname: string): (url: URL) => URL
-  (url: URL, hostname: string): URL
-} = immutableURLSetter("hostname")
+  (hostname: string): (url: URL) => URL;
+  (url: URL, hostname: string): URL;
+} = immutableURLSetter("hostname");
 
 /**
  * Replaces the entire URL string.
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setHref: {
-  (href: string): (url: URL) => URL
-  (url: URL, href: string): URL
-} = immutableURLSetter("href")
+  (href: string): (url: URL) => URL;
+  (url: URL, href: string): URL;
+} = immutableURLSetter("href");
 
 /**
  * Updates the password used for authentication.
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setPassword: {
-  (password: string | Redacted.Redacted): (url: URL) => URL
-  (url: URL, password: string | Redacted.Redacted): URL
+  (password: string | Redacted.Redacted): (url: URL) => URL;
+  (url: URL, password: string | Redacted.Redacted): URL;
 } = dual(2, (url: URL, password: string | Redacted.Redacted) =>
   mutate(url, (url) => {
-    url.password = typeof password === "string"
-      ? password :
-      Redacted.value(password)
-  }))
+    url.password = typeof password === "string" ? password : Redacted.value(password);
+  }),
+);
 
 /**
  * Updates the path of the URL.
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setPathname: {
-  (pathname: string): (url: URL) => URL
-  (url: URL, pathname: string): URL
-} = immutableURLSetter("pathname")
+  (pathname: string): (url: URL) => URL;
+  (url: URL, pathname: string): URL;
+} = immutableURLSetter("pathname");
 
 /**
  * Updates the port of the URL.
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setPort: {
-  (port: string | number): (url: URL) => URL
-  (url: URL, port: string | number): URL
-} = immutableURLSetter("port")
+  (port: string | number): (url: URL) => URL;
+  (url: URL, port: string | number): URL;
+} = immutableURLSetter("port");
 
 /**
  * Updates the protocol (e.g., `http`, `https`).
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setProtocol: {
-  (protocol: string): (url: URL) => URL
-  (url: URL, protocol: string): URL
-} = immutableURLSetter("protocol")
+  (protocol: string): (url: URL) => URL;
+  (url: URL, protocol: string): URL;
+} = immutableURLSetter("protocol");
 
 /**
  * Updates the query string of the URL.
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setSearch: {
-  (search: string): (url: URL) => URL
-  (url: URL, search: string): URL
-} = immutableURLSetter("search")
+  (search: string): (url: URL) => URL;
+  (url: URL, search: string): URL;
+} = immutableURLSetter("search");
 
 /**
  * Updates the username used for authentication.
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setUsername: {
-  (username: string): (url: URL) => URL
-  (url: URL, username: string): URL
-} = immutableURLSetter("username")
+  (username: string): (url: URL) => URL;
+  (url: URL, username: string): URL;
+} = immutableURLSetter("username");
 
 /**
  * Updates the query parameters of a URL.
  *
  * **Details**
  *
- * This function allows you to set or replace the query parameters of a `URL`
- * object using the provided `UrlParams`. It creates a new `URL` object with the
- * updated parameters, leaving the original object unchanged.
+ * This function allows you to set or replace the query parameters of a `URL` object using the
+ * provided `UrlParams`. It creates a new `URL` object with the updated parameters, leaving the
+ * original object unchanged.
  *
  * **Example** (Replacing query parameters)
  *
  * ```ts
- * import { Url, UrlParams } from "effect/unstable/http"
+ * import { Url, UrlParams } from "effect/unstable/http";
  *
- * const myUrl = new URL("https://example.com?foo=bar")
+ * const myUrl = new URL("https://example.com?foo=bar");
  *
  * // Write parameters
- * const updatedUrl = Url.setUrlParams(
- *   myUrl,
- *   UrlParams.fromInput([["key", "value"]])
- * )
+ * const updatedUrl = Url.setUrlParams(myUrl, UrlParams.fromInput([["key", "value"]]));
  *
- * console.log(updatedUrl.toString())
+ * console.log(updatedUrl.toString());
  * // Output: https://example.com/?key=value
  * ```
  *
- * @category setters
  * @since 4.0.0
+ * @category Setters
  */
 export const setUrlParams: {
-  (urlParams: UrlParams.Input): (url: URL) => URL
-  (url: URL, urlParams: UrlParams.Input): URL
+  (urlParams: UrlParams.Input): (url: URL) => URL;
+  (url: URL, urlParams: UrlParams.Input): URL;
 } = dual(2, (url: URL, urlParams: UrlParams.Input) =>
   mutate(url, (url) => {
-    url.search = UrlParams.toString(UrlParams.fromInput(urlParams))
-  }))
+    url.search = UrlParams.toString(UrlParams.fromInput(urlParams));
+  }),
+);
 
 /**
  * Retrieves the query parameters from a URL.
  *
  * **Details**
  *
- * This function extracts the query parameters from a `URL` object and returns
- * them as `UrlParams`. The resulting structure can be easily manipulated or
- * inspected.
+ * This function extracts the query parameters from a `URL` object and returns them as `UrlParams`.
+ * The resulting structure can be easily manipulated or inspected.
  *
  * **Example** (Reading query parameters)
  *
  * ```ts
- * import { Url } from "effect/unstable/http"
+ * import { Url } from "effect/unstable/http";
  *
- * const myUrl = new URL("https://example.com?foo=bar")
+ * const myUrl = new URL("https://example.com?foo=bar");
  *
  * // Read parameters
- * const params = Url.urlParams(myUrl)
+ * const params = Url.urlParams(myUrl);
  *
- * console.log(params)
+ * console.log(params);
  * // Output: [ [ 'foo', 'bar' ] ]
  * ```
  *
- * @category getters
  * @since 4.0.0
+ * @category Getters
  */
-export const urlParams = (url: URL): UrlParams.UrlParams => UrlParams.fromInput(url.searchParams)
+export const urlParams = (url: URL): UrlParams.UrlParams => UrlParams.fromInput(url.searchParams);
 
 /**
  * Reads the query parameters of a URL, modifies them, and updates the URL.
  *
  * **Details**
  *
- * This function provides a functional way to interact with query parameters by
- * reading the current parameters, applying a transformation function, and then
- * writing the updated parameters back to the URL. It returns a new `URL` object
- * with the modified parameters, ensuring immutability.
+ * This function provides a functional way to interact with query parameters by reading the current
+ * parameters, applying a transformation function, and then writing the updated parameters back to
+ * the URL. It returns a new `URL` object with the modified parameters, ensuring immutability.
  *
  * **Example** (Modifying query parameters)
  *
  * ```ts
- * import { Url, UrlParams } from "effect/unstable/http"
+ * import { Url, UrlParams } from "effect/unstable/http";
  *
- * const myUrl = new URL("https://example.com?foo=bar")
+ * const myUrl = new URL("https://example.com?foo=bar");
  *
- * const changedUrl = Url.modifyUrlParams(myUrl, UrlParams.append("key", "value"))
+ * const changedUrl = Url.modifyUrlParams(myUrl, UrlParams.append("key", "value"));
  *
- * console.log(changedUrl.toString())
+ * console.log(changedUrl.toString());
  * // Output: https://example.com/?foo=bar&key=value
  * ```
  *
- * @category modifiers
  * @since 4.0.0
+ * @category Modifiers
  */
 export const modifyUrlParams: {
-  (f: (urlParams: UrlParams.UrlParams) => UrlParams.Input): (url: URL) => URL
-  (url: URL, f: (urlParams: UrlParams.UrlParams) => UrlParams.Input): URL
+  (f: (urlParams: UrlParams.UrlParams) => UrlParams.Input): (url: URL) => URL;
+  (url: URL, f: (urlParams: UrlParams.UrlParams) => UrlParams.Input): URL;
 } = dual(2, (url: URL, f: (urlParams: UrlParams.UrlParams) => UrlParams.Input) =>
   mutate(url, (url) => {
-    const params = f(UrlParams.fromInput(url.searchParams))
-    url.search = UrlParams.toString(params)
-  }))
+    const params = f(UrlParams.fromInput(url.searchParams));
+    url.search = UrlParams.toString(params);
+  }),
+);

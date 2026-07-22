@@ -30,13 +30,13 @@ inputSchema:
         returned from the other tools can be passed as is (e.g. paths from 'search_*' tools).
     line:
       type: integer
-      description: 'Optional input: line number (1-based) of the breakpoint to remove.'
+      description: "Optional input: line number (1-based) of the breakpoint to remove."
     owner:
       type: string
       enum:
         - user
         - agent
-      description: 'Breakpoint owner filter. Default: agent.'
+      description: "Breakpoint owner filter. Default: agent."
     projectPath:
       type: string
       description: |2-

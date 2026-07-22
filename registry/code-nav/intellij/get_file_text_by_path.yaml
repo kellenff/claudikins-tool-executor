@@ -19,7 +19,7 @@ inputSchema:
         - MIDDLE
         - END
         - NONE
-      description: 'How to truncate the text: from the start, in the middle, at the end, or don''t truncate at all'
+      description: "How to truncate the text: from the start, in the middle, at the end, or don't truncate at all"
     maxLinesCount:
       type: integer
       description: Max number of lines to return. Truncation will be performed depending on truncateMode.

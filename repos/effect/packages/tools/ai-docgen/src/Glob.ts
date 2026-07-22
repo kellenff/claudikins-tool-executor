@@ -3,46 +3,50 @@
  *
  * @since 4.0.0
  */
-import * as Context from "effect/Context"
-import * as Data from "effect/Data"
-import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import * as GlobLib from "glob"
+import * as Context from "effect/Context";
+import * as Data from "effect/Data";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as GlobLib from "glob";
 
 /**
  * Error during glob pattern matching.
  *
- * @category errors
  * @since 4.0.0
+ * @category Errors
  */
 export class GlobError extends Data.TaggedError("GlobError")<{
-  readonly pattern: string | ReadonlyArray<string>
-  readonly cause: unknown
+  readonly pattern: string | ReadonlyArray<string>;
+  readonly cause: unknown;
 }> {}
 
 /**
  * Context service for glob pattern matching used by AI docgen tooling.
  *
- * @category services
  * @since 4.0.0
+ * @category Services
  */
-export class Glob extends Context.Service<Glob, {
-  readonly glob: (
-    pattern: string | ReadonlyArray<string>,
-    options?: GlobLib.GlobOptions
-  ) => Effect.Effect<Array<string>, GlobError>
-}>()("@effect/ai-codegen/Glob") {}
+export class Glob extends Context.Service<
+  Glob,
+  {
+    readonly glob: (
+      pattern: string | ReadonlyArray<string>,
+      options?: GlobLib.GlobOptions,
+    ) => Effect.Effect<Array<string>, GlobError>;
+  }
+>()("@effect/ai-codegen/Glob") {}
 
 /**
  * Layer providing the Glob service.
  *
- * @category layers
  * @since 4.0.0
+ * @category Layers
  */
 export const layer: Layer.Layer<Glob> = Layer.succeed(Glob, {
   glob: (pattern, options) =>
     Effect.tryPromise({
-      try: () => GlobLib.glob(pattern as string | Array<string>, options ?? {}) as Promise<Array<string>>,
-      catch: (cause) => new GlobError({ pattern, cause })
-    })
-})
+      try: () =>
+        GlobLib.glob(pattern as string | Array<string>, options ?? {}) as Promise<Array<string>>,
+      catch: (cause) => new GlobError({ pattern, cause }),
+    }),
+});

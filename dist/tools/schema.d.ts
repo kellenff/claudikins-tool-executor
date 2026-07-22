@@ -1,9 +1,7 @@
-import { G as GetToolSchemaInput } from '../schemas-BvvqupNu.js';
+import { G as GetToolSchemaInput } from '../schemas-9t_yp478.js';
 import 'zod';
 
-/**
- * Get full inputSchema for a specific tool
- */
+/** Get full inputSchema for a specific tool */
 declare function handleGetToolSchema(params: GetToolSchemaInput): Promise<{
     content: {
         type: "text";

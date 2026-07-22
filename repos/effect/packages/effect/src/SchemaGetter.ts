@@ -1,92 +1,89 @@
 /**
  * Builds one-way conversions used by schemas.
  *
- * A `Getter<T, E, R>` receives an optional encoded value and returns an
- * optional decoded value. It can also report a schema issue or require Effect
- * services. Schema transformations use getters to describe one direction of a
- * conversion, for example decoding a field from input data. This module
- * includes basic getters, validation helpers, pure and effectful conversions,
- * and ready-made conversions for common string, number, binary, date, form, and
- * URL-related values.
+ * A `Getter<T, E, R>` receives an optional encoded value and returns an optional decoded value. It
+ * can also report a schema issue or require Effect services. Schema transformations use getters to
+ * describe one direction of a conversion, for example decoding a field from input data. This module
+ * includes basic getters, validation helpers, pure and effectful conversions, and ready-made
+ * conversions for common string, number, binary, date, form, and URL-related values.
  *
  * @since 4.0.0
  */
-import * as DateTime from "./DateTime.ts"
-import * as Effect from "./Effect.ts"
-import * as Encoding from "./Encoding.ts"
-import * as InternalRecord from "./internal/record.ts"
-import * as Option from "./Option.ts"
-import * as Pipeable from "./Pipeable.ts"
-import * as Predicate from "./Predicate.ts"
-import * as Result from "./Result.ts"
-import type * as Schema from "./Schema.ts"
-import type * as SchemaAST from "./SchemaAST.ts"
-import * as SchemaIssue from "./SchemaIssue.ts"
-import * as Str from "./String.ts"
+import * as DateTime from "./DateTime.ts";
+import * as Effect from "./Effect.ts";
+import * as Encoding from "./Encoding.ts";
+import * as InternalRecord from "./internal/record.ts";
+import * as Option from "./Option.ts";
+import * as Pipeable from "./Pipeable.ts";
+import * as Predicate from "./Predicate.ts";
+import * as Result from "./Result.ts";
+import type * as Schema from "./Schema.ts";
+import type * as SchemaAST from "./SchemaAST.ts";
+import * as SchemaIssue from "./SchemaIssue.ts";
+import * as Str from "./String.ts";
 
 /**
  * Represents a composable transformation from an encoded type `E` to a decoded type `T`.
  *
  * **When to use**
  *
- * Use when you need a schema getter to build and compose custom transformations
- * for `Schema.decodeTo` or `Schema.decode`.
+ * Use when you need a schema getter to build and compose custom transformations for
+ * `Schema.decodeTo` or `Schema.decode`.
  *
  * **Details**
  *
- * A getter wraps a function `Option<E> -> Effect<Option<T>, Issue, R>`. It
- * receives `Option.None` when the encoded key is absent, such as a missing
- * struct field, and returns `Option.None` to omit the value from the decoded
- * output. It fails with `Issue` on invalid input and may require Effect
- * services via `R`. `.map(f)` applies `f` to the decoded value inside `Some`
- * while leaving `None` unchanged. `.compose(other)` chains two getters by
- * feeding the output of `this` into `other`; passthrough getters on either side
- * are optimized away.
+ * A getter wraps a function `Option<E> -> Effect<Option<T>, Issue, R>`. It receives `Option.None`
+ * when the encoded key is absent, such as a missing struct field, and returns `Option.None` to omit
+ * the value from the decoded output. It fails with `Issue` on invalid input and may require Effect
+ * services via `R`. `.map(f)` applies `f` to the decoded value inside `Some` while leaving `None`
+ * unchanged. `.compose(other)` chains two getters by feeding the output of `this` into `other`;
+ * passthrough getters on either side are optimized away.
  *
  * **Example** (Creating and composing getters)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const parseNumber = SchemaGetter.transform<number, string>((s) => Number(s))
- * const double = SchemaGetter.transform<number, number>((n) => n * 2)
- * const composed = parseNumber.compose(double)
+ * const parseNumber = SchemaGetter.transform<number, string>((s) => Number(s));
+ * const double = SchemaGetter.transform<number, number>((n) => n * 2);
+ * const composed = parseNumber.compose(double);
  * // composed: Getter<number, string> — parses then doubles
  * ```
  *
+ * @since 4.0.0
+ * @category Models
  * @see {@link transform} to create a getter from a pure function
  * @see {@link passthrough} for the identity getter
  * @see {@link transformOrFail} for fallible transformation
- *
- * @category models
- * @since 4.0.0
  */
 export class Getter<out T, in E, R = never> extends Pipeable.Class {
   readonly run: (
     input: Option.Option<E>,
-    options: SchemaAST.ParseOptions
-  ) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
+    options: SchemaAST.ParseOptions,
+  ) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>;
 
   constructor(
     run: (
       input: Option.Option<E>,
-      options: SchemaAST.ParseOptions
-    ) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
+      options: SchemaAST.ParseOptions,
+    ) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>,
   ) {
-    super()
-    this.run = run
+    super();
+    this.run = run;
   }
   map<T2>(f: (t: T) => T2): Getter<T2, E, R> {
-    return new Getter((oe, options) => this.run(oe, options).pipe(Effect.mapEager(Option.map(f))))
+    return new Getter((oe, options) => this.run(oe, options).pipe(Effect.mapEager(Option.map(f))));
   }
   compose<T2, R2>(other: Getter<T2, T, R2>): Getter<T2, E, R | R2> {
     if (isPassthrough(this)) {
-      return other as any
+      return other as any;
     }
     if (isPassthrough(other)) {
-      return this as any
+      return this as any;
     }
-    return new Getter((oe, options) => this.run(oe, options).pipe(Effect.flatMapEager((ot) => other.run(ot, options))))
+    return new Getter((oe, options) =>
+      this.run(oe, options).pipe(Effect.flatMapEager((ot) => other.run(ot, options))),
+    );
   }
 }
 
@@ -95,31 +92,29 @@ export class Getter<out T, in E, R = never> extends Pipeable.Class {
  *
  * **When to use**
  *
- * Use when you need a schema getter that always decodes a field to a fixed
- * value.
+ * Use when you need a schema getter that always decodes a field to a fixed value.
  *
  * **Details**
  *
- * The getter is pure and always returns `Option.some(t)` regardless of whether
- * the input is `Some` or `None`.
+ * The getter is pure and always returns `Option.some(t)` regardless of whether the input is `Some`
+ * or `None`.
  *
  * **Example** (Returning a constant getter)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const alwaysZero = SchemaGetter.succeed(0)
+ * const alwaysZero = SchemaGetter.succeed(0);
  * // alwaysZero: Getter<0, unknown> — always produces 0
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link transform} when you need to use the input value
  * @see {@link passthrough} when you want to keep the input as-is
- *
- * @category constructors
- * @since 4.0.0
  */
 export function succeed<const T, E>(t: T): Getter<T, E> {
-  return new Getter(() => Effect.succeedSome(t))
+  return new Getter(() => Effect.succeedSome(t));
 }
 
 /**
@@ -128,6 +123,7 @@ export function succeed<const T, E>(t: T): Getter<T, E> {
  * **When to use**
  *
  * Use when you need a schema getter that unconditionally rejects input.
+ *
  * - Building custom validation getters that produce specific error types.
  *
  * **Details**
@@ -138,21 +134,20 @@ export function succeed<const T, E>(t: T): Getter<T, E> {
  * **Example** (Defining an always-failing getter)
  *
  * ```ts
- * import { Option, SchemaGetter, SchemaIssue } from "effect"
+ * import { Option, SchemaGetter, SchemaIssue } from "effect";
  *
  * const rejectAll = SchemaGetter.fail<string, string>(
- *   (oe) => new SchemaIssue.InvalidValue(oe, { message: "not allowed" })
- * )
+ *   (oe) => new SchemaIssue.InvalidValue(oe, { message: "not allowed" }),
+ * );
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link forbidden} for a convenience helper for `Forbidden` issues
  * @see {@link checkEffect} to fail conditionally based on input value
- *
- * @category constructors
- * @since 4.0.0
  */
 export function fail<T, E>(f: (oe: Option.Option<E>) => SchemaIssue.Issue): Getter<T, E> {
-  return new Getter((oe) => Effect.fail(f(oe)))
+  return new Getter((oe) => Effect.fail(f(oe)));
 }
 
 /**
@@ -160,8 +155,8 @@ export function fail<T, E>(f: (oe: Option.Option<E>) => SchemaIssue.Issue): Gett
  *
  * **When to use**
  *
- * Use when you need a schema getter to disallow a field or direction
- * (encode/decode) entirely.
+ * Use when you need a schema getter to disallow a field or direction (encode/decode) entirely.
+ *
  * - You want a clear "forbidden" error message in schema validation output.
  *
  * **Details**
@@ -172,26 +167,23 @@ export function fail<T, E>(f: (oe: Option.Option<E>) => SchemaIssue.Issue): Gett
  * **Example** (Forbidding a decode direction)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const noEncode = SchemaGetter.forbidden<string, number>(
- *   () => "encoding is not supported"
- * )
+ * const noEncode = SchemaGetter.forbidden<string, number>(() => "encoding is not supported");
  * ```
  *
- * @see {@link fail} to fail with a custom issue type
- *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
+ * @see {@link fail} to fail with a custom issue type
  */
 export function forbidden<T, E>(message: (oe: Option.Option<E>) => string): Getter<T, E> {
-  return fail<T, E>((oe) => new SchemaIssue.Forbidden(oe, { message: message(oe) }))
+  return fail<T, E>((oe) => new SchemaIssue.Forbidden(oe, { message: message(oe) }));
 }
 
-const passthrough_ = new Getter<any, any>(Effect.succeed)
+const passthrough_ = new Getter<any, any>(Effect.succeed);
 
 function isPassthrough<T, E, R>(getter: Getter<T, E, R>): getter is typeof passthrough_ {
-  return getter.run === passthrough_.run
+  return getter.run === passthrough_.run;
 }
 
 /**
@@ -199,41 +191,40 @@ function isPassthrough<T, E, R>(getter: Getter<T, E, R>): getter is typeof passt
  *
  * **When to use**
  *
- * Use when you need a schema getter for one side of a `decodeTo` pair, either
- * encode or decode, to pass values through unchanged.
+ * Use when you need a schema getter for one side of a `decodeTo` pair, either encode or decode, to
+ * pass values through unchanged.
  *
  * **Details**
  *
  * - Pure, no allocation (singleton instance).
  * - Optimized away during `.compose()` — composing with a passthrough is free.
- * - The default overload requires `T === E`. Pass `{ strict: false }` to opt
- *   out of the type constraint.
+ * - The default overload requires `T === E`. Pass `{ strict: false }` to opt out of the type
+ *   constraint.
  *
  * **Example** (Passing through identity transformations)
  *
  * ```ts
- * import { Schema, SchemaGetter } from "effect"
+ * import { Schema, SchemaGetter } from "effect";
  *
  * // No transformation needed — types already match
  * const StringToString = Schema.String.pipe(
  *   Schema.decodeTo(Schema.String, {
  *     decode: SchemaGetter.passthrough(),
- *     encode: SchemaGetter.passthrough()
- *   })
- * )
+ *     encode: SchemaGetter.passthrough(),
+ *   }),
+ * );
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link passthroughSupertype} when `T extends E`
  * @see {@link passthroughSubtype} when `E extends T`
  * @see {@link transform} when you need to change the value
- *
- * @category constructors
- * @since 4.0.0
  */
-export function passthrough<T, E>(options: { readonly strict: false }): Getter<T, E>
-export function passthrough<T>(): Getter<T, T>
+export function passthrough<T, E>(options: { readonly strict: false }): Getter<T, E>;
+export function passthrough<T>(): Getter<T, T>;
 export function passthrough<T>(): Getter<T, T> {
-  return passthrough_
+  return passthrough_;
 }
 
 /**
@@ -241,8 +232,8 @@ export function passthrough<T>(): Getter<T, T> {
  *
  * **When to use**
  *
- * Use when you need a schema getter that passes values through when the
- * decoded/output type is narrower than the encoded/input type.
+ * Use when you need a schema getter that passes values through when the decoded/output type is
+ * narrower than the encoded/input type.
  *
  * **Details**
  *
@@ -251,21 +242,20 @@ export function passthrough<T>(): Getter<T, T> {
  * **Example** (Passing through supertypes)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
  * // string extends string, so this is valid
- * const g = SchemaGetter.passthroughSupertype<string, string>()
+ * const g = SchemaGetter.passthroughSupertype<string, string>();
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link passthrough} when types are identical
  * @see {@link passthroughSubtype} when `E extends T`
- *
- * @category constructors
- * @since 4.0.0
  */
-export function passthroughSupertype<T extends E, E>(): Getter<T, E>
+export function passthroughSupertype<T extends E, E>(): Getter<T, E>;
 export function passthroughSupertype<T>(): Getter<T, T> {
-  return passthrough_
+  return passthrough_;
 }
 
 /**
@@ -273,8 +263,8 @@ export function passthroughSupertype<T>(): Getter<T, T> {
  *
  * **When to use**
  *
- * Use when you need a schema getter that passes values through without
- * `{ strict: false }` for an encoded type that narrows the decoded type.
+ * Use when you need a schema getter that passes values through without `{ strict: false }` for an
+ * encoded type that narrows the decoded type.
  *
  * **Details**
  *
@@ -283,21 +273,20 @@ export function passthroughSupertype<T>(): Getter<T, T> {
  * **Example** (Passing through subtypes)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
  * // "hello" extends string, so E extends T
- * const g = SchemaGetter.passthroughSubtype<string, "hello">()
+ * const g = SchemaGetter.passthroughSubtype<string, "hello">();
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link passthrough} when types are identical
  * @see {@link passthroughSupertype} when `T extends E`
- *
- * @category constructors
- * @since 4.0.0
  */
-export function passthroughSubtype<T, E extends T>(): Getter<T, E>
+export function passthroughSubtype<T, E extends T>(): Getter<T, E>;
 export function passthroughSubtype<T>(): Getter<T, T> {
-  return passthrough_
+  return passthrough_;
 }
 
 /**
@@ -305,8 +294,9 @@ export function passthroughSubtype<T>(): Getter<T, T> {
  *
  * **When to use**
  *
- * Use when you need a schema getter to provide a fallback or computed value for
- * missing struct keys.
+ * Use when you need a schema getter to provide a fallback or computed value for missing struct
+ * keys.
+ *
  * - Building custom "default value" logic more complex than {@link withDefault}.
  *
  * **Details**
@@ -318,24 +308,23 @@ export function passthroughSubtype<T>(): Getter<T, T> {
  * **Example** (Providing a default timestamp for a missing field)
  *
  * ```ts
- * import { Effect, Option, SchemaGetter } from "effect"
+ * import { Effect, Option, SchemaGetter } from "effect";
  *
  * const withTimestamp = SchemaGetter.onNone<number>(() =>
- *   Effect.succeed(Option.some(Date.now()))
- * )
+ *   Effect.succeed(Option.some(Date.now())),
+ * );
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link required} when absent input should fail
  * @see {@link withDefault} for a simpler default value for undefined inputs
  * @see {@link onSome} to handle only present values
- *
- * @category constructors
- * @since 4.0.0
  */
 export function onNone<T, E extends T = T, R = never>(
-  f: (options: SchemaAST.ParseOptions) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
+  f: (options: SchemaAST.ParseOptions) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>,
 ): Getter<T, E, R> {
-  return new Getter((ot, options) => Option.isNone(ot) ? f(options) : Effect.succeed(ot))
+  return new Getter((ot, options) => (Option.isNone(ot) ? f(options) : Effect.succeed(ot)));
 }
 
 /**
@@ -343,8 +332,8 @@ export function onNone<T, E extends T = T, R = never>(
  *
  * **When to use**
  *
- * Use when you need a schema getter to require a struct field in the encoded
- * input and report a missing key error when it is absent.
+ * Use when you need a schema getter to require a struct field in the encoded input and report a
+ * missing key error when it is absent.
  *
  * **Details**
  *
@@ -355,19 +344,20 @@ export function onNone<T, E extends T = T, R = never>(
  * **Example** (Defining a required struct field)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const mustExist = SchemaGetter.required<string>()
+ * const mustExist = SchemaGetter.required<string>();
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link onNone} to provide a fallback instead of failing
  * @see {@link withDefault} to substitute a default for undefined values
- *
- * @category constructors
- * @since 4.0.0
  */
-export function required<T, E extends T = T>(annotations?: Schema.Annotations.Key<T>): Getter<T, E> {
-  return onNone(() => Effect.fail(new SchemaIssue.MissingKey(annotations)))
+export function required<T, E extends T = T>(
+  annotations?: Schema.Annotations.Key<T>,
+): Getter<T, E> {
+  return onNone(() => Effect.fail(new SchemaIssue.MissingKey(annotations)));
 }
 
 /**
@@ -375,8 +365,8 @@ export function required<T, E extends T = T>(annotations?: Schema.Annotations.Ke
  *
  * **When to use**
  *
- * Use when you need a schema getter to transform or validate only when a field
- * value is present.
+ * Use when you need a schema getter to transform or validate only when a field value is present.
+ *
  * - Missing keys should remain absent in the output.
  *
  * **Details**
@@ -388,24 +378,28 @@ export function required<T, E extends T = T>(annotations?: Schema.Annotations.Ke
  * **Example** (Transforming only present values)
  *
  * ```ts
- * import { Effect, Option, SchemaGetter } from "effect"
+ * import { Effect, Option, SchemaGetter } from "effect";
  *
- * const parseIfPresent = SchemaGetter.onSome<number, string>(
- *   (s) => Effect.succeed(Option.some(Number(s)))
- * )
+ * const parseIfPresent = SchemaGetter.onSome<number, string>((s) =>
+ *   Effect.succeed(Option.some(Number(s))),
+ * );
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link onNone} to handle only absent values
  * @see {@link transform} for a simpler pure transformation of present values
  * @see {@link transformOrFail} for fallible transformation of present values
- *
- * @category constructors
- * @since 4.0.0
  */
 export function onSome<T, E, R = never>(
-  f: (e: E, options: SchemaAST.ParseOptions) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
+  f: (
+    e: E,
+    options: SchemaAST.ParseOptions,
+  ) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>,
 ): Getter<T, E, R> {
-  return new Getter((oe, options) => Option.isNone(oe) ? Effect.succeedNone : f(oe.value, options))
+  return new Getter((oe, options) =>
+    Option.isNone(oe) ? Effect.succeedNone : f(oe.value, options),
+  );
 }
 
 /**
@@ -413,52 +407,52 @@ export function onSome<T, E, R = never>(
  *
  * **When to use**
  *
- * Use when you need a schema getter to validate a decoded value (e.g. check a
- * constraint or call an external service).
+ * Use when you need a schema getter to validate a decoded value (e.g. check a constraint or call an
+ * external service).
+ *
  * - The validation may be asynchronous or require Effect services.
  *
  * **Details**
  *
  * - Only runs when input is `Some` — `None` passes through.
  * - The check function returns a validation result:
+ *
  *   - `undefined` or `true` — value is valid, passes through.
  *   - `false` or a `string` — value is invalid, fails with an `Issue`.
  *   - An `Issue` object — fails with that issue directly.
- *   - `{ path, issue }` — fails with a nested path issue (`issue` may be a
- *     message string or a full {@link SchemaIssue.Issue}).
+ *   - `{ path, issue }` — fails with a nested path issue (`issue` may be a message string or a full
+ *     {@link SchemaIssue.Issue}).
  * - Does not transform the value — input and output types are the same.
  *
  * **Example** (Validating effectfully)
  *
  * ```ts
- * import { Effect, SchemaGetter } from "effect"
+ * import { Effect, SchemaGetter } from "effect";
  *
  * const nonNegative = SchemaGetter.checkEffect<number>((n) =>
- *   Effect.succeed(n >= 0 ? undefined : "must be non-negative")
- * )
+ *   Effect.succeed(n >= 0 ? undefined : "must be non-negative"),
+ * );
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link transform} when you need to change the value, not just validate
  * @see {@link fail} for unconditional failure
- *
- * @category constructors
- * @since 4.0.0
  */
 export function checkEffect<T, R = never>(
-  f: (input: T, options: SchemaAST.ParseOptions) => Effect.Effect<
-    undefined | boolean | Schema.FilterIssue,
-    never,
-    R
-  >
+  f: (
+    input: T,
+    options: SchemaAST.ParseOptions,
+  ) => Effect.Effect<undefined | boolean | Schema.FilterIssue, never, R>,
 ): Getter<T, T, R> {
   return onSome((t, options) => {
-    return f(t, options).pipe(Effect.flatMapEager((out) => {
-      const issue = SchemaIssue.makeSingle(t, out)
-      return issue ?
-        Effect.fail(issue) :
-        Effect.succeed(Option.some(t))
-    }))
-  })
+    return f(t, options).pipe(
+      Effect.flatMapEager((out) => {
+        const issue = SchemaIssue.makeSingle(t, out);
+        return issue ? Effect.fail(issue) : Effect.succeed(Option.some(t));
+      }),
+    );
+  });
 }
 
 /**
@@ -466,8 +460,8 @@ export function checkEffect<T, R = never>(
  *
  * **When to use**
  *
- * Use when you need a schema getter for a pure, infallible transformation
- * between types.
+ * Use when you need a schema getter for a pure, infallible transformation between types.
+ *
  * - Building encode/decode pairs for `Schema.decodeTo`.
  *
  * **Details**
@@ -480,25 +474,24 @@ export function checkEffect<T, R = never>(
  * **Example** (Transforming strings to numbers)
  *
  * ```ts
- * import { Schema, SchemaGetter } from "effect"
+ * import { Schema, SchemaGetter } from "effect";
  *
  * const NumberFromString = Schema.String.pipe(
  *   Schema.decodeTo(Schema.Number, {
  *     decode: SchemaGetter.transform((s) => Number(s)),
- *     encode: SchemaGetter.transform((n) => String(n))
- *   })
- * )
+ *     encode: SchemaGetter.transform((n) => String(n)),
+ *   }),
+ * );
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link transformOrFail} when the transformation can fail
  * @see {@link transformOptional} when you need to handle `None` inputs
  * @see {@link passthrough} when no transformation is needed
- *
- * @category constructors
- * @since 4.0.0
  */
 export function transform<T, E>(f: (e: E) => T): Getter<T, E> {
-  return transformOptional(Option.map(f))
+  return transformOptional(Option.map(f));
 }
 
 /**
@@ -506,8 +499,8 @@ export function transform<T, E>(f: (e: E) => T): Getter<T, E> {
  *
  * **When to use**
  *
- * Use when you need a schema getter for a transformation that may fail, require
- * Effect services, or run asynchronously.
+ * Use when you need a schema getter for a transformation that may fail, require Effect services, or
+ * run asynchronously.
  *
  * **Details**
  *
@@ -518,28 +511,27 @@ export function transform<T, E>(f: (e: E) => T): Getter<T, E> {
  * **Example** (Parsing with failure)
  *
  * ```ts
- * import { Effect, Option, SchemaGetter, SchemaIssue } from "effect"
+ * import { Effect, Option, SchemaGetter, SchemaIssue } from "effect";
  *
- * const safeParseInt = SchemaGetter.transformOrFail<number, string>(
- *   (s) => {
- *     const n = parseInt(s, 10)
- *     return isNaN(n)
- *       ? Effect.fail(new SchemaIssue.InvalidValue(Option.some(s), { message: "not an integer" }))
- *       : Effect.succeed(n)
- *   }
- * )
+ * const safeParseInt = SchemaGetter.transformOrFail<number, string>((s) => {
+ *   const n = parseInt(s, 10);
+ *   return isNaN(n)
+ *     ? Effect.fail(
+ *         new SchemaIssue.InvalidValue(Option.some(s), { message: "not an integer" }),
+ *       )
+ *     : Effect.succeed(n);
+ * });
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link transform} when transformation cannot fail
  * @see {@link onSome} when you need full `Option` control over the output
- *
- * @category constructors
- * @since 4.0.0
  */
 export function transformOrFail<T, E, R = never>(
-  f: (e: E, options: SchemaAST.ParseOptions) => Effect.Effect<T, SchemaIssue.Issue, R>
+  f: (e: E, options: SchemaAST.ParseOptions) => Effect.Effect<T, SchemaIssue.Issue, R>,
 ): Getter<T, E, R> {
-  return onSome((e, options) => f(e, options).pipe(Effect.mapEager(Option.some)))
+  return onSome((e, options) => f(e, options).pipe(Effect.mapEager(Option.some)));
 }
 
 /**
@@ -551,28 +543,28 @@ export function transformOrFail<T, E, R = never>(
  *
  * **Details**
  *
- * The getter is pure and never fails. It receives the full `Option<E>` and
- * must return `Option<T>`, so it can turn a present value into absent or an
- * absent value into present.
+ * The getter is pure and never fails. It receives the full `Option<E>` and must return `Option<T>`,
+ * so it can turn a present value into absent or an absent value into present.
  *
  * **Example** (Filtering out empty strings)
  *
  * ```ts
- * import { Option, SchemaGetter } from "effect"
+ * import { Option, SchemaGetter } from "effect";
  *
  * const skipEmpty = SchemaGetter.transformOptional<string, string>((o) =>
- *   Option.filter(o, (s) => s.length > 0)
- * )
+ *   Option.filter(o, (s) => s.length > 0),
+ * );
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link transform} when you only need to transform present values
  * @see {@link omit} when you always want `None`
- *
- * @category constructors
- * @since 4.0.0
  */
-export function transformOptional<T, E>(f: (oe: Option.Option<E>) => Option.Option<T>): Getter<T, E> {
-  return new Getter((oe) => Effect.succeed(f(oe)))
+export function transformOptional<T, E>(
+  f: (oe: Option.Option<E>) => Option.Option<T>,
+): Getter<T, E> {
+  return new Getter((oe) => Effect.succeed(f(oe)));
 }
 
 /**
@@ -580,8 +572,7 @@ export function transformOptional<T, E>(f: (oe: Option.Option<E>) => Option.Opti
  *
  * **When to use**
  *
- * Use when you need a schema getter to exclude a field during decoding or
- * encoding.
+ * Use when you need a schema getter to exclude a field during decoding or encoding.
  *
  * **Details**
  *
@@ -591,19 +582,18 @@ export function transformOptional<T, E>(f: (oe: Option.Option<E>) => Option.Opti
  * **Example** (Omitting a field during encoding)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const omitField = SchemaGetter.omit<string>()
+ * const omitField = SchemaGetter.omit<string>();
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link transformOptional} when you want conditional omission
  * @see {@link forbidden} when you want to fail instead of silently omit
- *
- * @category constructors
- * @since 4.0.0
  */
 export function omit<T>(): Getter<never, T> {
-  return new Getter(() => Effect.succeedNone)
+  return new Getter(() => Effect.succeedNone);
 }
 
 /**
@@ -611,8 +601,8 @@ export function omit<T>(): Getter<never, T> {
  *
  * **When to use**
  *
- * Use when you need a schema getter to provide a fallback for a field that may
- * be `undefined` in the encoded input.
+ * Use when you need a schema getter to provide a fallback for a field that may be `undefined` in
+ * the encoded input.
  *
  * **Details**
  *
@@ -623,25 +613,26 @@ export function omit<T>(): Getter<never, T> {
  * **Example** (Providing a default value for an optional field)
  *
  * ```ts
- * import { Effect, SchemaGetter } from "effect"
+ * import { Effect, SchemaGetter } from "effect";
  *
- * const withZero = SchemaGetter.withDefault(Effect.succeed(0))
+ * const withZero = SchemaGetter.withDefault(Effect.succeed(0));
  * // Getter<number, number | undefined>
  * ```
  *
+ * @since 4.0.0
+ * @category Constructors
  * @see {@link onNone} to handle only absent keys (not `undefined` values)
  * @see {@link required} when absent input should fail instead of using a default
- *
- * @category constructors
- * @since 4.0.0
  */
 export function withDefault<T, R = never>(
-  defaultValue: Effect.Effect<T, SchemaIssue.Issue, R>
+  defaultValue: Effect.Effect<T, SchemaIssue.Issue, R>,
 ): Getter<T, T | undefined, R> {
   return new Getter((o) => {
-    const filtered = Option.filter(o, Predicate.isNotUndefined)
-    return Option.isSome(filtered) ? Effect.succeed(filtered) : Effect.mapEager(defaultValue, Option.some)
-  })
+    const filtered = Option.filter(o, Predicate.isNotUndefined);
+    return Option.isSome(filtered)
+      ? Effect.succeed(filtered)
+      : Effect.mapEager(defaultValue, Option.some);
+  });
 }
 
 /**
@@ -649,8 +640,7 @@ export function withDefault<T, R = never>(
  *
  * **When to use**
  *
- * Use when you need a schema getter to coerce a present encoded value to a
- * string with `String()`.
+ * Use when you need a schema getter to coerce a present encoded value to a string with `String()`.
  *
  * **Details**
  *
@@ -659,19 +649,18 @@ export function withDefault<T, R = never>(
  * **Example** (Coercing to a string)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const toString = SchemaGetter.String<number>()
+ * const toString = SchemaGetter.String<number>();
  * // Getter<string, number>
  * ```
  *
- * @see {@link transform} for custom string conversions
- *
- * @category Coercions
  * @since 4.0.0
+ * @category Coercions
+ * @see {@link transform} for custom string conversions
  */
 export function String<E>(): Getter<string, E> {
-  return transform(globalThis.String)
+  return transform(globalThis.String);
 }
 
 /**
@@ -679,30 +668,28 @@ export function String<E>(): Getter<string, E> {
  *
  * **When to use**
  *
- * Use when you need a schema getter to coerce a present encoded value to a
- * number with `Number()`.
+ * Use when you need a schema getter to coerce a present encoded value to a number with `Number()`.
  *
  * **Details**
  *
- * The getter is pure, never fails, and delegates to `globalThis.Number`. It may
- * produce `NaN` for non-numeric inputs.
+ * The getter is pure, never fails, and delegates to `globalThis.Number`. It may produce `NaN` for
+ * non-numeric inputs.
  *
  * **Example** (Coercing to a number)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const toNumber = SchemaGetter.Number<string>()
+ * const toNumber = SchemaGetter.Number<string>();
  * // Getter<number, string>
  * ```
  *
- * @see {@link transformOrFail} for validated number parsing
- *
- * @category Coercions
  * @since 4.0.0
+ * @category Coercions
+ * @see {@link transformOrFail} for validated number parsing
  */
 export function Number<E>(): Getter<number, E> {
-  return transform(globalThis.Number)
+  return transform(globalThis.Number);
 }
 
 /**
@@ -710,8 +697,8 @@ export function Number<E>(): Getter<number, E> {
  *
  * **When to use**
  *
- * Use when you need a schema getter to coerce a present encoded value to a
- * boolean with `Boolean()`.
+ * Use when you need a schema getter to coerce a present encoded value to a boolean with
+ * `Boolean()`.
  *
  * **Details**
  *
@@ -720,17 +707,17 @@ export function Number<E>(): Getter<number, E> {
  * **Example** (Coercing to a boolean)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const toBool = SchemaGetter.Boolean<string>()
+ * const toBool = SchemaGetter.Boolean<string>();
  * // Getter<boolean, string>
  * ```
  *
- * @category Coercions
  * @since 4.0.0
+ * @category Coercions
  */
 export function Boolean<E>(): Getter<boolean, E> {
-  return transform(globalThis.Boolean)
+  return transform(globalThis.Boolean);
 }
 
 /**
@@ -738,8 +725,8 @@ export function Boolean<E>(): Getter<boolean, E> {
  *
  * **When to use**
  *
- * Use when you need a schema getter to convert a present string, number, or
- * boolean value to `bigint`.
+ * Use when you need a schema getter to convert a present string, number, or boolean value to
+ * `bigint`.
  *
  * **Details**
  *
@@ -749,17 +736,17 @@ export function Boolean<E>(): Getter<boolean, E> {
  * **Example** (Coercing to a bigint)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const toBigInt = SchemaGetter.BigInt<string>()
+ * const toBigInt = SchemaGetter.BigInt<string>();
  * // Getter<bigint, string>
  * ```
  *
- * @category Coercions
  * @since 4.0.0
+ * @category Coercions
  */
 export function BigInt<E extends string | number | bigint | boolean>(): Getter<bigint, E> {
-  return transform(globalThis.BigInt)
+  return transform(globalThis.BigInt);
 }
 
 /**
@@ -767,8 +754,8 @@ export function BigInt<E extends string | number | bigint | boolean>(): Getter<b
  *
  * **When to use**
  *
- * Use when you need a schema getter to coerce a present string, number, or
- * existing date object into a new date object.
+ * Use when you need a schema getter to coerce a present string, number, or existing date object
+ * into a new date object.
  *
  * **Details**
  *
@@ -778,19 +765,18 @@ export function BigInt<E extends string | number | bigint | boolean>(): Getter<b
  * **Example** (Coercing to a Date)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const toDate = SchemaGetter.Date<string>()
+ * const toDate = SchemaGetter.Date<string>();
  * // Getter<Date, string>
  * ```
  *
- * @see {@link dateTimeUtcFromInput} for validated DateTime parsing
- *
- * @category Coercions
  * @since 4.0.0
+ * @category Coercions
+ * @see {@link dateTimeUtcFromInput} for validated DateTime parsing
  */
 export function Date<E extends string | number | Date>(): Getter<Date, E> {
-  return transform((u) => new globalThis.Date(u))
+  return transform((u) => new globalThis.Date(u));
 }
 
 /**
@@ -803,16 +789,16 @@ export function Date<E extends string | number | Date>(): Getter<Date, E> {
  * **Example** (Trimming whitespace)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const trimmed = SchemaGetter.trim<string>()
+ * const trimmed = SchemaGetter.trim<string>();
  * ```
  *
- * @category string
  * @since 4.0.0
+ * @category String
  */
 export function trim<E extends string>(): Getter<string, E> {
-  return transform(Str.trim)
+  return transform(Str.trim);
 }
 
 /**
@@ -825,16 +811,16 @@ export function trim<E extends string>(): Getter<string, E> {
  * **Example** (Capitalizing a string)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const cap = SchemaGetter.capitalize<string>()
+ * const cap = SchemaGetter.capitalize<string>();
  * ```
  *
- * @category string
  * @since 4.0.0
+ * @category String
  */
 export function capitalize<E extends string>(): Getter<string, E> {
-  return transform(Str.capitalize)
+  return transform(Str.capitalize);
 }
 
 /**
@@ -847,16 +833,16 @@ export function capitalize<E extends string>(): Getter<string, E> {
  * **Example** (Uncapitalizing a string)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const uncap = SchemaGetter.uncapitalize<string>()
+ * const uncap = SchemaGetter.uncapitalize<string>();
  * ```
  *
- * @category string
  * @since 4.0.0
+ * @category String
  */
 export function uncapitalize<E extends string>(): Getter<string, E> {
-  return transform(Str.uncapitalize)
+  return transform(Str.uncapitalize);
 }
 
 /**
@@ -869,18 +855,17 @@ export function uncapitalize<E extends string>(): Getter<string, E> {
  * **Example** (Converting snake case to camel case)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const toCamel = SchemaGetter.snakeToCamel<string>()
+ * const toCamel = SchemaGetter.snakeToCamel<string>();
  * ```
  *
- * @see {@link camelToSnake} for the inverse operation
- *
- * @category string
  * @since 4.0.0
+ * @category String
+ * @see {@link camelToSnake} for the inverse operation
  */
 export function snakeToCamel<E extends string>(): Getter<string, E> {
-  return transform(Str.snakeToCamel)
+  return transform(Str.snakeToCamel);
 }
 
 /**
@@ -893,18 +878,17 @@ export function snakeToCamel<E extends string>(): Getter<string, E> {
  * **Example** (Converting camel case to snake case)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const toSnake = SchemaGetter.camelToSnake<string>()
+ * const toSnake = SchemaGetter.camelToSnake<string>();
  * ```
  *
- * @see {@link snakeToCamel} for the inverse operation
- *
- * @category string
  * @since 4.0.0
+ * @category String
+ * @see {@link snakeToCamel} for the inverse operation
  */
 export function camelToSnake<E extends string>(): Getter<string, E> {
-  return transform(Str.camelToSnake)
+  return transform(Str.camelToSnake);
 }
 
 /**
@@ -917,18 +901,17 @@ export function camelToSnake<E extends string>(): Getter<string, E> {
  * **Example** (Converting to lowercase)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const lower = SchemaGetter.toLowerCase<string>()
+ * const lower = SchemaGetter.toLowerCase<string>();
  * ```
  *
- * @see {@link toUpperCase} for the inverse operation
- *
- * @category string
  * @since 4.0.0
+ * @category String
+ * @see {@link toUpperCase} for the inverse operation
  */
 export function toLowerCase<E extends string>(): Getter<string, E> {
-  return transform(Str.toLowerCase)
+  return transform(Str.toLowerCase);
 }
 
 /**
@@ -941,31 +924,29 @@ export function toLowerCase<E extends string>(): Getter<string, E> {
  * **Example** (Converting to uppercase)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const upper = SchemaGetter.toUpperCase<string>()
+ * const upper = SchemaGetter.toUpperCase<string>();
  * ```
  *
- * @see {@link toLowerCase} for the inverse operation
- *
- * @category string
  * @since 4.0.0
+ * @category String
+ * @see {@link toLowerCase} for the inverse operation
  */
 export function toUpperCase<E extends string>(): Getter<string, E> {
-  return transform(Str.toUpperCase)
+  return transform(Str.toUpperCase);
 }
 
 type ParseJsonOptions = {
-  readonly reviver?: Parameters<typeof JSON.parse>[1]
-}
+  readonly reviver?: Parameters<typeof JSON.parse>[1];
+};
 
 /**
  * Parses a JSON string into a value.
  *
  * **When to use**
  *
- * Use when you need a schema getter to parse a present encoded JSON string
- * during decoding.
+ * Use when you need a schema getter to parse a present encoded JSON string during decoding.
  *
  * **Details**
  *
@@ -977,73 +958,73 @@ type ParseJsonOptions = {
  * **Example** (Parsing JSON)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const parse = SchemaGetter.parseJson<string>()
+ * const parse = SchemaGetter.parseJson<string>();
  * // Getter<MutableJson, string>
  * ```
  *
- * @see {@link stringifyJson} for the inverse operation
- *
- * @category JSON getters
  * @since 4.0.0
+ * @category JSON getters
+ * @see {@link stringifyJson} for the inverse operation
  */
-export function parseJson<E extends string>(): Getter<Schema.MutableJson, E>
-export function parseJson<E extends string>(options: ParseJsonOptions): Getter<unknown, E>
-export function parseJson<E extends string>(options?: ParseJsonOptions | undefined): Getter<unknown, E> {
+export function parseJson<E extends string>(): Getter<Schema.MutableJson, E>;
+export function parseJson<E extends string>(options: ParseJsonOptions): Getter<unknown, E>;
+export function parseJson<E extends string>(
+  options?: ParseJsonOptions | undefined,
+): Getter<unknown, E> {
   return onSome((input) =>
     Effect.try({
       try: () => Option.some(JSON.parse(input, options?.reviver)),
-      catch: (e) => new SchemaIssue.InvalidValue(Option.some(input), { message: globalThis.String(e) })
-    })
-  )
+      catch: (e) =>
+        new SchemaIssue.InvalidValue(Option.some(input), { message: globalThis.String(e) }),
+    }),
+  );
 }
 
 type StringifyJsonOptions = {
-  readonly replacer?: Parameters<typeof JSON.stringify>[1]
-  readonly space?: Parameters<typeof JSON.stringify>[2]
-}
+  readonly replacer?: Parameters<typeof JSON.stringify>[1];
+  readonly space?: Parameters<typeof JSON.stringify>[2];
+};
 
 /**
  * Stringifies a present value using `JSON.stringify`.
  *
  * **When to use**
  *
- * Use when you need a schema getter to serialize a present decoded value to
- * JSON text during encoding.
+ * Use when you need a schema getter to serialize a present decoded value to JSON text during
+ * encoding.
  *
  * **Details**
  *
  * - Skips `None` inputs.
- * - On thrown stringify failures, such as circular references, fails with
- *   `SchemaIssue.InvalidValue`.
- * - Supports optional `replacer` and `space` options, matching
- *   `JSON.stringify`.
- * - If `JSON.stringify` returns `undefined`, such as for `undefined`,
- *   functions, symbols, or a replacer that removes the root value, that
- *   `undefined` result is returned rather than converted into an `Issue`.
+ * - On thrown stringify failures, such as circular references, fails with `SchemaIssue.InvalidValue`.
+ * - Supports optional `replacer` and `space` options, matching `JSON.stringify`.
+ * - If `JSON.stringify` returns `undefined`, such as for `undefined`, functions, symbols, or a
+ *   replacer that removes the root value, that `undefined` result is returned rather than converted
+ *   into an `Issue`.
  *
  * **Example** (Stringifying JSON)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const stringify = SchemaGetter.stringifyJson()
+ * const stringify = SchemaGetter.stringifyJson();
  * // Getter<string, unknown>
  * ```
  *
- * @see {@link parseJson} for the inverse operation
- *
- * @category JSON getters
  * @since 4.0.0
+ * @category JSON getters
+ * @see {@link parseJson} for the inverse operation
  */
 export function stringifyJson(options?: StringifyJsonOptions): Getter<string, unknown> {
   return onSome((input) =>
     Effect.try({
       try: () => Option.some(JSON.stringify(input, options?.replacer, options?.space)),
-      catch: (e) => new SchemaIssue.InvalidValue(Option.some(input), { message: globalThis.String(e) })
-    })
-  )
+      catch: (e) =>
+        new SchemaIssue.InvalidValue(Option.some(input), { message: globalThis.String(e) }),
+    }),
+  );
 }
 
 /**
@@ -1051,45 +1032,47 @@ export function stringifyJson(options?: StringifyJsonOptions): Getter<string, un
  *
  * **When to use**
  *
- * Use when you need a schema getter to parse a present encoded string that
- * contains delimited key-value pairs (e.g. `"a=1,b=2"`).
+ * Use when you need a schema getter to parse a present encoded string that contains delimited
+ * key-value pairs (e.g. `"a=1,b=2"`).
  *
  * **Details**
  *
- * The getter is pure and never fails. It splits the string by `separator`
- * (default `,`) and then each pair by `keyValueSeparator` (default `=`). Pairs
- * missing a key or value are silently skipped.
+ * The getter is pure and never fails. It splits the string by `separator` (default `,`) and then
+ * each pair by `keyValueSeparator` (default `=`). Pairs missing a key or value are silently
+ * skipped.
  *
  * **Example** (Parsing a key-value string)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const parse = SchemaGetter.splitKeyValue<string>()
+ * const parse = SchemaGetter.splitKeyValue<string>();
  * // "a=1,b=2" -> { a: "1", b: "2" }
  * ```
  *
+ * @since 4.0.0
+ * @category String
  * @see {@link joinKeyValue} for the inverse operation
  * @see {@link split} to split into an array of strings
- *
- * @category string
- * @since 4.0.0
  */
 export function splitKeyValue<E extends string>(options?: {
-  readonly separator?: string | undefined
-  readonly keyValueSeparator?: string | undefined
+  readonly separator?: string | undefined;
+  readonly keyValueSeparator?: string | undefined;
 }): Getter<Record<string, string>, E> {
-  const separator = options?.separator ?? ","
-  const keyValueSeparator = options?.keyValueSeparator ?? "="
+  const separator = options?.separator ?? ",";
+  const keyValueSeparator = options?.keyValueSeparator ?? "=";
   return transform((input) =>
-    input.split(separator).reduce((acc, pair) => {
-      const [key, value] = pair.split(keyValueSeparator)
-      if (key && value) {
-        acc[key] = value
-      }
-      return acc
-    }, {} as Record<string, string>)
-  )
+    input.split(separator).reduce(
+      (acc, pair) => {
+        const [key, value] = pair.split(keyValueSeparator);
+        if (key && value) {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, string>,
+    ),
+  );
 }
 
 /**
@@ -1097,38 +1080,38 @@ export function splitKeyValue<E extends string>(options?: {
  *
  * **When to use**
  *
- * Use when you need a schema getter to serialize a present decoded record as a
- * delimited key-value string.
+ * Use when you need a schema getter to serialize a present decoded record as a delimited key-value
+ * string.
  *
  * **Details**
  *
- * The getter is pure and never fails. It joins entries with `separator`
- * (default `,`) and joins each key and value with `keyValueSeparator` (default
- * `=`).
+ * The getter is pure and never fails. It joins entries with `separator` (default `,`) and joins
+ * each key and value with `keyValueSeparator` (default `=`).
  *
  * **Example** (Joining key-value records)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const join = SchemaGetter.joinKeyValue()
+ * const join = SchemaGetter.joinKeyValue();
  * // { a: "1", b: "2" } -> "a=1,b=2"
  * ```
  *
- * @see {@link splitKeyValue} for the inverse operation
- *
- * @category string
  * @since 4.0.0
+ * @category String
+ * @see {@link splitKeyValue} for the inverse operation
  */
 export function joinKeyValue<E extends Record<PropertyKey, string>>(options?: {
-  readonly separator?: string | undefined
-  readonly keyValueSeparator?: string | undefined
+  readonly separator?: string | undefined;
+  readonly keyValueSeparator?: string | undefined;
 }): Getter<string, E> {
-  const separator = options?.separator ?? ","
-  const keyValueSeparator = options?.keyValueSeparator ?? "="
+  const separator = options?.separator ?? ",";
+  const keyValueSeparator = options?.keyValueSeparator ?? "=";
   return transform((input) =>
-    Object.entries(input).map(([key, value]) => `${key}${keyValueSeparator}${value}`).join(separator)
-  )
+    Object.entries(input)
+      .map(([key, value]) => `${key}${keyValueSeparator}${value}`)
+      .join(separator),
+  );
 }
 
 /**
@@ -1136,34 +1119,33 @@ export function joinKeyValue<E extends Record<PropertyKey, string>>(options?: {
  *
  * **When to use**
  *
- * Use when you need a schema getter to split a present encoded string
- * containing a delimited list, such as CSV values.
+ * Use when you need a schema getter to split a present encoded string containing a delimited list,
+ * such as CSV values.
  *
  * **Details**
  *
- * The getter is pure and never fails. It splits by `separator` (default `,`).
- * An empty string produces an empty array, not `[""]`.
+ * The getter is pure and never fails. It splits by `separator` (default `,`). An empty string
+ * produces an empty array, not `[""]`.
  *
  * **Example** (Splitting a comma-separated string)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const splitComma = SchemaGetter.split<string>()
+ * const splitComma = SchemaGetter.split<string>();
  * // "a,b,c" -> ["a", "b", "c"]
  * // "" -> []
  * ```
  *
- * @see {@link splitKeyValue} when values are key-value pairs
- *
- * @category string
  * @since 4.0.0
+ * @category String
+ * @see {@link splitKeyValue} when values are key-value pairs
  */
 export function split<E extends string>(options?: {
-  readonly separator?: string | undefined
+  readonly separator?: string | undefined;
 }): Getter<ReadonlyArray<string>, E> {
-  const separator = options?.separator ?? ","
-  return transform((input) => input === "" ? [] : input.split(separator))
+  const separator = options?.separator ?? ",";
+  return transform((input) => (input === "" ? [] : input.split(separator)));
 }
 
 /**
@@ -1176,20 +1158,19 @@ export function split<E extends string>(options?: {
  * **Example** (Encoding to Base64)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const encode = SchemaGetter.encodeBase64<Uint8Array>()
+ * const encode = SchemaGetter.encodeBase64<Uint8Array>();
  * ```
  *
+ * @since 4.0.0
+ * @category Base64 getters
  * @see {@link decodeBase64} for the inverse operation to `Uint8Array`
  * @see {@link decodeBase64String} for the inverse operation to `string`
  * @see {@link encodeBase64Url} for the URL-safe variant
- *
- * @category Base64 getters
- * @since 4.0.0
  */
 export function encodeBase64<E extends Uint8Array | string>(): Getter<string, E> {
-  return transform(Encoding.encodeBase64)
+  return transform(Encoding.encodeBase64);
 }
 
 /**
@@ -1202,20 +1183,19 @@ export function encodeBase64<E extends Uint8Array | string>(): Getter<string, E>
  * **Example** (Encoding to Base64Url)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const encode = SchemaGetter.encodeBase64Url<Uint8Array>()
+ * const encode = SchemaGetter.encodeBase64Url<Uint8Array>();
  * ```
  *
+ * @since 4.0.0
+ * @category Base64 getters
  * @see {@link decodeBase64Url} for the inverse operation to `Uint8Array`
  * @see {@link decodeBase64UrlString} for the inverse operation to `string`
  * @see {@link encodeBase64} for the standard Base64 variant
- *
- * @category Base64 getters
- * @since 4.0.0
  */
 export function encodeBase64Url<E extends Uint8Array | string>(): Getter<string, E> {
-  return transform(Encoding.encodeBase64Url)
+  return transform(Encoding.encodeBase64Url);
 }
 
 /**
@@ -1228,19 +1208,18 @@ export function encodeBase64Url<E extends Uint8Array | string>(): Getter<string,
  * **Example** (Encoding to hex)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const encode = SchemaGetter.encodeHex<Uint8Array>()
+ * const encode = SchemaGetter.encodeHex<Uint8Array>();
  * ```
  *
+ * @since 4.0.0
+ * @category Hex getters
  * @see {@link decodeHex} for the inverse operation to `Uint8Array`
  * @see {@link decodeHexString} for the inverse operation to `string`
- *
- * @category Hex getters
- * @since 4.0.0
  */
 export function encodeHex<E extends Uint8Array | string>(): Getter<string, E> {
-  return transform(Encoding.encodeHex)
+  return transform(Encoding.encodeHex);
 }
 
 /**
@@ -1253,25 +1232,24 @@ export function encodeHex<E extends Uint8Array | string>(): Getter<string, E> {
  * **Example** (Decoding Base64 to bytes)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const decode = SchemaGetter.decodeBase64<string>()
+ * const decode = SchemaGetter.decodeBase64<string>();
  * // Getter<Uint8Array, string>
  * ```
  *
+ * @since 4.0.0
+ * @category Base64 getters
  * @see {@link decodeBase64String} to decode to `string` instead
  * @see {@link encodeBase64} for the inverse operation
- *
- * @category Base64 getters
- * @since 4.0.0
  */
 export function decodeBase64<E extends string>(): Getter<Uint8Array, E> {
   return transformOrFail((input) =>
     Effect.mapErrorEager(
       Effect.fromResult(Encoding.decodeBase64(input)),
-      (e) => new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })
-    )
-  )
+      (e) => new SchemaIssue.InvalidValue(Option.some(input), { message: e.message }),
+    ),
+  );
 }
 
 /**
@@ -1284,25 +1262,25 @@ export function decodeBase64<E extends string>(): Getter<Uint8Array, E> {
  * **Example** (Decoding Base64 to string)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const decode = SchemaGetter.decodeBase64String<string>()
+ * const decode = SchemaGetter.decodeBase64String<string>();
  * // Getter<string, string>
  * ```
  *
+ * @since 4.0.0
+ * @category Base64 getters
  * @see {@link decodeBase64} to decode to `Uint8Array` instead
  * @see {@link encodeBase64} for the inverse operation
- *
- * @category Base64 getters
- * @since 4.0.0
  */
 export function decodeBase64String<E extends string>(): Getter<string, E> {
   return transformOrFail((input) =>
     Result.match(Encoding.decodeBase64String(input), {
-      onFailure: (e) => Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
-      onSuccess: Effect.succeed
-    })
-  )
+      onFailure: (e) =>
+        Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
+      onSuccess: Effect.succeed,
+    }),
+  );
 }
 
 /**
@@ -1315,25 +1293,25 @@ export function decodeBase64String<E extends string>(): Getter<string, E> {
  * **Example** (Decoding Base64Url to bytes)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const decode = SchemaGetter.decodeBase64Url<string>()
+ * const decode = SchemaGetter.decodeBase64Url<string>();
  * // Getter<Uint8Array, string>
  * ```
  *
+ * @since 4.0.0
+ * @category Base64 getters
  * @see {@link decodeBase64UrlString} to decode to `string` instead
  * @see {@link encodeBase64Url} for the inverse operation
- *
- * @category Base64 getters
- * @since 4.0.0
  */
 export function decodeBase64Url<E extends string>(): Getter<Uint8Array, E> {
   return transformOrFail((input) =>
     Result.match(Encoding.decodeBase64Url(input), {
-      onFailure: (e) => Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
-      onSuccess: Effect.succeed
-    })
-  )
+      onFailure: (e) =>
+        Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
+      onSuccess: Effect.succeed,
+    }),
+  );
 }
 
 /**
@@ -1346,25 +1324,25 @@ export function decodeBase64Url<E extends string>(): Getter<Uint8Array, E> {
  * **Example** (Decoding Base64Url to string)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const decode = SchemaGetter.decodeBase64UrlString<string>()
+ * const decode = SchemaGetter.decodeBase64UrlString<string>();
  * // Getter<string, string>
  * ```
  *
+ * @since 4.0.0
+ * @category Base64 getters
  * @see {@link decodeBase64Url} to decode to `Uint8Array` instead
  * @see {@link encodeBase64Url} for the inverse operation
- *
- * @category Base64 getters
- * @since 4.0.0
  */
 export function decodeBase64UrlString<E extends string>(): Getter<string, E> {
   return transformOrFail((input) =>
     Result.match(Encoding.decodeBase64UrlString(input), {
-      onFailure: (e) => Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
-      onSuccess: Effect.succeed
-    })
-  )
+      onFailure: (e) =>
+        Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
+      onSuccess: Effect.succeed,
+    }),
+  );
 }
 
 /**
@@ -1377,25 +1355,25 @@ export function decodeBase64UrlString<E extends string>(): Getter<string, E> {
  * **Example** (Decoding hex to bytes)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const decode = SchemaGetter.decodeHex<string>()
+ * const decode = SchemaGetter.decodeHex<string>();
  * // Getter<Uint8Array, string>
  * ```
  *
+ * @since 4.0.0
+ * @category Hex getters
  * @see {@link decodeHexString} to decode to `string` instead
  * @see {@link encodeHex} for the inverse operation
- *
- * @category Hex getters
- * @since 4.0.0
  */
 export function decodeHex<E extends string>(): Getter<Uint8Array, E> {
   return transformOrFail((input) =>
     Result.match(Encoding.decodeHex(input), {
-      onFailure: (e) => Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
-      onSuccess: Effect.succeed
-    })
-  )
+      onFailure: (e) =>
+        Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
+      onSuccess: Effect.succeed,
+    }),
+  );
 }
 
 /**
@@ -1408,25 +1386,25 @@ export function decodeHex<E extends string>(): Getter<Uint8Array, E> {
  * **Example** (Decoding hex to string)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const decode = SchemaGetter.decodeHexString<string>()
+ * const decode = SchemaGetter.decodeHexString<string>();
  * // Getter<string, string>
  * ```
  *
+ * @since 4.0.0
+ * @category Hex getters
  * @see {@link decodeHex} to decode to `Uint8Array` instead
  * @see {@link encodeHex} for the inverse operation
- *
- * @category Hex getters
- * @since 4.0.0
  */
 export function decodeHexString<E extends string>(): Getter<string, E> {
   return transformOrFail((input) =>
     Result.match(Encoding.decodeHexString(input), {
-      onFailure: (e) => Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
-      onSuccess: Effect.succeed
-    })
-  )
+      onFailure: (e) =>
+        Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: e.message })),
+      onSuccess: Effect.succeed,
+    }),
+  );
 }
 
 /**
@@ -1435,24 +1413,23 @@ export function decodeHexString<E extends string>(): Getter<string, E> {
  * **Details**
  *
  * - Skips `None` inputs.
- * - May throw a `URIError` for malformed surrogate pairs; this exception is not
- *   converted into an `Issue`.
+ * - May throw a `URIError` for malformed surrogate pairs; this exception is not converted into an
+ *   `Issue`.
  *
  * **Example** (Encoding a URI component)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const encode = SchemaGetter.encodeUriComponent<string>()
+ * const encode = SchemaGetter.encodeUriComponent<string>();
  * ```
  *
- * @see {@link decodeUriComponent} for the inverse operation
- *
- * @category URI
  * @since 4.0.0
+ * @category URI
+ * @see {@link decodeUriComponent} for the inverse operation
  */
 export function encodeUriComponent<E extends string>(): Getter<string, E> {
-  return transform(encodeURIComponent)
+  return transform(encodeURIComponent);
 }
 
 /**
@@ -1465,29 +1442,28 @@ export function encodeUriComponent<E extends string>(): Getter<string, E> {
  * **Example** (Decoding a URI component)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const decode = SchemaGetter.decodeUriComponent<string>()
+ * const decode = SchemaGetter.decodeUriComponent<string>();
  * // Getter<string, string>
  * ```
  *
- * @see {@link encodeUriComponent} for the inverse operation
- *
- * @category URI
  * @since 4.0.0
+ * @category URI
+ * @see {@link encodeUriComponent} for the inverse operation
  */
 export function decodeUriComponent<E extends string>(): Getter<string, E> {
   return transformOrFail((input) => {
     try {
-      return Effect.succeed(globalThis.decodeURIComponent(input))
+      return Effect.succeed(globalThis.decodeURIComponent(input));
     } catch (e) {
       return Effect.fail(
         new SchemaIssue.InvalidValue(Option.some(input), {
-          message: e instanceof URIError ? e.message : "Invalid URI component"
-        })
-      )
+          message: e instanceof URIError ? e.message : "Invalid URI component",
+        }),
+      );
     }
-  })
+  });
 }
 
 /**
@@ -1495,40 +1471,39 @@ export function decodeUriComponent<E extends string>(): Getter<string, E> {
  *
  * **When to use**
  *
- * Use when you need a schema getter to decode a present encoded date/time value
- * to a `DateTime.Utc`.
+ * Use when you need a schema getter to decode a present encoded date/time value to a
+ * `DateTime.Utc`.
  *
  * **Details**
  *
- * - Accepted input includes existing `DateTime` values, partial date/time parts,
- *   instant objects, zoned instant objects, JavaScript `Date` instances, epoch
- *   milliseconds, and date strings.
+ * - Accepted input includes existing `DateTime` values, partial date/time parts, instant objects,
+ *   zoned instant objects, JavaScript `Date` instances, epoch milliseconds, and date strings.
  * - Converts successfully parsed values to UTC.
- * - Fails with `SchemaIssue.InvalidValue` if the input cannot be parsed as a valid
- *   `DateTime`.
+ * - Fails with `SchemaIssue.InvalidValue` if the input cannot be parsed as a valid `DateTime`.
  *
  * **Example** (Parsing DateTime)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const parseDate = SchemaGetter.dateTimeUtcFromInput<string>()
+ * const parseDate = SchemaGetter.dateTimeUtcFromInput<string>();
  * // Getter<DateTime.Utc, string>
  * ```
  *
- * @see {@link Date} for a simpler coercion to `Date` (no validation)
- *
- * @category DateTime
  * @since 4.0.0
+ * @category DateTime
+ * @see {@link Date} for a simpler coercion to `Date` (no validation)
  */
 export function dateTimeUtcFromInput<E extends DateTime.DateTime.Input>(): Getter<DateTime.Utc, E> {
   return transformOrFail((input) => {
     return Option.match(DateTime.make(input), {
       onNone: () =>
-        Effect.fail(new SchemaIssue.InvalidValue(Option.some(input), { message: "Invalid DateTime input" })),
-      onSome: (dt) => Effect.succeed(DateTime.toUtc(dt))
-    })
-  })
+        Effect.fail(
+          new SchemaIssue.InvalidValue(Option.some(input), { message: "Invalid DateTime input" }),
+        ),
+      onSome: (dt) => Effect.succeed(DateTime.toUtc(dt)),
+    });
+  });
 }
 
 /**
@@ -1536,80 +1511,75 @@ export function dateTimeUtcFromInput<E extends DateTime.DateTime.Input>(): Gette
  *
  * **When to use**
  *
- * Use when you need a schema getter to parse `FormData` from HTTP requests into
- * structured objects.
+ * Use when you need a schema getter to parse `FormData` from HTTP requests into structured objects.
  *
  * **Details**
  *
- * The getter is pure and never fails. It interprets bracket-path keys such as
- * `user[name]` and `items[0]` to build nested objects or arrays, and each leaf
- * value is a `string` or `Blob`.
+ * The getter is pure and never fails. It interprets bracket-path keys such as `user[name]` and
+ * `items[0]` to build nested objects or arrays, and each leaf value is a `string` or `Blob`.
  *
  * **Example** (Decoding FormData)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const decode = SchemaGetter.decodeFormData()
+ * const decode = SchemaGetter.decodeFormData();
  * // Getter<TreeObject<string | Blob>, FormData>
  * ```
  *
+ * @since 4.0.0
+ * @category FormData
  * @see {@link encodeFormData} for the inverse operation
  * @see {@link makeTreeRecord} for the underlying bracket-path parser
  * @see {@link decodeURLSearchParams} for the URLSearchParams variant
- *
- * @category FormData
- * @since 4.0.0
  */
 export function decodeFormData(): Getter<Schema.TreeRecord<string | Blob>, FormData> {
-  return transform((input) => makeTreeRecord(Array.from(input.entries())))
+  return transform((input) => makeTreeRecord(Array.from(input.entries())));
 }
 
-const collectFormDataEntries = collectBracketPathEntries((value): value is string | Blob =>
-  typeof value === "string" || (typeof Blob !== "undefined" && value instanceof Blob)
-)
+const collectFormDataEntries = collectBracketPathEntries(
+  (value): value is string | Blob =>
+    typeof value === "string" || (typeof Blob !== "undefined" && value instanceof Blob),
+);
 
 /**
  * Encodes a nested object into a `FormData` instance using bracket-path notation.
  *
  * **When to use**
  *
- * Use when you need a schema getter to serialize structured data to `FormData`
- * for HTTP requests.
+ * Use when you need a schema getter to serialize structured data to `FormData` for HTTP requests.
  *
  * **Details**
  *
- * The getter is pure and never fails. It flattens nested objects or arrays into
- * bracket-path keys such as `user[name]` and `items[0]`. Non-object inputs
- * produce an empty `FormData`.
+ * The getter is pure and never fails. It flattens nested objects or arrays into bracket-path keys
+ * such as `user[name]` and `items[0]`. Non-object inputs produce an empty `FormData`.
  *
  * **Example** (Encoding to FormData)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const encode = SchemaGetter.encodeFormData()
+ * const encode = SchemaGetter.encodeFormData();
  * // Getter<FormData, unknown>
  * ```
  *
+ * @since 4.0.0
+ * @category FormData
  * @see {@link decodeFormData} for the inverse operation
  * @see {@link collectBracketPathEntries} for the underlying flattener
  * @see {@link encodeURLSearchParams} for the URLSearchParams variant
- *
- * @category FormData
- * @since 4.0.0
  */
 export function encodeFormData(): Getter<FormData, unknown> {
   return transform((input) => {
-    const out = new FormData()
+    const out = new FormData();
     if (typeof input === "object" && input !== null) {
-      const entries = collectFormDataEntries(input)
+      const entries = collectFormDataEntries(input);
       entries.forEach(([key, value]) => {
-        out.append(key, value)
-      })
+        out.append(key, value);
+      });
     }
-    return out
-  })
+    return out;
+  });
 }
 
 /**
@@ -1617,105 +1587,96 @@ export function encodeFormData(): Getter<FormData, unknown> {
  *
  * **When to use**
  *
- * Use when you need a schema getter to parse query parameters from URLs into
- * structured objects.
+ * Use when you need a schema getter to parse query parameters from URLs into structured objects.
  *
  * **Details**
  *
- * The getter is pure and never fails. It interprets bracket-path keys such as
- * `user[name]` and `items[0]` to build nested objects or arrays, and each leaf
- * value is a `string`.
+ * The getter is pure and never fails. It interprets bracket-path keys such as `user[name]` and
+ * `items[0]` to build nested objects or arrays, and each leaf value is a `string`.
  *
  * **Example** (Decoding URLSearchParams)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const decode = SchemaGetter.decodeURLSearchParams()
+ * const decode = SchemaGetter.decodeURLSearchParams();
  * // Getter<TreeObject<string>, URLSearchParams>
  * ```
  *
+ * @since 4.0.0
+ * @category Search params
  * @see {@link encodeURLSearchParams} for the inverse operation
  * @see {@link makeTreeRecord} for the underlying bracket-path parser
  * @see {@link decodeFormData} for the FormData variant
- *
- * @category search params
- * @since 4.0.0
  */
 export function decodeURLSearchParams(): Getter<Schema.TreeRecord<string>, URLSearchParams> {
-  return transform((input) => makeTreeRecord(Array.from(input.entries())))
+  return transform((input) => makeTreeRecord(Array.from(input.entries())));
 }
 
-const collectURLSearchParamsEntries = collectBracketPathEntries(Predicate.isString)
+const collectURLSearchParamsEntries = collectBracketPathEntries(Predicate.isString);
 
 /**
  * Encodes a nested object into a `URLSearchParams` instance using bracket-path notation.
  *
  * **When to use**
  *
- * Use when you need a schema getter to serialize structured data to query
- * parameters for URLs.
+ * Use when you need a schema getter to serialize structured data to query parameters for URLs.
  *
  * **Details**
  *
- * The getter is pure and never fails. It flattens nested objects or arrays into
- * bracket-path keys. Non-object inputs produce an empty `URLSearchParams`.
+ * The getter is pure and never fails. It flattens nested objects or arrays into bracket-path keys.
+ * Non-object inputs produce an empty `URLSearchParams`.
  *
  * **Example** (Encoding to URLSearchParams)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
- * const encode = SchemaGetter.encodeURLSearchParams()
+ * const encode = SchemaGetter.encodeURLSearchParams();
  * // Getter<URLSearchParams, unknown>
  * ```
  *
+ * @since 4.0.0
+ * @category Search params
  * @see {@link decodeURLSearchParams} for the inverse operation
  * @see {@link collectBracketPathEntries} for the underlying flattener
  * @see {@link encodeFormData} for the FormData variant
- *
- * @category search params
- * @since 4.0.0
  */
 export function encodeURLSearchParams(): Getter<URLSearchParams, unknown> {
   return transform((input) => {
     if (typeof input === "object" && input !== null) {
-      return new URLSearchParams(collectURLSearchParamsEntries(input))
+      return new URLSearchParams(collectURLSearchParamsEntries(input));
     }
-    return new URLSearchParams()
-  })
+    return new URLSearchParams();
+  });
 }
 
-const INDEX_REGEXP = /^\d+$/
+const INDEX_REGEXP = /^\d+$/;
 
 function bracketPathToTokens(bracketPath: string): Array<string | number> {
   // real empty path (from append("", value))
   if (bracketPath === "") {
-    return [""]
+    return [""];
   }
 
-  const replaced = bracketPath.replace(/\[(.*?)\]/g, ".$1")
-  const parts = replaced.split(".")
+  const replaced = bracketPath.replace(/\[(.*?)\]/g, ".$1");
+  const parts = replaced.split(".");
   // if bracket path started with "[...]" we get ".foo" => ["", "foo"]; drop the synthetic first ""
-  const start = replaced.startsWith(".") ? 1 : 0
+  const start = replaced.startsWith(".") ? 1 : 0;
 
   return parts
     .slice(start)
-    .map((part) => (INDEX_REGEXP.test(part) ? globalThis.Number(part) : part))
+    .map((part) => (INDEX_REGEXP.test(part) ? globalThis.Number(part) : part));
 }
 
-function getOrCreateContainer(
-  self: any,
-  key: PropertyKey,
-  shouldBeArray: boolean
-): any {
-  const current = Object.hasOwn(self, key) ? self[key] : undefined
+function getOrCreateContainer(self: any, key: PropertyKey, shouldBeArray: boolean): any {
+  const current = Object.hasOwn(self, key) ? self[key] : undefined;
   if (current !== undefined) {
-    return current
+    return current;
   }
-  const container = shouldBeArray ? [] : {}
-  InternalRecord.set(self, key, container)
-  return container
+  const container = shouldBeArray ? [] : {};
+  InternalRecord.set(self, key, container);
+  return container;
 }
 
 /**
@@ -1723,17 +1684,19 @@ function getOrCreateContainer(
  *
  * **When to use**
  *
- * Use when you need a schema getter to parse FormData or URLSearchParams
- * entries into structured objects.
+ * Use when you need a schema getter to parse FormData or URLSearchParams entries into structured
+ * objects.
+ *
  * - You have flat key-value pairs with bracket-path keys that need nesting.
  *
  * **Details**
  *
- * - A bracket path is a string like `"user[address][city]"` that describes nested
- *   object/array structure.
+ * - A bracket path is a string like `"user[address][city]"` that describes nested object/array
+ *   structure.
  * - Interprets bracket paths and constructs the corresponding nested object.
  * - Builds and returns a nested object from the input entries.
  * - Supported syntax:
+ *
  *   - `"foo"` → object key `"foo"`
  *   - `"foo[bar]"` → nested `{ foo: { bar: ... } }`
  *   - `"foo[0]"` → array index `{ foo: [value] }`
@@ -1744,64 +1707,63 @@ function getOrCreateContainer(
  * **Example** (Building a tree from bracket paths)
  *
  * ```ts
- * import { SchemaGetter } from "effect"
+ * import { SchemaGetter } from "effect";
  *
  * const tree = SchemaGetter.makeTreeRecord([
  *   ["user[name]", "Alice"],
  *   ["user[tags][]", "admin"],
- *   ["user[tags][]", "editor"]
- * ])
+ *   ["user[tags][]", "editor"],
+ * ]);
  * // { user: { name: "Alice", tags: ["admin", "editor"] } }
  * ```
  *
+ * @since 4.0.0
+ * @category Tree
  * @see {@link collectBracketPathEntries} for the inverse operation (tree to flat entries)
  * @see {@link decodeFormData} for a higher-level FormData decoder
  * @see {@link decodeURLSearchParams} for a higher-level URLSearchParams decoder
- *
- * @category Tree
- * @since 4.0.0
  */
 export function makeTreeRecord<A>(
-  bracketPathEntries: ReadonlyArray<readonly [bracketPath: string, value: A]>
+  bracketPathEntries: ReadonlyArray<readonly [bracketPath: string, value: A]>,
 ): Schema.TreeRecord<A> {
-  const out: any = {}
+  const out: any = {};
   bracketPathEntries.forEach(([key, value]) => {
-    const tokens = bracketPathToTokens(key)
-    let cur: any = out
+    const tokens = bracketPathToTokens(key);
+    let cur: any = out;
     tokens.forEach((token, i) => {
-      const isLast = i === tokens.length - 1
+      const isLast = i === tokens.length - 1;
 
       // We are inside an array and see "[]" (empty token) => append
       if (Array.isArray(cur) && token === "") {
         if (isLast) {
-          cur.push(value)
+          cur.push(value);
         } else {
           // bracket path: "foo[][bar]" => push a new element and descend into it
-          const next = tokens[i + 1]
-          const shouldBeArray = typeof next === "number" || next === ""
-          const index = cur.length
-          cur = getOrCreateContainer(cur, index, shouldBeArray)
+          const next = tokens[i + 1];
+          const shouldBeArray = typeof next === "number" || next === "";
+          const index = cur.length;
+          cur = getOrCreateContainer(cur, index, shouldBeArray);
         }
       } else if (isLast) {
         // If we're setting a value at a path that already exists
         // convert it to an array to support multiple values for the same key
-        const hasOwn = Object.hasOwn(cur, token)
+        const hasOwn = Object.hasOwn(cur, token);
         if (hasOwn && Array.isArray(cur[token])) {
-          cur[token].push(value)
+          cur[token].push(value);
         } else if (hasOwn) {
-          InternalRecord.set(cur, token, [cur[token], value])
+          InternalRecord.set(cur, token, [cur[token], value]);
         } else {
-          InternalRecord.set(cur, token, value)
+          InternalRecord.set(cur, token, value);
         }
       } else {
-        const next = tokens[i + 1]
+        const next = tokens[i + 1];
         // if next is a number OR "" (from []), we are building an array
-        const shouldBeArray = typeof next === "number" || next === ""
-        cur = getOrCreateContainer(cur, token, shouldBeArray)
+        const shouldBeArray = typeof next === "number" || next === "";
+        cur = getOrCreateContainer(cur, token, shouldBeArray);
       }
-    })
-  })
-  return out
+    });
+  });
+  return out;
 }
 
 /**
@@ -1809,68 +1771,68 @@ export function makeTreeRecord<A>(
  *
  * **When to use**
  *
- * Use when you need a schema getter to serialize structured objects to flat
- * key-value entries.
+ * Use when you need a schema getter to serialize structured objects to flat key-value entries.
+ *
  * - Building custom `FormData` or `URLSearchParams` encoders.
  *
  * **Details**
  *
  * - This is the inverse of {@link makeTreeRecord}.
- * - Takes a nested object and produces flat `[bracketPath, value]` pairs suitable for
- *   `FormData` or `URLSearchParams`.
- * - Returns a curried function: first call provides the leaf type guard, second call provides the object.
+ * - Takes a nested object and produces flat `[bracketPath, value]` pairs suitable for `FormData` or
+ *   `URLSearchParams`.
+ * - Returns a curried function: first call provides the leaf type guard, second call provides the
+ *   object.
  * - Recursively traverses objects and arrays.
- * - If all elements of an array are leaves, encodes them as multiple entries with the same key
- *   (e.g. `tags=a&tags=b`). Otherwise uses indexed bracket paths (e.g. `items[0]`, `items[1]`).
+ * - If all elements of an array are leaves, encodes them as multiple entries with the same key (e.g.
+ *   `tags=a&tags=b`). Otherwise uses indexed bracket paths (e.g. `items[0]`, `items[1]`).
  * - Non-leaf values that aren't objects or arrays are silently skipped.
  *
  * **Example** (Flattening an object to bracket paths)
  *
  * ```ts
- * import { Predicate, SchemaGetter } from "effect"
+ * import { Predicate, SchemaGetter } from "effect";
  *
- * const collectStrings = SchemaGetter.collectBracketPathEntries(Predicate.isString)
- * const entries = collectStrings({ user: { name: "Alice", tags: ["admin", "editor"] } })
+ * const collectStrings = SchemaGetter.collectBracketPathEntries(Predicate.isString);
+ * const entries = collectStrings({ user: { name: "Alice", tags: ["admin", "editor"] } });
  * // [["user[name]", "Alice"], ["user[tags]", "admin"], ["user[tags]", "editor"]]
  * ```
  *
+ * @since 4.0.0
+ * @category Tree
  * @see {@link makeTreeRecord} for the inverse operation (flat entries to tree)
  * @see {@link encodeFormData} for a higher-level FormData encoder
  * @see {@link encodeURLSearchParams} for a higher-level URLSearchParams encoder
- *
- * @category Tree
- * @since 4.0.0
  */
 export function collectBracketPathEntries<A>(isLeaf: (value: unknown) => value is A) {
   return (input: object): Array<[bracketPath: string, value: A]> => {
-    const bracketPathEntries: Array<[string, A]> = []
+    const bracketPathEntries: Array<[string, A]> = [];
 
     function append(key: string, value: unknown): void {
       if (isLeaf(value)) {
-        bracketPathEntries.push([key, value])
+        bracketPathEntries.push([key, value]);
       } else if (Array.isArray(value)) {
         // If all values are leaves, encode as multiple entries with the same key
-        const allLeaves = value.every(isLeaf)
+        const allLeaves = value.every(isLeaf);
         if (allLeaves) {
           value.forEach((v) => {
-            bracketPathEntries.push([key, v])
-          })
+            bracketPathEntries.push([key, v]);
+          });
         } else {
           value.forEach((v, i) => {
-            append(`${key}[${i}]`, v)
-          })
+            append(`${key}[${i}]`, v);
+          });
         }
       } else if (typeof value === "object" && value !== null) {
         for (const [k, v] of Object.entries(value)) {
-          append(`${key}[${k}]`, v)
+          append(`${key}[${k}]`, v);
         }
       }
     }
 
     for (const [key, value] of Object.entries(input)) {
-      append(key, value)
+      append(key, value);
     }
 
-    return bracketPathEntries
-  }
+    return bracketPathEntries;
+  };
 }

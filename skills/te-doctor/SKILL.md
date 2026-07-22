@@ -32,6 +32,7 @@ node --check dist/index.js dist/search.js dist/config.js dist/cli.js dist/sandbo
 ```
 
 **If build fails:**
+
 - Run `npm install` to ensure dependencies are installed
 - Check Node.js version (requires 18+)
 
@@ -53,6 +54,7 @@ try {
 ```
 
 **Common connectivity issues:**
+
 - **uvx not installed**: Install with `pip install uvx` or `pipx install uvx`
 - **npx timeout**: Network issues or npm registry problems
 - **API key missing**: Check environment variables are set
@@ -72,6 +74,7 @@ node --input-type=module -e 'import {globSync} from "glob"; import {readFileSync
 ```
 
 **If registry is corrupted:**
+
 ```bash
 rm -rf registry/
 npm run extract
@@ -88,6 +91,7 @@ du -sh workspace/  # Check disk usage
 ```
 
 **Clean up old MCP results:**
+
 ```typescript
 // In execute_code:
 const deleted = await workspace.cleanupMcpResults(3600000); // 1 hour
@@ -99,6 +103,7 @@ console.log("Cleaned up", deleted, "old result files");
 Both Serena instances must be working:
 
 **Registry Serena** (powers search_tools):
+
 ```bash
 # Test semantic search
 search_tools({ query: "diagram", limit: 3 })
@@ -106,12 +111,14 @@ search_tools({ query: "diagram", limit: 3 })
 ```
 
 **Sandbox Serena** (available in execute_code):
+
 ```typescript
 const symbols = await serena.find_symbol({ name_path: "workspace" });
 console.log("Found symbols:", symbols.content?.length || 0);
 ```
 
 **If Serena fails:**
+
 - Check uvx is installed: `which uvx`
 - Check Python 3.10+: `python3 --version`
 - Try manual start: `uvx --from git+https://github.com/oraios/serena serena start-mcp-server`
@@ -121,11 +128,13 @@ console.log("Found symbols:", symbols.content?.length || 0);
 ### Issue: "search_tools returns no results"
 
 **Causes:**
+
 1. Registry YAML files missing or corrupted
 2. Serena not indexing registry directory
 3. Query terms don't match any tool descriptions
 
 **Fix:**
+
 ```bash
 npm run extract   # Regenerate registry
 # Restart Claude Code
@@ -134,11 +143,13 @@ npm run extract   # Regenerate registry
 ### Issue: "execute_code times out"
 
 **Causes:**
+
 1. MCP server slow to connect (first use)
 2. Long-running operation exceeds timeout
 3. Infinite loop in code
 
 **Fix:**
+
 - Increase timeout: `execute_code({ code: "...", timeout: 60000 })`
 - Split into smaller operations
 - Check for infinite loops
@@ -146,11 +157,13 @@ npm run extract   # Regenerate registry
 ### Issue: "MCP client returns null"
 
 **Causes:**
+
 1. Server failed to start
 2. Environment variable missing
 3. Package not found (npx/uvx issue)
 
 **Fix:**
+
 ```bash
 # Check environment variables
 echo $GEMINI_API_KEY
@@ -165,6 +178,7 @@ npx -y @rlabs-inc/gemini-mcp
 **Cause:** Attempting to access files outside workspace.
 
 **Fix:** All workspace paths must be relative and within `./workspace/`:
+
 ```typescript
 // Wrong
 await workspace.read("/etc/passwd");
@@ -179,6 +193,7 @@ await workspace.read("data/file.txt");
 **Cause:** Output exceeds 500 character limit.
 
 **Fix:** Keep logs concise or save verbose output to workspace:
+
 ```typescript
 // Instead of:
 console.log(JSON.stringify(largeData, null, 2));
@@ -191,6 +206,7 @@ console.log("Saved to output.json");
 ## Log Locations
 
 **MCP Server Stderr:**
+
 ```bash
 # Claude Code captures MCP stderr
 # Check Claude Code's debug output
@@ -198,6 +214,7 @@ claude --debug
 ```
 
 **Audit Log:**
+
 ```typescript
 // In execute_code, MCP calls are logged
 // Access via getAuditLog() in clients.ts (internal only)

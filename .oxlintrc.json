@@ -53,12 +53,7 @@
       }
     },
     {
-      "files": [
-        "src/vendor.d.ts",
-        "src/bm25.ts",
-        "src/search.ts",
-        "src/search.test.ts"
-      ],
+      "files": ["src/vendor.d.ts", "src/bm25.ts", "src/search.ts", "src/search.test.ts"],
       "rules": {
         "typescript/no-unsafe-call": "off",
         "typescript/no-unsafe-member-access": "off",

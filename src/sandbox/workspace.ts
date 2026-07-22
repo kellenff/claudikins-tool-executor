@@ -16,9 +16,7 @@ import { DEFAULT_MCP_RESULTS_MAX_AGE_MS, MCP_RESULTS_DIR } from "../constants.js
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(__dirname, "..", "..", "workspace");
 
-/**
- * Resolve a path within the workspace, blocking traversal attacks
- */
+/** Resolve a path within the workspace, blocking traversal attacks */
 function resolvePath(relativePath: string): string {
   const normalized = normalize(relativePath);
 
@@ -37,10 +35,7 @@ function resolvePath(relativePath: string): string {
   return fullPath;
 }
 
-/**
- * Clean up old MCP results (older than maxAge ms)
- * Default: 1 hour (DEFAULT_MCP_RESULTS_MAX_AGE_MS)
- */
+/** Clean up old MCP results (older than maxAge ms) Default: 1 hour (DEFAULT_MCP_RESULTS_MAX_AGE_MS) */
 async function cleanupMcpResults(maxAgeMs = DEFAULT_MCP_RESULTS_MAX_AGE_MS): Promise<number> {
   const dir = join(WORKSPACE_ROOT, MCP_RESULTS_DIR);
 
@@ -72,9 +67,7 @@ async function cleanupMcpResults(maxAgeMs = DEFAULT_MCP_RESULTS_MAX_AGE_MS): Pro
   }
 }
 
-/**
- * Workspace API - all file operations scoped to ./workspace/
- */
+/** Workspace API - all file operations scoped to ./workspace/ */
 export const workspace = {
   // Core operations
   async read(path: string): Promise<string> {

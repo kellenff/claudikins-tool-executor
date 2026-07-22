@@ -1,144 +1,141 @@
 /**
  * Describes ordered fallback steps for running effects or streams.
  *
- * An `ExecutionPlan` contains one or more steps. Each step provides a `Context`
- * or `Layer`, and may also define attempt limits, retry schedules, or
- * predicates that decide whether to keep trying. The runtime tries steps in
- * order until the workflow succeeds or the plan is exhausted. This module also
- * supports merging plans and reading metadata for the active step and attempt.
+ * An `ExecutionPlan` contains one or more steps. Each step provides a `Context` or `Layer`, and may
+ * also define attempt limits, retry schedules, or predicates that decide whether to keep trying.
+ * The runtime tries steps in order until the workflow succeeds or the plan is exhausted. This
+ * module also supports merging plans and reading metadata for the active step and attempt.
  *
  * @since 3.16.0
  */
-import type { NonEmptyReadonlyArray } from "./Array.ts"
-import * as Context from "./Context.ts"
-import type * as Effect from "./Effect.ts"
-import { constant } from "./Function.ts"
-import * as effect from "./internal/effect.ts"
-import * as Layer from "./Layer.ts"
-import type { Pipeable } from "./Pipeable.ts"
-import { pipeArguments } from "./Pipeable.ts"
-import * as Predicate from "./Predicate.ts"
-import type * as Schedule from "./Schedule.ts"
+import type { NonEmptyReadonlyArray } from "./Array.ts";
+import * as Context from "./Context.ts";
+import type * as Effect from "./Effect.ts";
+import { constant } from "./Function.ts";
+import * as effect from "./internal/effect.ts";
+import * as Layer from "./Layer.ts";
+import type { Pipeable } from "./Pipeable.ts";
+import { pipeArguments } from "./Pipeable.ts";
+import * as Predicate from "./Predicate.ts";
+import type * as Schedule from "./Schedule.ts";
 
 /**
- * String literal type used as the runtime type identifier for `ExecutionPlan`
- * values.
+ * String literal type used as the runtime type identifier for `ExecutionPlan` values.
  *
- * @category type IDs
  * @since 3.16.0
+ * @category Type IDs
  */
-export type TypeId = "~effect/ExecutionPlan"
+export type TypeId = "~effect/ExecutionPlan";
 
 /**
- * Runtime type identifier attached to `ExecutionPlan` values and used by
- * `isExecutionPlan`.
+ * Runtime type identifier attached to `ExecutionPlan` values and used by `isExecutionPlan`.
  *
- * @category type IDs
  * @since 3.16.0
+ * @category Type IDs
  */
-export const TypeId: TypeId = "~effect/ExecutionPlan"
+export const TypeId: TypeId = "~effect/ExecutionPlan";
 
 /**
- * Returns `true` if a value is an `ExecutionPlan` by checking for the
- * `ExecutionPlan.TypeId` marker.
+ * Returns `true` if a value is an `ExecutionPlan` by checking for the `ExecutionPlan.TypeId`
+ * marker.
  *
  * **When to use**
  *
- * Use when accepting an unknown value and you need to narrow it to an
- * `ExecutionPlan` before reading plan fields or passing it to plan-consuming
- * APIs.
+ * Use when accepting an unknown value and you need to narrow it to an `ExecutionPlan` before
+ * reading plan fields or passing it to plan-consuming APIs.
  *
  * **Gotchas**
  *
- * This is a structural marker check; it does not validate the marker value or
- * the shape of the plan steps.
+ * This is a structural marker check; it does not validate the marker value or the shape of the plan
+ * steps.
  *
+ * @since 3.16.0
+ * @category Guards
  * @see {@link make} for constructing execution plans that satisfy this guard
  * @see {@link TypeId} for the runtime marker checked by this guard
- *
- * @category guards
- * @since 3.16.0
  */
-export const isExecutionPlan = (u: unknown): u is ExecutionPlan<any> => Predicate.hasProperty(u, TypeId)
+export const isExecutionPlan = (u: unknown): u is ExecutionPlan<any> =>
+  Predicate.hasProperty(u, TypeId);
 
 /**
- * A `ExecutionPlan` can be used with `Effect.withExecutionPlan` or `Stream.withExecutionPlan`, allowing you to provide different resources for each step of execution until the effect succeeds or the plan is exhausted.
+ * A `ExecutionPlan` can be used with `Effect.withExecutionPlan` or `Stream.withExecutionPlan`,
+ * allowing you to provide different resources for each step of execution until the effect succeeds
+ * or the plan is exhausted.
  *
  * **Example** (Defining fallback execution steps)
  *
  * ```ts
- * import { Effect, ExecutionPlan, Schedule } from "effect"
- * import type { Layer } from "effect"
- * import type { LanguageModel } from "effect/unstable/ai"
+ * import { Effect, ExecutionPlan, Schedule } from "effect";
+ * import type { Layer } from "effect";
+ * import type { LanguageModel } from "effect/unstable/ai";
  *
- * declare const layerBad: Layer.Layer<LanguageModel.LanguageModel>
- * declare const layerGood: Layer.Layer<LanguageModel.LanguageModel>
+ * declare const layerBad: Layer.Layer<LanguageModel.LanguageModel>;
+ * declare const layerGood: Layer.Layer<LanguageModel.LanguageModel>;
  *
  * const ThePlan = ExecutionPlan.make(
  *   {
  *     // First try with the bad layer 2 times with a 3 second delay between attempts
  *     provide: layerBad,
  *     attempts: 2,
- *     schedule: Schedule.spaced(3000)
+ *     schedule: Schedule.spaced(3000),
  *   },
  *   // Then try with the bad layer 3 times with a 1 second delay between attempts
  *   {
  *     provide: layerBad,
  *     attempts: 3,
- *     schedule: Schedule.spaced(1000)
+ *     schedule: Schedule.spaced(1000),
  *   },
  *   // Finally try with the good layer.
  *   //
  *   // If `attempts` is omitted, the plan will only attempt once, unless a schedule is provided.
  *   {
- *     provide: layerGood
- *   }
- * )
+ *     provide: layerGood,
+ *   },
+ * );
  *
- * declare const effect: Effect.Effect<
- *   void,
- *   never,
- *   LanguageModel.LanguageModel
- * >
- * const withPlan: Effect.Effect<void> = Effect.withExecutionPlan(effect, ThePlan)
+ * declare const effect: Effect.Effect<void, never, LanguageModel.LanguageModel>;
+ * const withPlan: Effect.Effect<void> = Effect.withExecutionPlan(effect, ThePlan);
  * ```
  *
- * @category models
  * @since 3.16.0
+ * @category Models
  */
 export interface ExecutionPlan<
   Config extends {
-    provides: any
-    input: any
-    error: any
-    requirements: any
-  }
+    provides: any;
+    input: any;
+    error: any;
+    requirements: any;
+  },
 > extends Pipeable {
-  readonly [TypeId]: TypeId
+  readonly [TypeId]: TypeId;
   readonly steps: NonEmptyReadonlyArray<{
     readonly provide:
       | Context.Context<Config["provides"]>
-      | Layer.Layer<Config["provides"], Config["error"], Config["requirements"]>
-    readonly attempts?: number | undefined
+      | Layer.Layer<Config["provides"], Config["error"], Config["requirements"]>;
+    readonly attempts?: number | undefined;
     readonly while?:
-      | ((input: Config["input"]) => Effect.Effect<boolean, Config["error"], Config["requirements"]>)
-      | undefined
-    readonly schedule?: Schedule.Schedule<any, Config["input"], Config["requirements"]> | undefined
-  }>
+      | ((
+          input: Config["input"],
+        ) => Effect.Effect<boolean, Config["error"], Config["requirements"]>)
+      | undefined;
+    readonly schedule?: Schedule.Schedule<any, Config["input"], Config["requirements"]> | undefined;
+  }>;
 
   /**
-   * Returns an equivalent `ExecutionPlan` with the requirements satisfied, using the current context.
+   * Returns an equivalent `ExecutionPlan` with the requirements satisfied, using the current
+   * context.
    */
   readonly captureRequirements: Effect.Effect<
     ExecutionPlan<{
-      provides: Config["provides"]
-      input: Config["input"]
-      error: Config["error"]
-      requirements: never
+      provides: Config["provides"];
+      input: Config["input"];
+      error: Config["error"];
+      requirements: never;
     }>,
     never,
     Config["requirements"]
-  >
+  >;
 }
 
 /**
@@ -146,97 +143,109 @@ export interface ExecutionPlan<
  *
  * **Details**
  *
- * `provides` tracks services supplied by plan steps, `input` tracks the error
- * input consumed by schedules and `while` predicates, `error` tracks failures
- * from plan layers or predicates, and `requirements` tracks services needed to
- * build or run the plan.
+ * `provides` tracks services supplied by plan steps, `input` tracks the error input consumed by
+ * schedules and `while` predicates, `error` tracks failures from plan layers or predicates, and
+ * `requirements` tracks services needed to build or run the plan.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export type ConfigBase = {
-  provides: any
-  input: any
-  error: any
-  requirements: any
-}
+  provides: any;
+  input: any;
+  error: any;
+  requirements: any;
+};
 
 /**
- * Create an `ExecutionPlan`, which can be used with `Effect.withExecutionPlan` or `Stream.withExecutionPlan`, allowing you to provide different resources for each step of execution until the effect succeeds or the plan is exhausted.
+ * Create an `ExecutionPlan`, which can be used with `Effect.withExecutionPlan` or
+ * `Stream.withExecutionPlan`, allowing you to provide different resources for each step of
+ * execution until the effect succeeds or the plan is exhausted.
  *
  * **Example** (Creating an execution plan)
  *
  * ```ts
- * import { Effect, ExecutionPlan, Schedule } from "effect"
- * import type { Layer } from "effect"
- * import type { LanguageModel } from "effect/unstable/ai"
+ * import { Effect, ExecutionPlan, Schedule } from "effect";
+ * import type { Layer } from "effect";
+ * import type { LanguageModel } from "effect/unstable/ai";
  *
- * declare const layerBad: Layer.Layer<LanguageModel.LanguageModel>
- * declare const layerGood: Layer.Layer<LanguageModel.LanguageModel>
+ * declare const layerBad: Layer.Layer<LanguageModel.LanguageModel>;
+ * declare const layerGood: Layer.Layer<LanguageModel.LanguageModel>;
  *
  * const ThePlan = ExecutionPlan.make(
  *   {
  *     // First try with the bad layer 2 times with a 3 second delay between attempts
  *     provide: layerBad,
  *     attempts: 2,
- *     schedule: Schedule.spaced(3000)
+ *     schedule: Schedule.spaced(3000),
  *   },
  *   // Then try with the bad layer 3 times with a 1 second delay between attempts
  *   {
  *     provide: layerBad,
  *     attempts: 3,
- *     schedule: Schedule.spaced(1000)
+ *     schedule: Schedule.spaced(1000),
  *   },
  *   // Finally try with the good layer.
  *   //
  *   // If `attempts` is omitted, the plan will only attempt once, unless a schedule is provided.
  *   {
- *     provide: layerGood
- *   }
- * )
+ *     provide: layerGood,
+ *   },
+ * );
  *
- * declare const effect: Effect.Effect<
- *   void,
- *   never,
- *   LanguageModel.LanguageModel
- * >
- * const withPlan: Effect.Effect<void> = Effect.withExecutionPlan(effect, ThePlan)
+ * declare const effect: Effect.Effect<void, never, LanguageModel.LanguageModel>;
+ * const withPlan: Effect.Effect<void> = Effect.withExecutionPlan(effect, ThePlan);
  * ```
  *
- * @category constructors
  * @since 3.16.0
+ * @category Constructors
  */
 export const make = <const Steps extends NonEmptyReadonlyArray<make.Step>>(
   ...steps: Steps & { [K in keyof Steps]: make.Step }
 ): ExecutionPlan<{
-  provides: make.StepProvides<Steps>
-  input: make.StepInput<Steps>
+  provides: make.StepProvides<Steps>;
+  input: make.StepInput<Steps>;
   error:
-    | (Steps[number]["provide"] extends Context.Context<infer _P> | Layer.Layer<infer _P, infer E, infer _R> ? E
-      : never)
-    | (Steps[number]["while"] extends (input: infer _I) => Effect.Effect<infer _A, infer _E, infer _R> ? _E : never)
+    | (Steps[number]["provide"] extends
+        | Context.Context<infer _P>
+        | Layer.Layer<infer _P, infer E, infer _R>
+        ? E
+        : never)
+    | (Steps[number]["while"] extends (
+        input: infer _I,
+      ) => Effect.Effect<infer _A, infer _E, infer _R>
+        ? _E
+        : never);
   requirements:
     | (Steps[number]["provide"] extends Layer.Layer<infer _A, infer _E, infer R> ? R : never)
-    | (Steps[number]["while"] extends (input: infer _I) => Effect.Effect<infer _A, infer _E, infer R> ? R : never)
-    | (Steps[number]["schedule"] extends Schedule.Schedule<infer _O, infer _I, infer R> ? R : never)
+    | (Steps[number]["while"] extends (
+        input: infer _I,
+      ) => Effect.Effect<infer _A, infer _E, infer R>
+        ? R
+        : never)
+    | (Steps[number]["schedule"] extends Schedule.Schedule<infer _O, infer _I, infer R>
+        ? R
+        : never);
 }> =>
-  makeProto(steps.map((options, i) => {
-    if (options.attempts && options.attempts < 1) {
-      throw new Error(`ExecutionPlan.make: step[${i}].attempts must be greater than 0`)
-    }
-    return {
-      schedule: options.schedule,
-      attempts: options.attempts,
-      while: options.while
-        ? (input: any) =>
-          effect.suspend(() => {
-            const result = options.while!(input)
-            return typeof result === "boolean" ? effect.succeed(result) : result
-          })
-        : undefined,
-      provide: options.provide
-    }
-  }) as any)
+  makeProto(
+    steps.map((options, i) => {
+      if (options.attempts && options.attempts < 1) {
+        throw new Error(`ExecutionPlan.make: step[${i}].attempts must be greater than 0`);
+      }
+      return {
+        schedule: options.schedule,
+        attempts: options.attempts,
+        while: options.while
+          ? (input: any) =>
+              effect.suspend(() => {
+                const result = options.while!(input);
+                return typeof result === "boolean" ? effect.succeed(result) : result;
+              })
+          : undefined,
+        provide: options.provide,
+      };
+    }) as any,
+  );
 
 /**
  * Namespace containing type helpers used by `ExecutionPlan.make`.
@@ -249,168 +258,178 @@ export declare namespace make {
    *
    * **Details**
    *
-   * Each step provides a `Context` or `Layer` and may limit attempts, add a
-   * `while` predicate for retry decisions, or attach a `Schedule` for retry
-   * timing.
+   * Each step provides a `Context` or `Layer` and may limit attempts, add a `while` predicate for
+   * retry decisions, or attach a `Schedule` for retry timing.
    *
-   * @category models
    * @since 3.16.0
+   * @category Models
    */
   export type Step = {
-    readonly provide: Context.Context<any> | Context.Context<never> | Layer.Any
-    readonly attempts?: number | undefined
-    readonly while?: ((input: any) => boolean | Effect.Effect<boolean, any, any>) | undefined
-    readonly schedule?: Schedule.Schedule<any, any, any> | undefined
-  }
+    readonly provide: Context.Context<any> | Context.Context<never> | Layer.Any;
+    readonly attempts?: number | undefined;
+    readonly while?: ((input: any) => boolean | Effect.Effect<boolean, any, any>) | undefined;
+    readonly schedule?: Schedule.Schedule<any, any, any> | undefined;
+  };
 
   /**
-   * Computes the intersection of services provided by a list of execution-plan
-   * steps.
+   * Computes the intersection of services provided by a list of execution-plan steps.
    *
-   * @category utility types
    * @since 3.16.1
+   * @category Utility types
    */
-  export type StepProvides<Steps extends ReadonlyArray<any>, Out = unknown> = Steps extends
-    readonly [infer Step, ...infer Rest] ? StepProvides<
-      Rest,
-      & Out
-      & (
-        (Step extends { readonly provide: Context.Context<infer P> | Layer.Layer<infer P, infer _E, infer _R> } ? P
-          : unknown)
-      )
-    > :
-    Out
+  export type StepProvides<
+    Steps extends ReadonlyArray<any>,
+    Out = unknown,
+  > = Steps extends readonly [infer Step, ...infer Rest]
+    ? StepProvides<
+        Rest,
+        Out &
+          (Step extends {
+            readonly provide: Context.Context<infer P> | Layer.Layer<infer P, infer _E, infer _R>;
+          }
+            ? P
+            : unknown)
+      >
+    : Out;
 
   /**
    * Computes the intersection of services provided by a list of execution plans.
    *
-   * @category utility types
    * @since 3.16.1
+   * @category Utility types
    */
-  export type PlanProvides<Plans extends ReadonlyArray<any>, Out = unknown> = Plans extends
-    readonly [infer Plan, ...infer Rest] ?
-    PlanProvides<Rest, Out & (Plan extends ExecutionPlan<infer T> ? T["provides"] : unknown)> :
-    Out
+  export type PlanProvides<
+    Plans extends ReadonlyArray<any>,
+    Out = unknown,
+  > = Plans extends readonly [infer Plan, ...infer Rest]
+    ? PlanProvides<Rest, Out & (Plan extends ExecutionPlan<infer T> ? T["provides"] : unknown)>
+    : Out;
 
   /**
-   * Computes the input type consumed by the `while` predicates and schedules in
-   * a list of execution-plan steps.
+   * Computes the input type consumed by the `while` predicates and schedules in a list of
+   * execution-plan steps.
    *
-   * @category utility types
    * @since 3.16.0
+   * @category Utility types
    */
-  export type StepInput<Steps extends ReadonlyArray<any>, Out = unknown> = Steps extends
-    readonly [infer Step, ...infer Rest] ? StepInput<
-      Rest,
-      & Out
-      & (
-        & (Step extends { readonly while: (input: infer I) => infer _ } ? I : unknown)
-        & (Step extends { readonly schedule: Schedule.Schedule<infer _O, infer I, infer _R> } ? I : unknown)
-      )
-    > :
-    Out
+  export type StepInput<Steps extends ReadonlyArray<any>, Out = unknown> = Steps extends readonly [
+    infer Step,
+    ...infer Rest,
+  ]
+    ? StepInput<
+        Rest,
+        Out &
+          ((Step extends { readonly while: (input: infer I) => infer _ } ? I : unknown) &
+            (Step extends { readonly schedule: Schedule.Schedule<infer _O, infer I, infer _R> }
+              ? I
+              : unknown))
+      >
+    : Out;
 
   /**
    * Computes the combined input type consumed by a list of execution plans.
    *
-   * @category utility types
    * @since 3.16.0
+   * @category Utility types
    */
-  export type PlanInput<Plans extends ReadonlyArray<any>, Out = unknown> = Plans extends
-    readonly [infer Plan, ...infer Rest] ?
-    PlanInput<Rest, Out & (Plan extends ExecutionPlan<infer T> ? T["input"] : unknown)> :
-    Out
+  export type PlanInput<Plans extends ReadonlyArray<any>, Out = unknown> = Plans extends readonly [
+    infer Plan,
+    ...infer Rest,
+  ]
+    ? PlanInput<Rest, Out & (Plan extends ExecutionPlan<infer T> ? T["input"] : unknown)>
+    : Out;
 }
 
 const Proto: Omit<ExecutionPlan<any>, "steps"> = {
   [TypeId]: TypeId,
   get captureRequirements() {
-    const self = this as any as ExecutionPlan<any>
+    const self = this as any as ExecutionPlan<any>;
     return effect.contextWith((context: Context.Context<any>) =>
-      effect.succeed(makeProto(self.steps.map((step) => ({
-        ...step,
-        provide: Layer.isLayer(step.provide)
-          ? Layer.provide(step.provide, Layer.succeedContext(context))
-          : step.provide
-      })) as any))
-    )
+      effect.succeed(
+        makeProto(
+          self.steps.map((step) => ({
+            ...step,
+            provide: Layer.isLayer(step.provide)
+              ? Layer.provide(step.provide, Layer.succeedContext(context))
+              : step.provide,
+          })) as any,
+        ),
+      ),
+    );
   },
   pipe() {
-    return pipeArguments(this, arguments)
-  }
-}
+    return pipeArguments(this, arguments);
+  },
+};
 
 const makeProto = <Provides, In, PlanE, PlanR>(
   steps: ExecutionPlan<{
-    provides: Provides
-    input: In
-    error: PlanE
-    requirements: PlanR
-  }>["steps"]
+    provides: Provides;
+    input: In;
+    error: PlanE;
+    requirements: PlanR;
+  }>["steps"],
 ) => {
-  const self = Object.create(Proto)
-  self.steps = steps
-  return self
-}
+  const self = Object.create(Proto);
+  self.steps = steps;
+  return self;
+};
 
 /**
  * Combines multiple execution plans by concatenating their steps in order.
  *
  * **When to use**
  *
- * Use to combine separately defined fallback plans into one ordered plan before
- * applying it to an effect or stream.
+ * Use to combine separately defined fallback plans into one ordered plan before applying it to an
+ * effect or stream.
  *
  * **Details**
  *
- * The resulting plan tries every step from the first plan, then every step from
- * the next plan, and so on.
+ * The resulting plan tries every step from the first plan, then every step from the next plan, and
+ * so on.
  *
- * @see {@link make} for building a plan from individual steps instead of combining existing plans
- *
- * @category combining
  * @since 3.16.0
+ * @category Combining
+ * @see {@link make} for building a plan from individual steps instead of combining existing plans
  */
 export const merge = <const Plans extends NonEmptyReadonlyArray<ExecutionPlan<any>>>(
   ...plans: Plans
 ): ExecutionPlan<{
-  provides: make.PlanProvides<Plans>
-  input: make.PlanInput<Plans>
-  error: Plans[number] extends ExecutionPlan<infer T> ? T["error"] : never
-  requirements: Plans[number] extends ExecutionPlan<infer T> ? T["requirements"] : never
-}> => makeProto(plans.flatMap((plan) => plan.steps) as any)
+  provides: make.PlanProvides<Plans>;
+  input: make.PlanInput<Plans>;
+  error: Plans[number] extends ExecutionPlan<infer T> ? T["error"] : never;
+  requirements: Plans[number] extends ExecutionPlan<infer T> ? T["requirements"] : never;
+}> => makeProto(plans.flatMap((plan) => plan.steps) as any);
 
 /**
  * Metadata describing the currently running execution-plan attempt.
  *
  * **Details**
  *
- * `attempt` is the current 1-based attempt number, and `stepIndex` is the
- * 0-based index of the plan step currently being evaluated.
+ * `attempt` is the current 1-based attempt number, and `stepIndex` is the 0-based index of the plan
+ * step currently being evaluated.
  *
- * @category metadata
  * @since 4.0.0
+ * @category Metadata
  */
 export interface Metadata {
-  readonly attempt: number
-  readonly stepIndex: number
+  readonly attempt: number;
+  readonly stepIndex: number;
 }
 
 /**
- * Context reference containing metadata for the currently running
- * execution-plan attempt.
+ * Context reference containing metadata for the currently running execution-plan attempt.
  *
  * **When to use**
  *
- * Use to read the active plan step and attempt while code is running under an
- * execution plan.
+ * Use to read the active plan step and attempt while code is running under an execution plan.
  *
- * @category metadata
  * @since 4.0.0
+ * @category Metadata
  */
 export const CurrentMetadata = Context.Reference<Metadata>("effect/ExecutionPlan/CurrentMetadata", {
   defaultValue: constant({
     attempt: 0,
-    stepIndex: 0
-  })
-})
+    stepIndex: 0,
+  }),
+});

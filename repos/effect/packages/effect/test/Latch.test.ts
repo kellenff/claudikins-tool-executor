@@ -1,33 +1,32 @@
-import { assert, describe, it } from "@effect/vitest"
-import { Effect, Latch } from "effect"
+import { assert, describe, it } from "@effect/vitest";
+import { Effect, Latch } from "effect";
 
 describe("Latch", () => {
   it.effect("release wakes current waiters and keeps the latch closed", () =>
-    Effect.gen(function*() {
-      const latch = yield* Latch.make(false)
-      const waiter = yield* Effect.forkChild(
-        Latch.await(latch),
-        { startImmediately: true }
-      )
+    Effect.gen(function* () {
+      const latch = yield* Latch.make(false);
+      const waiter = yield* Effect.forkChild(Latch.await(latch), { startImmediately: true });
 
-      assert.isUndefined(waiter.pollUnsafe())
+      assert.isUndefined(waiter.pollUnsafe());
 
-      yield* latch.release
-      yield* Effect.yieldNow
-      yield* Effect.yieldNow
+      yield* latch.release;
+      yield* Effect.yieldNow;
+      yield* Effect.yieldNow;
 
-      assert.isDefined(waiter.pollUnsafe())
-    }))
+      assert.isDefined(waiter.pollUnsafe());
+    }),
+  );
 
   it.effect("isOpen reflects the state of the latch", () =>
-    Effect.gen(function*() {
-      const latch = yield* Latch.make(false)
+    Effect.gen(function* () {
+      const latch = yield* Latch.make(false);
 
-      assert.isFalse(latch.isOpen())
+      assert.isFalse(latch.isOpen());
 
-      yield* latch.open
-      yield* Effect.yieldNow
+      yield* latch.open;
+      yield* Effect.yieldNow;
 
-      assert.isTrue(latch.isOpen())
-    }))
-})
+      assert.isTrue(latch.isOpen());
+    }),
+  );
+});

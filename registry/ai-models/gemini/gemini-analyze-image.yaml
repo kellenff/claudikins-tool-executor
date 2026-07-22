@@ -16,14 +16,14 @@ inputSchema:
     detectObjects:
       type: boolean
       default: true
-      description: 'Enable object detection with bounding boxes (returns box_2d coordinates). Default: true'
+      description: "Enable object detection with bounding boxes (returns box_2d coordinates). Default: true"
     model:
       type: string
       enum:
         - pro
         - flash
       default: flash
-      description: 'Model to use: pro (more accurate) or flash (faster). Default: flash'
+      description: "Model to use: pro (more accurate) or flash (faster). Default: flash"
     thinkingLevel:
       type: string
       enum:
@@ -41,7 +41,7 @@ inputSchema:
         - medium
         - high
       default: medium
-      description: 'Resolution for processing: low (faster), medium (balanced), high (more detail). Default: medium'
+      description: "Resolution for processing: low (faster), medium (balanced), high (more detail). Default: medium"
   required:
     - imagePath
   additionalProperties: false

@@ -15,18 +15,14 @@ import {
 } from "./constants.js";
 import type { ToolDefinition } from "./types.js";
 
-/**
- * Search result from tool search
- */
+/** Search result from tool search */
 export interface SearchResult {
   tool: ToolDefinition;
   score: number;
   matchContext?: string;
 }
 
-/**
- * Search response
- */
+/** Search response */
 export interface SearchResponse {
   results: SearchResult[];
   source: "serena" | "local";
@@ -44,20 +40,16 @@ type SerenaContentItem = {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REGISTRY_ROOT = resolve(__dirname, "..", "registry");
 
-/**
- * Dedicated Serena client for registry search (separate from sandbox)
- */
+/** Dedicated Serena client for registry search (separate from sandbox) */
 let registrySerena: Client | null = null;
 
-/**
- * Track in-flight connection promise to avoid duplicate connections
- */
+/** Track in-flight connection promise to avoid duplicate connections */
 let connectionPromise: Promise<Client | null> | null = null;
 
 /**
- * Pure: data shape for the Serena stdio transport. No I/O, fully testable.
- * Field types match the underlying SDK's `StdioServerParameters` so the spec
- * can be passed straight to the constructor without a cast.
+ * Represents the configuration required to launch and communicate with a Serena transport process.
+ * Encapsulates the executable command, its arguments, and any environment variables needed to spawn
+ * the process.
  */
 type SerenaTransportSpec = {
   readonly command: string;
@@ -66,17 +58,17 @@ type SerenaTransportSpec = {
 };
 
 /**
- * Serena MCP server is launched via `uvx --from <pkg> <entrypoint> <command>`.
- * The package pin lives in this single spec builder so transport details
- * stay discoverable in one place and can be exercised without spawning a process.
+ * Serena MCP server is launched via `uvx --from <pkg> <entrypoint> <command>`. The package pin
+ * lives in this single spec builder so transport details stay discoverable in one place and can be
+ * exercised without spawning a process.
  */
 const SERENA_PACKAGE = "git+https://github.com/oraios/serena";
 const SERENA_ENTRYPOINT = "serena";
 const SERENA_MCP_SERVER_COMMAND = "start-mcp-server";
 
 /**
- * Build the stdio transport spec for launching the Serena MCP server.
- * Pure: no I/O, no globals read beyond `process.env` passed by reference.
+ * Build the stdio transport spec for launching the Serena MCP server. Pure: no I/O, no globals read
+ * beyond `process.env` passed by reference.
  */
 export const buildSerenaTransportSpec = (): SerenaTransportSpec => ({
   command: "uvx",
@@ -85,20 +77,39 @@ export const buildSerenaTransportSpec = (): SerenaTransportSpec => ({
 });
 
 /**
- * Tagged failure modes for `connectRegistrySerena`. Distinguishing
- * transport-spawn failures from `activate_project` rejections lets callers
- * log a precise cause without inspecting thrown values.
+ * Represents an error that can occur while connecting to or interacting with the Serena registry.
+ *
+ * This is a discriminated union of error variants, where each variant is identified by its `tag`
+ * property. The `cause` field holds the underlying error or reason that triggered the failure, and
+ * may be of any type.
  */
 type RegistrySerenaConnectError =
   | { readonly tag: "connect_failed"; readonly cause: unknown }
   | { readonly tag: "activate_project_failed"; readonly cause: unknown };
 
+/**
+ * Represents the outcome of a registry Serena connection attempt.
+ *
+ * This is a discriminated union indicating either a successful connection, in which case the
+ * resulting {@link Client} is provided, or a failed connection, in which case the corresponding
+ * {@link RegistrySerenaConnectError} describing the failure is returned.
+ *
+ * Consumers should narrow on the `ok` field to safely access the type-specific payload.
+ */
 type RegistrySerenaConnectResult =
   | { readonly ok: true; readonly client: Client }
   | { readonly ok: false; readonly error: RegistrySerenaConnectError };
 
 /**
- * Get or create the registry Serena client
+ * Returns the singleton Serena registry client, establishing a connection on first call.
+ *
+ * If a client instance already exists, it is returned immediately. If a connection attempt is
+ * currently in progress, the returned promise resolves with the outcome of that ongoing attempt,
+ * preventing duplicate concurrent connections. Otherwise, a new connection is initiated and the
+ * resulting client (or `null` on failure) is cached for subsequent calls.
+ *
+ * @returns A promise that resolves to the connected `Client` instance, or `null` if the connection
+ *   attempt fails.
  */
 async function getRegistrySerena(): Promise<Client | null> {
   // Already connected
@@ -127,10 +138,9 @@ async function getRegistrySerena(): Promise<Client | null> {
 }
 
 /**
- * Connect to the registry Serena MCP server and activate the registry project.
- * Returns a tagged result; the caller (typically `getRegistrySerena`) decides
- * whether to retain the client. Pure with respect to module state: does not
- * assign to `registrySerena` itself.
+ * Connect to the registry Serena MCP server and activate the registry project. Returns a tagged
+ * result; the caller (typically `getRegistrySerena`) decides whether to retain the client. Pure
+ * with respect to module state: does not assign to `registrySerena` itself.
  */
 export async function connectRegistrySerena(): Promise<RegistrySerenaConnectResult> {
   const client = new Client(
@@ -160,8 +170,8 @@ export async function connectRegistrySerena(): Promise<RegistrySerenaConnectResu
 }
 
 /**
- * Escapes regex metacharacters in a single search term so the term can be
- * embedded into a lookahead pattern without altering its literal meaning.
+ * Escapes regex metacharacters in a single search term so the term can be embedded into a lookahead
+ * pattern without altering its literal meaning.
  *
  * @param {string} term - Raw search term, may contain any character.
  * @returns {string} The term with regex metacharacters (`.*+?^${}()|[]\`) escaped.
@@ -170,8 +180,8 @@ export const escapeRegexTerm = (term: string): string =>
   term.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 /**
- * Splits a free-text search query into individual terms on whitespace,
- * discarding empty fragments. Whitespace-only input yields `[]`.
+ * Splits a free-text search query into individual terms on whitespace, discarding empty fragments.
+ * Whitespace-only input yields `[]`.
  *
  * @param {string} query - Free-text query string.
  * @returns {string[]} Non-empty term fragments in original order.
@@ -181,10 +191,10 @@ export const tokenizeQuery = (query: string): string[] => query.split(/\s+/).fil
 /**
  * Builds a regex substring pattern for Serena's `search_for_pattern`.
  *
- * For a single term, returns the term as-is (already escaped by the caller).
- * For multiple terms, wraps each in a lookahead `(?=.*term)` so all terms must
- * appear in any order, terminating with `.*`. For an empty array, returns `.*`
- * (matches anything — preserves the current implicit behavior).
+ * For a single term, returns the term as-is (already escaped by the caller). For multiple terms,
+ * wraps each in a lookahead `(?=.*term)` so all terms must appear in any order, terminating with
+ * `.*`. For an empty array, returns `.*` (matches anything — preserves the current implicit
+ * behavior).
  *
  * @param {string[]} terms - Pre-escaped search terms.
  * @returns {string} The substring pattern to pass to `search_for_pattern`.
@@ -202,8 +212,8 @@ export const buildLookaheadPattern = (terms: string[]): string => {
 /**
  * Extracts every registry-shaped YAML file path from a single text snippet.
  *
- * Matches substrings of the form `<category>/<server>/<file>.yaml` (or `.yml`),
- * case-insensitive. Returns an empty array if no matches.
+ * Matches substrings of the form `<category>/<server>/<file>.yaml` (or `.yml`), case-insensitive.
+ * Returns an empty array if no matches.
  *
  * @param {string} text - Free-text snippet (e.g., one item from a Serena response).
  * @returns {string[]} Matched path substrings in source order, possibly empty.
@@ -222,9 +232,7 @@ export const dedupePaths = (paths: string[]): string[] => {
   return paths.filter((path) => (seen.has(path) ? false : seen.add(path)));
 };
 
-/**
- * Load a tool definition from a YAML file
- */
+/** Load a tool definition from a YAML file */
 export async function loadToolDefinition(filePath: string): Promise<ToolDefinition | null> {
   try {
     const content = await readFile(filePath, "utf-8");
@@ -244,13 +252,12 @@ export async function loadToolDefinition(filePath: string): Promise<ToolDefiniti
 }
 
 /**
- * Resolves a registry-relative path against REGISTRY_ROOT, loads its
- * ToolDefinition, and packages it as a SearchResult. Returns null if the
- * file cannot be loaded.
+ * Resolves a registry-relative path against REGISTRY_ROOT, loads its ToolDefinition, and packages
+ * it as a SearchResult. Returns null if the file cannot be loaded.
  *
  * @param {string} match - Path relative to the registry root.
- * @param {string} contextText - Source text from which the match was discovered;
- *   truncated to MATCH_CONTEXT_CHARS for the SearchResult.matchContext field.
+ * @param {string} contextText - Source text from which the match was discovered; truncated to
+ *   MATCH_CONTEXT_CHARS for the SearchResult.matchContext field.
  * @returns {Promise<SearchResult | null>} The result, or null if the file failed to load.
  */
 const loadToolResult = async (match: string, contextText: string): Promise<SearchResult | null> => {
@@ -267,7 +274,17 @@ const loadToolResult = async (match: string, contextText: string): Promise<Searc
 };
 
 /**
- * Search tools using Registry Serena (dedicated instance for tool search)
+ * Searches the registry using the Serena tool by tokenizing the query, building a lookahead regex
+ * pattern, and invoking the underlying search_for_pattern capability with surrounding context.
+ *
+ * Results are deduplicated by path and limited to the specified count. Each surviving match is
+ * enriched through {@link loadToolResult} before being returned. Any error encountered during the
+ * search is logged and results in a `null` return value.
+ *
+ * @param query - Raw search query to be tokenized and matched.
+ * @param limit - Maximum number of results to return.
+ * @returns A promise resolving to an array of search results, or `null` if the registry is
+ *   unavailable, the response is empty, or an error occurs during the search.
  */
 const searchWithSerena = async (query: string, limit: number): Promise<SearchResult[] | null> => {
   try {
@@ -311,7 +328,10 @@ const searchWithSerena = async (query: string, limit: number): Promise<SearchRes
 };
 
 /**
- * Load all tools for BM25 indexing
+ * Loads all tool definitions from YAML files located in the registry root directory.
+ *
+ * @returns A promise that resolves to an array of tool definitions parsed from the discovered YAML
+ *   files.
  */
 async function loadAllTools(): Promise<ToolDefinition[]> {
   const files = await glob("**/*.{yaml,yml}", {
@@ -330,7 +350,13 @@ async function loadAllTools(): Promise<ToolDefinition[]> {
 }
 
 /**
- * Search tools using local glob + text matching (fallback)
+ * Performs a local search for tools matching the given query using BM25 ranking with a fallback to
+ * simple term matching across tool definitions.
+ *
+ * @param {string} query - The search query string to match against tool definitions.
+ * @param {number} limit - The maximum number of results to return.
+ * @returns {Promise<SearchResult[]>} A promise that resolves to an array of search results sorted
+ *   by relevance score.
  */
 async function searchLocally(query: string, limit: number): Promise<SearchResult[]> {
   // Try BM25 first (better ranking)
@@ -402,7 +428,16 @@ async function searchLocally(query: string, limit: number): Promise<SearchResult
 }
 
 /**
- * Search for tools matching a query
+ * Searches for tools matching the given query, with pagination support.
+ *
+ * Attempts semantic search first and falls back to text-based search if unavailable or no matches
+ * are found.
+ *
+ * @param query - The search query string.
+ * @param limit - Maximum number of results to return. Defaults to DEFAULT_SEARCH_LIMIT.
+ * @param offset - Number of results to skip for pagination. Defaults to 0.
+ * @returns A promise that resolves to a SearchResponse containing the results, source, total count,
+ *   and optional fallback reason or suggestion.
  */
 export async function searchTools(
   query: string,
@@ -450,9 +485,7 @@ export async function searchTools(
   };
 }
 
-/**
- * Get all available categories in the registry
- */
+/** Get all available categories in the registry */
 export async function getCategories(): Promise<string[]> {
   const files = await glob("*/", {
     cwd: REGISTRY_ROOT,
@@ -462,9 +495,7 @@ export async function getCategories(): Promise<string[]> {
   return files.map((file) => file.replace(/\/$/, ""));
 }
 
-/**
- * List all tools in a category
- */
+/** List all tools in a category */
 export async function listToolsInCategory(category: string): Promise<ToolDefinition[]> {
   const categoryPath = resolve(REGISTRY_ROOT, category);
   const files = await glob("**/*.{yaml,yml}", {
@@ -482,9 +513,7 @@ export async function listToolsInCategory(category: string): Promise<ToolDefinit
   return tools;
 }
 
-/**
- * Get a specific tool by name (for full schema retrieval)
- */
+/** Get a specific tool by name (for full schema retrieval) */
 export async function getToolByName(toolName: string): Promise<ToolDefinition | null> {
   // Search all YAML files in registry
   const files = await glob("**/*.{yaml,yml}", {
@@ -502,9 +531,7 @@ export async function getToolByName(toolName: string): Promise<ToolDefinition | 
   return null;
 }
 
-/**
- * Disconnect the registry Serena client (for cleanup)
- */
+/** Disconnect the registry Serena client (for cleanup) */
 export async function disconnectRegistrySerena(): Promise<void> {
   if (registrySerena) {
     try {

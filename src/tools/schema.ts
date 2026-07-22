@@ -1,9 +1,7 @@
 import { getToolByName } from "../search.js";
 import type { GetToolSchemaInput } from "../schemas.js";
 
-/**
- * Get full inputSchema for a specific tool
- */
+/** Get full inputSchema for a specific tool */
 export async function handleGetToolSchema(params: GetToolSchemaInput): Promise<
   | {
       content: { type: "text"; text: string }[];

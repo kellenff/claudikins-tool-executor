@@ -86,10 +86,10 @@ inputSchema:
         `configurationName`.
     timeout:
       type: integer
-      description: 'Timeout in milliseconds to wait for the debug session to start. Default: 60000.'
+      description: "Timeout in milliseconds to wait for the debug session to start. Default: 60000."
     graceWaitMs:
       type: integer
-      description: 'Grace wait in milliseconds after session starts to refresh state. Default: 2000.'
+      description: "Grace wait in milliseconds after session starts to refresh state. Default: 2000."
     programArguments:
       type: string
       description: >-

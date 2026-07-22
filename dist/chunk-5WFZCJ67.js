@@ -1,0 +1,2 @@
+import {a}from'./chunk-GIDF7KAM.js';async function n(e){let t=await a(e.code,e.timeout);return {content:[{type:"text",text:JSON.stringify(t,null,2)}],structuredContent:{...t},isError:!!t.error}}export{n as a};//# sourceMappingURL=chunk-5WFZCJ67.js.map
+//# sourceMappingURL=chunk-5WFZCJ67.js.map

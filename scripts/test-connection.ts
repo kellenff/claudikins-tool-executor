@@ -1,7 +1,5 @@
 #!/usr/bin/env npx tsx
-/**
- * Quick integration test - verify MCP client connections work
- */
+/** Quick integration test - verify MCP client connections work */
 import "dotenv/config";
 import { disconnectAll, getClient, initClientStates } from "../src/sandbox/clients.js";
 

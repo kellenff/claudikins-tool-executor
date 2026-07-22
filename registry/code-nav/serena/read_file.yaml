@@ -17,7 +17,7 @@ inputSchema:
     end_line:
       anyOf:
         - type: integer
-        - type: 'null'
+        - type: "null"
       default: null
       title: End Line
       description: The 0-based index of the last line to be retrieved (inclusive). If None, read until the end of the file.

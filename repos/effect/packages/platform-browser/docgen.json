@@ -13,8 +13,6 @@
     "types": ["node"],
     "rewriteRelativeImportExtensions": true,
     "allowImportingTsExtensions": true,
-    "plugins": [
-      { "name": "@effect/language-service", "includeSuggestionsInTsc": false }
-    ]
+    "plugins": [{ "name": "@effect/language-service", "includeSuggestionsInTsc": false }]
   }
 }

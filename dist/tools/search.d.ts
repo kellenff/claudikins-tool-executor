@@ -1,9 +1,9 @@
-import { S as SearchToolsInput } from '../schemas-BvvqupNu.js';
+import { S as SearchToolsInput } from '../schemas-9t_yp478.js';
 import 'zod';
 
 /**
- * Search for MCP tools across all wrapped servers
- * Returns MINIMAL results - just enough to identify and call the tool
+ * Search for MCP tools across all wrapped servers Returns MINIMAL results - just enough to identify
+ * and call the tool
  */
 declare function handleSearchTools(params: SearchToolsInput): Promise<{
     content: {

@@ -14,18 +14,18 @@ inputSchema:
     aspectRatio:
       type: string
       enum:
-        - '1:1'
-        - '2:3'
-        - '3:2'
-        - '3:4'
-        - '4:3'
-        - '4:5'
-        - '5:4'
-        - '9:16'
-        - '16:9'
-        - '21:9'
-      default: '1:1'
-      description: 'Aspect ratio: 1:1 (square), 16:9 (widescreen), 9:16 (portrait/mobile), 21:9 (ultrawide), etc.'
+        - "1:1"
+        - "2:3"
+        - "3:2"
+        - "3:4"
+        - "4:3"
+        - "4:5"
+        - "5:4"
+        - "9:16"
+        - "16:9"
+        - "21:9"
+      default: "1:1"
+      description: "Aspect ratio: 1:1 (square), 16:9 (widescreen), 9:16 (portrait/mobile), 21:9 (ultrawide), etc."
     imageSize:
       type: string
       enum:
@@ -33,7 +33,7 @@ inputSchema:
         - 2K
         - 4K
       default: 2K
-      description: 'Resolution: 1K (fast), 2K (balanced, default), 4K (highest quality)'
+      description: "Resolution: 1K (fast), 2K (balanced, default), 4K (highest quality)"
     useGoogleSearch:
       type: boolean
       default: false

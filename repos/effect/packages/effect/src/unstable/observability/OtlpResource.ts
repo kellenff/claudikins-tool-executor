@@ -1,29 +1,28 @@
 /**
  * Builds OTLP resource metadata shared by exported telemetry.
  *
- * An OTLP resource describes the service and other attributes attached to every
- * exported log, metric, or trace. This module builds resources from explicit
- * options or OpenTelemetry environment variables and converts JavaScript values
- * into OTLP attribute values.
+ * An OTLP resource describes the service and other attributes attached to every exported log,
+ * metric, or trace. This module builds resources from explicit options or OpenTelemetry environment
+ * variables and converts JavaScript values into OTLP attribute values.
  *
  * @since 4.0.0
  */
-import * as Config from "../../Config.ts"
-import * as Effect from "../../Effect.ts"
-import { format } from "../../Formatter.ts"
-import * as Schema from "../../Schema.ts"
+import * as Config from "../../Config.ts";
+import * as Effect from "../../Effect.ts";
+import { format } from "../../Formatter.ts";
+import * as Schema from "../../Schema.ts";
 
 /**
  * OTLP resource metadata attached to exported logs, metrics, and traces.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface Resource {
   /** Resource attributes */
-  attributes: Array<KeyValue>
+  attributes: Array<KeyValue>;
   /** Resource droppedAttributesCount */
-  droppedAttributesCount: number
+  droppedAttributesCount: number;
 }
 
 /**
@@ -31,258 +30,258 @@ export interface Resource {
  *
  * **Details**
  *
- * The resource always includes `service.name`, includes `service.version` when
- * provided, and converts custom attributes into OTLP attribute values.
+ * The resource always includes `service.name`, includes `service.version` when provided, and
+ * converts custom attributes into OTLP attribute values.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const make = (options: {
-  readonly serviceName: string
-  readonly serviceVersion?: string | undefined
-  readonly attributes?: Record<string, unknown> | undefined
+  readonly serviceName: string;
+  readonly serviceVersion?: string | undefined;
+  readonly attributes?: Record<string, unknown> | undefined;
 }): Resource => {
   const resourceAttributes = options.attributes
     ? entriesToAttributes(Object.entries(options.attributes))
-    : []
+    : [];
   resourceAttributes.push({
     key: "service.name",
     value: {
-      stringValue: options.serviceName
-    }
-  })
+      stringValue: options.serviceName,
+    },
+  });
   if (options.serviceVersion) {
     resourceAttributes.push({
       key: "service.version",
       value: {
-        stringValue: options.serviceVersion
-      }
-    })
+        stringValue: options.serviceVersion,
+      },
+    });
   }
 
   return {
     attributes: resourceAttributes,
-    droppedAttributesCount: 0
-  }
-}
+    droppedAttributesCount: 0,
+  };
+};
 
 /**
- * Creates an OTLP resource from explicit options and OpenTelemetry
- * configuration.
+ * Creates an OTLP resource from explicit options and OpenTelemetry configuration.
  *
  * **Details**
  *
- * `OTEL_RESOURCE_ATTRIBUTES`, `OTEL_SERVICE_NAME`, and
- * `OTEL_SERVICE_VERSION` override explicit options; missing required
- * configuration is converted to a defect.
+ * `OTEL_RESOURCE_ATTRIBUTES`, `OTEL_SERVICE_NAME`, and `OTEL_SERVICE_VERSION` override explicit
+ * options; missing required configuration is converted to a defect.
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const fromConfig: (
-  options?: {
-    readonly serviceName?: string | undefined
-    readonly serviceVersion?: string | undefined
-    readonly attributes?: Record<string, unknown> | undefined
-  } | undefined
-) => Effect.Effect<Resource> = Effect.fnUntraced(function*(options?: {
-  readonly serviceName?: string | undefined
-  readonly serviceVersion?: string | undefined
-  readonly attributes?: Record<string, unknown> | undefined
+  options?:
+    | {
+        readonly serviceName?: string | undefined;
+        readonly serviceVersion?: string | undefined;
+        readonly attributes?: Record<string, unknown> | undefined;
+      }
+    | undefined,
+) => Effect.Effect<Resource> = Effect.fnUntraced(function* (options?: {
+  readonly serviceName?: string | undefined;
+  readonly serviceVersion?: string | undefined;
+  readonly attributes?: Record<string, unknown> | undefined;
 }) {
   const env = yield* Config.schema(
     Schema.UndefinedOr(Config.Record(Schema.String, Schema.String)),
-    "OTEL_RESOURCE_ATTRIBUTES"
-  )
+    "OTEL_RESOURCE_ATTRIBUTES",
+  );
 
-  const serviceName = (yield* Config.schema(Schema.UndefinedOr(Schema.String), "OTEL_SERVICE_NAME"))
-    ?? env?.["service.name"] as string | undefined
-    ?? options?.attributes?.["service.name"] as string | undefined
-    ?? options?.serviceName
-    ?? (yield* Config.string("OTEL_SERVICE_NAME"))
+  const serviceName =
+    (yield* Config.schema(Schema.UndefinedOr(Schema.String), "OTEL_SERVICE_NAME")) ??
+    (env?.["service.name"] as string | undefined) ??
+    (options?.attributes?.["service.name"] as string | undefined) ??
+    options?.serviceName ??
+    (yield* Config.string("OTEL_SERVICE_NAME"));
 
-  const serviceVersion = (yield* Config.schema(Schema.UndefinedOr(Schema.String), "OTEL_SERVICE_VERSION"))
-    ?? env?.["service.version"] as string | undefined
-    ?? options?.attributes?.["service.version"] as string | undefined
-    ?? options?.serviceVersion
+  const serviceVersion =
+    (yield* Config.schema(Schema.UndefinedOr(Schema.String), "OTEL_SERVICE_VERSION")) ??
+    (env?.["service.version"] as string | undefined) ??
+    (options?.attributes?.["service.version"] as string | undefined) ??
+    options?.serviceVersion;
 
   const attributes = {
     ...options?.attributes,
-    ...env
-  }
+    ...env,
+  };
 
-  delete attributes["service.name"]
-  delete attributes["service.version"]
+  delete attributes["service.name"];
+  delete attributes["service.version"];
 
   return make({
     serviceName,
     serviceVersion,
-    attributes
-  })
-}, Effect.orDie)
+    attributes,
+  });
+}, Effect.orDie);
 
 /**
  * Returns the `service.name` attribute from an OTLP resource.
  *
  * **When to use**
  *
- * Use when an OTLP resource is known to contain a string `service.name` and
- * throwing is acceptable if that invariant is broken.
+ * Use when an OTLP resource is known to contain a string `service.name` and throwing is acceptable
+ * if that invariant is broken.
  *
  * **Gotchas**
  *
  * Throws if the resource does not contain a string `service.name` attribute.
  *
- * @category Attributes
  * @since 4.0.0
+ * @category Attributes
  */
 export const serviceNameUnsafe = (resource: Resource): string => {
-  const serviceNameAttribute = resource.attributes.find(
-    (attr) => attr.key === "service.name"
-  )
+  const serviceNameAttribute = resource.attributes.find((attr) => attr.key === "service.name");
   if (!serviceNameAttribute || !serviceNameAttribute.value.stringValue) {
-    throw new Error("Resource does not contain a service name")
+    throw new Error("Resource does not contain a service name");
   }
-  return serviceNameAttribute.value.stringValue
-}
+  return serviceNameAttribute.value.stringValue;
+};
 
 /**
  * Converts key/value entries into OTLP `KeyValue` attributes.
  *
- * @category Attributes
  * @since 4.0.0
+ * @category Attributes
  */
 export const entriesToAttributes = (entries: Iterable<[string, unknown]>): Array<KeyValue> => {
-  const attributes: Array<KeyValue> = []
+  const attributes: Array<KeyValue> = [];
   for (const [key, value] of entries) {
     attributes.push({
       key,
-      value: unknownToAttributeValue(value)
-    })
+      value: unknownToAttributeValue(value),
+    });
   }
-  return attributes
-}
+  return attributes;
+};
 
 /**
  * Converts an arbitrary JavaScript value into an OTLP `AnyValue`.
  *
  * **Details**
  *
- * Arrays are converted recursively, primitive values use their matching OTLP
- * fields, and unsupported values are formatted as strings.
+ * Arrays are converted recursively, primitive values use their matching OTLP fields, and
+ * unsupported values are formatted as strings.
  *
- * @category Attributes
  * @since 4.0.0
+ * @category Attributes
  */
 export const unknownToAttributeValue = (value: unknown): AnyValue => {
   if (Array.isArray(value)) {
     return {
       arrayValue: {
-        values: value.map(unknownToAttributeValue)
-      }
-    }
+        values: value.map(unknownToAttributeValue),
+      },
+    };
   }
   switch (typeof value) {
     case "string":
       return {
-        stringValue: value
-      }
+        stringValue: value,
+      };
     case "bigint":
       return {
-        intValue: Number(value)
-      }
+        intValue: Number(value),
+      };
     case "number":
       return Number.isInteger(value)
         ? {
-          intValue: value
-        }
+            intValue: value,
+          }
         : {
-          doubleValue: value
-        }
+            doubleValue: value,
+          };
     case "boolean":
       return {
-        boolValue: value
-      }
+        boolValue: value,
+      };
     default:
       return {
-        stringValue: format(value)
-      }
+        stringValue: format(value),
+      };
   }
-}
+};
 
 /**
  * An OTLP attribute represented as a string key and typed value.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface KeyValue {
   /** KeyValue key */
-  key: string
+  key: string;
   /** KeyValue value */
-  value: AnyValue
+  value: AnyValue;
 }
 
 /**
  * OTLP `AnyValue` payload for scalar, array, key/value-list, or byte values.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface AnyValue {
   /** AnyValue stringValue */
-  stringValue?: string | null
+  stringValue?: string | null;
   /** AnyValue boolValue */
-  boolValue?: boolean | null
+  boolValue?: boolean | null;
   /** AnyValue intValue */
-  intValue?: number | null
+  intValue?: number | null;
   /** AnyValue doubleValue */
-  doubleValue?: number | null
+  doubleValue?: number | null;
   /** AnyValue arrayValue */
-  arrayValue?: ArrayValue
+  arrayValue?: ArrayValue;
   /** AnyValue kvlistValue */
-  kvlistValue?: KeyValueList
+  kvlistValue?: KeyValueList;
   /** AnyValue bytesValue */
-  bytesValue?: Uint8Array
+  bytesValue?: Uint8Array;
 }
 
 /**
  * OTLP array value containing nested `AnyValue` entries.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface ArrayValue {
   /** ArrayValue values */
-  values: Array<AnyValue>
+  values: Array<AnyValue>;
 }
 
 /**
  * OTLP key/value-list value containing nested attributes.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface KeyValueList {
   /** KeyValueList values */
-  values: Array<KeyValue>
+  values: Array<KeyValue>;
 }
 
 /**
  * Low and high 32-bit parts of a 64-bit integer value.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface LongBits {
-  low: number
-  high: number
+  low: number;
+  high: number;
 }
 
 /**
  * Accepted runtime representations for an OTLP/protobuf fixed 64-bit value.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export type Fixed64 = LongBits | string | number
+export type Fixed64 = LongBits | string | number;

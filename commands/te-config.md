@@ -37,6 +37,7 @@ You are orchestrating Tool Executor configuration changes with user guidance at 
 ## Post-Configuration
 
 After any configuration changes, remind the user to:
+
 1. Run `npm run extract`
 2. Restart Claude Code
 

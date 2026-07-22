@@ -27,12 +27,7 @@ Create `tool-executor.config.json` in the project root:
       "name": "serena",
       "displayName": "Serena",
       "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/oraios/serena",
-        "serena",
-        "start-mcp-server"
-      ],
+      "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
       "trusted": true
     },
     {

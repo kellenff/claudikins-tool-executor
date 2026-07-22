@@ -16,8 +16,6 @@
       "effect": ["../../../effect/src/index.js"],
       "effect/*": ["../../../effect/src/*.js"]
     },
-    "plugins": [
-      { "name": "@effect/language-service", "includeSuggestionsInTsc": false }
-    ]
+    "plugins": [{ "name": "@effect/language-service", "includeSuggestionsInTsc": false }]
   }
 }

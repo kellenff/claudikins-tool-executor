@@ -49,11 +49,11 @@ inputSchema:
       type: string
     offset:
       default: 0
-      description: 'Number of items to skip (default: 0).'
+      description: "Number of items to skip (default: 0)."
       type: number
     limit:
       default: 100
-      description: 'Maximum number of items to return (default: 100).'
+      description: "Maximum number of items to return (default: 100)."
       type: number
   required:
     - datasetId

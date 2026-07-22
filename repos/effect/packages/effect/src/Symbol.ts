@@ -1,13 +1,12 @@
 /**
- * The `Symbol` module contains the runtime predicate for JavaScript primitive
- * `symbol` values. It is most useful at boundaries where a value is `unknown`
- * and must be narrowed before it can be used as a symbol key, identifier, or
- * discriminant.
+ * The `Symbol` module contains the runtime predicate for JavaScript primitive `symbol` values. It
+ * is most useful at boundaries where a value is `unknown` and must be narrowed before it can be
+ * used as a symbol key, identifier, or discriminant.
  *
  * @since 2.0.0
  */
 
-import * as predicate from "./Predicate.ts"
+import * as predicate from "./Predicate.ts";
 
 /**
  * Checks whether a value is a `symbol`.
@@ -19,13 +18,13 @@ import * as predicate from "./Predicate.ts"
  * **Example** (Checking for symbols)
  *
  * ```ts
- * import { Symbol } from "effect"
+ * import { Symbol } from "effect";
  *
- * console.log(Symbol.isSymbol(globalThis.Symbol.for("a"))) // true
- * console.log(Symbol.isSymbol("a")) // false
+ * console.log(Symbol.isSymbol(globalThis.Symbol.for("a"))); // true
+ * console.log(Symbol.isSymbol("a")); // false
  * ```
  *
- * @category guards
  * @since 2.0.0
+ * @category Guards
  */
-export const isSymbol: (u: unknown) => u is symbol = predicate.isSymbol
+export const isSymbol: (u: unknown) => u is symbol = predicate.isSymbol;

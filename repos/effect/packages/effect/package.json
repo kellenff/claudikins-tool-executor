@@ -1,30 +1,31 @@
 {
   "name": "effect",
-  "type": "module",
   "version": "4.0.0-beta.100",
-  "license": "MIT",
   "description": "The missing standard library for TypeScript, for writing production-grade software.",
+  "keywords": [
+    "concurrency",
+    "error-handling",
+    "observability",
+    "typescript"
+  ],
   "homepage": "https://effect.website",
+  "bugs": {
+    "url": "https://github.com/Effect-TS/effect/issues"
+  },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Effect-TS/effect.git",
     "directory": "packages/effect"
   },
-  "bugs": {
-    "url": "https://github.com/Effect-TS/effect/issues"
-  },
-  "tags": [
-    "typescript",
-    "error-handling",
-    "concurrency",
-    "observability"
+  "files": [
+    "src/**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
   ],
-  "keywords": [
-    "typescript",
-    "error-handling",
-    "concurrency",
-    "observability"
-  ],
+  "type": "module",
   "sideEffects": [],
   "exports": {
     "./package.json": "./package.json",
@@ -54,16 +55,7 @@
     "./unstable/cluster/internal/*": null,
     "./*/index": null
   },
-  "files": [
-    "src/**/*.ts",
-    "dist/**/*.js",
-    "dist/**/*.js.map",
-    "dist/**/*.d.ts",
-    "dist/**/*.d.ts.map"
-  ],
   "publishConfig": {
-    "access": "public",
-    "provenance": true,
     "exports": {
       "./package.json": "./package.json",
       ".": "./dist/index.js",
@@ -91,7 +83,9 @@
       "./unstable/cli/internal/*": null,
       "./unstable/cluster/internal/*": null,
       "./*/index": null
-    }
+    },
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "codegen": "effect-utils codegen",
@@ -100,16 +94,6 @@
     "check": "tsc -b tsconfig.json",
     "test": "vitest --sequence.concurrent=false",
     "coverage": "vitest --run --coverage --sequence.concurrent=false"
-  },
-  "devDependencies": {
-    "@types/ini": "^4.1.1",
-    "@types/node": "^26.1.1",
-    "ajv": "^8.20.0",
-    "arktype": "^2.2.3",
-    "ast-types": "^0.14.2",
-    "immer": "^11.1.11",
-    "tinybench": "^6.0.2",
-    "valibot": "^1.4.2"
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
@@ -122,5 +106,21 @@
     "toml": "^4.1.2",
     "uuid": "^14.0.1",
     "yaml": "^2.9.0"
-  }
+  },
+  "devDependencies": {
+    "@types/ini": "^4.1.1",
+    "@types/node": "^26.1.1",
+    "ajv": "^8.20.0",
+    "arktype": "^2.2.3",
+    "ast-types": "^0.14.2",
+    "immer": "^11.1.11",
+    "tinybench": "^6.0.2",
+    "valibot": "^1.4.2"
+  },
+  "tags": [
+    "typescript",
+    "error-handling",
+    "concurrency",
+    "observability"
+  ]
 }

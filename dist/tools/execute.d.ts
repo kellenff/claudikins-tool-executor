@@ -1,9 +1,7 @@
-import { E as ExecuteCodeInput } from '../schemas-BvvqupNu.js';
+import { E as ExecuteCodeInput } from '../schemas-9t_yp478.js';
 import 'zod';
 
-/**
- * Execute TypeScript/JavaScript code in sandbox
- */
+/** Execute TypeScript/JavaScript code in sandbox */
 declare function handleExecuteCode(params: ExecuteCodeInput): Promise<{
     content: {
         type: "text";

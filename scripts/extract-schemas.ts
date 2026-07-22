@@ -13,9 +13,7 @@ import { join } from "node:path";
 import yaml from "js-yaml";
 import { MCP_CLIENT_VERSION } from "../src/constants.js";
 
-/**
- * Server configuration with category mapping
- */
+/** Server configuration with category mapping */
 interface ServerConfig {
   name: string;
   displayName: string;
@@ -146,9 +144,7 @@ const RESERVED_GLOBAL_BINDINGS = new Set(["console", "workspace", "clients", "gl
 const SERVER_BINDINGS = new Map<string, string>();
 const usedBindings = new Set<string>(["console", "workspace", "clients", "globalThis"]);
 
-/**
- * Connect to an MCP server and extract tool schemas
- */
+/** Connect to an MCP server and extract tool schemas */
 async function extractFromServer(config: ServerConfig): Promise<void> {
   console.log(`\nConnecting to ${config.displayName}...`);
 
@@ -218,9 +214,7 @@ async function extractFromServer(config: ServerConfig): Promise<void> {
   }
 }
 
-/**
- * Generate a basic example for a tool
- */
+/** Generate a basic example for a tool */
 function generateExample(serverName: string, toolName: string, inputSchema: unknown): string {
   const schema = inputSchema as {
     properties?: Record<string, { type?: string; description?: string }>;
@@ -245,9 +239,7 @@ function generateExample(serverName: string, toolName: string, inputSchema: unkn
   return `await ${serverBinding}["${toolName}"]({\n${args}\n});`;
 }
 
-/**
- * Match execute_code sandbox bindings for server names that are not valid JS identifiers.
- */
+/** Match execute_code sandbox bindings for server names that are not valid JS identifiers. */
 function toSandboxIdentifier(serverName: string): string {
   const identifier = serverName.replace(/[^a-zA-Z0-9_$]/g, "_") || "_";
   return /^[0-9]/.test(identifier) ? `_${identifier}` : identifier;
@@ -278,16 +270,12 @@ function getServerBinding(serverName: string): string {
   return candidate;
 }
 
-/**
- * Quote input object keys only when JavaScript requires it.
- */
+/** Quote input object keys only when JavaScript requires it. */
 function toObjectKey(name: string): string {
   return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
 }
 
-/**
- * Get a placeholder value for a property type
- */
+/** Get a placeholder value for a property type */
 function getPlaceholder(type: string | undefined, name: string): string {
   switch (type) {
     case "string":
@@ -306,16 +294,12 @@ function getPlaceholder(type: string | undefined, name: string): string {
   }
 }
 
-/**
- * Sanitize a tool name for use as a filename
- */
+/** Sanitize a tool name for use as a filename */
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 
-/**
- * Main entry point
- */
+/** Main entry point */
 async function main(): Promise<void> {
   console.log("Tool Schema Extractor");
   console.log("=====================");

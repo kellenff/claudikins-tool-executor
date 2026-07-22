@@ -33,12 +33,12 @@ You are orchestrating Tool Executor diagnostics with clear reporting at each ste
 
 ## Health Check Items
 
-| Check | Command | Expected |
-|-------|---------|----------|
-| Build current | `node --check dist/index.js dist/search.js dist/config.js dist/cli.js` | Exit 0 |
-| Tests pass | Registry and runtime health checks | No parse/runtime check failures |
-| Registry valid | Parse `registry/**/*.yaml` with `node --input-type=module` and `js-yaml` | YAML parses cleanly |
-| Workspace clean | Check `./workspace/` | Exists, writable |
+| Check           | Command                                                                  | Expected                        |
+| --------------- | ------------------------------------------------------------------------ | ------------------------------- |
+| Build current   | `node --check dist/index.js dist/search.js dist/config.js dist/cli.js`   | Exit 0                          |
+| Tests pass      | Registry and runtime health checks                                       | No parse/runtime check failures |
+| Registry valid  | Parse `registry/**/*.yaml` with `node --input-type=module` and `js-yaml` | YAML parses cleanly             |
+| Workspace clean | Check `./workspace/`                                                     | Exists, writable                |
 
 ## Critical Facts
 

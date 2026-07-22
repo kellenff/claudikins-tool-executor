@@ -1,68 +1,65 @@
 /**
  * Provides path operations through the Effect environment.
  *
- * The `Path` service works with file system paths without tying code to one
- * concrete platform module. It exposes common operations such as joining,
- * normalizing, parsing, formatting, resolving, and converting paths to or from
- * file URLs. This module includes the service interface, parsed path type,
- * service tag, runtime marker, and built-in POSIX path layer.
+ * The `Path` service works with file system paths without tying code to one concrete platform
+ * module. It exposes common operations such as joining, normalizing, parsing, formatting,
+ * resolving, and converting paths to or from file URLs. This module includes the service interface,
+ * parsed path type, service tag, runtime marker, and built-in POSIX path layer.
  *
  * @since 4.0.0
  */
-import * as Context from "./Context.ts"
-import * as Effect from "./Effect.ts"
-import { identity } from "./Function.ts"
-import * as Layer from "./Layer.ts"
-import { BadArgument } from "./PlatformError.ts"
+import * as Context from "./Context.ts";
+import * as Effect from "./Effect.ts";
+import { identity } from "./Function.ts";
+import * as Layer from "./Layer.ts";
+import { BadArgument } from "./PlatformError.ts";
 
 /**
  * Runtime type identifier used to mark implementations of the `Path` service.
  *
  * **Details**
  *
- * The marker is the exact string stored on `Path` service implementations.
- * Most code should depend on the `Path` service instead of inspecting this
- * value directly.
+ * The marker is the exact string stored on `Path` service implementations. Most code should depend
+ * on the `Path` service instead of inspecting this value directly.
  *
- * @see {@link layer} for the built-in POSIX `Path` service layer
- *
- * @category type IDs
  * @since 4.0.0
+ * @category Type IDs
+ * @see {@link layer} for the built-in POSIX `Path` service layer
  */
-export const TypeId = "~effect/platform/Path"
+export const TypeId = "~effect/platform/Path";
 
 /**
  * Defines the service interface for platform-specific path manipulation.
  *
  * **When to use**
  *
- * Use to depend on path operations through the Effect environment instead of a
- * concrete host path module.
+ * Use to depend on path operations through the Effect environment instead of a concrete host path
+ * module.
  *
  * **Details**
  *
- * The service exposes operations for joining, normalizing, parsing,
- * formatting, and converting file system paths. URL conversion methods return
- * `Effect`s because invalid file URLs or paths can fail with `BadArgument`.
+ * The service exposes operations for joining, normalizing, parsing, formatting, and converting file
+ * system paths. URL conversion methods return `Effect`s because invalid file URLs or paths can fail
+ * with `BadArgument`.
  *
  * **Example** (Using path operations)
  *
  * ```ts
- * import { Effect, Path } from "effect"
+ * import { Effect, Path } from "effect";
  *
- * const program = Effect.gen(function*() {
- *   const path = yield* Path.Path
+ * const program = Effect.gen(function* () {
+ *   const path = yield* Path.Path;
  *
  *   // Use various path operations
- *   const joined = path.join("home", "user", "documents")
- *   const normalized = path.normalize("./path/../to/file.txt")
- *   const basename = path.basename("/path/to/file.txt")
- *   const dirname = path.dirname("/path/to/file.txt")
- *   const extname = path.extname("file.txt")
- *   const isAbs = path.isAbsolute("/absolute/path")
- *   const parsed = path.parse("/path/to/file.txt")
- *   const relative = path.relative("/from/path", "/to/path")
- *   const resolved = path.resolve("relative", "path")
+ *   const joined = path.join("home", "user", "documents");
+ *   const normalized = path.normalize("./path/../to/file.txt");
+ *   const basename = path.basename("/path/to/file.txt");
+ *   const dirname = path.dirname("/path/to/file.txt");
+ *   const extname = path.extname("file.txt");
+ *   const isAbs = path.isAbsolute("/absolute/path");
+ *   const parsed = path.parse("/path/to/file.txt");
+ *   const relative = path.relative("/from/path", "/to/path");
+ *   const resolved = path.resolve("relative", "path");
  *
  *   console.log({
  *     joined,
@@ -73,30 +70,30 @@ export const TypeId = "~effect/platform/Path"
  *     isAbs,
  *     parsed,
  *     relative,
- *     resolved
- *   })
- * })
+ *     resolved,
+ *   });
+ * });
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export interface Path {
-  readonly [TypeId]: typeof TypeId
-  readonly sep: string
-  readonly basename: (path: string, suffix?: string) => string
-  readonly dirname: (path: string) => string
-  readonly extname: (path: string) => string
-  readonly format: (pathObject: Partial<Path.Parsed>) => string
-  readonly fromFileUrl: (url: URL) => Effect.Effect<string, BadArgument>
-  readonly isAbsolute: (path: string) => boolean
-  readonly join: (...paths: ReadonlyArray<string>) => string
-  readonly normalize: (path: string) => string
-  readonly parse: (path: string) => Path.Parsed
-  readonly relative: (from: string, to: string) => string
-  readonly resolve: (...pathSegments: ReadonlyArray<string>) => string
-  readonly toFileUrl: (path: string) => Effect.Effect<URL, BadArgument>
-  readonly toNamespacedPath: (path: string) => string
+  readonly [TypeId]: typeof TypeId;
+  readonly sep: string;
+  readonly basename: (path: string, suffix?: string) => string;
+  readonly dirname: (path: string) => string;
+  readonly extname: (path: string) => string;
+  readonly format: (pathObject: Partial<Path.Parsed>) => string;
+  readonly fromFileUrl: (url: URL) => Effect.Effect<string, BadArgument>;
+  readonly isAbsolute: (path: string) => boolean;
+  readonly join: (...paths: ReadonlyArray<string>) => string;
+  readonly normalize: (path: string) => string;
+  readonly parse: (path: string) => Path.Parsed;
+  readonly relative: (from: string, to: string) => string;
+  readonly resolve: (...pathSegments: ReadonlyArray<string>) => string;
+  readonly toFileUrl: (path: string) => Effect.Effect<URL, BadArgument>;
+  readonly toNamespacedPath: (path: string) => string;
 }
 
 /**
@@ -109,14 +106,14 @@ export interface Path {
  * **Example** (Working with parsed paths)
  *
  * ```ts
- * import { Effect, Path } from "effect"
+ * import { Effect, Path } from "effect";
  *
  * // Access types and utilities in the Path namespace
- * const program = Effect.gen(function*() {
- *   const path = yield* Path.Path
+ * const program = Effect.gen(function* () {
+ *   const path = yield* Path.Path;
  *
  *   // Parse a path and get a Path.Parsed object
- *   const parsed = path.parse("/home/user/file.txt")
+ *   const parsed = path.parse("/home/user/file.txt");
  *
  *   // The parsed object conforms to the Path.Parsed interface
  *   const exampleParsed = {
@@ -124,11 +121,11 @@ export interface Path {
  *     dir: "/home/user",
  *     base: "file.txt",
  *     ext: ".txt",
- *     name: "file"
- *   }
+ *     name: "file",
+ *   };
  *
- *   console.log(parsed, exampleParsed)
- * })
+ *   console.log(parsed, exampleParsed);
+ * });
  * ```
  *
  * @since 4.0.0
@@ -139,26 +136,24 @@ export declare namespace Path {
    *
    * **When to use**
    *
-   * Use to model the object form produced by `Path.parse` and consumed by
-   * `Path.format`.
+   * Use to model the object form produced by `Path.parse` and consumed by `Path.format`.
    *
    * **Details**
    *
-   * The fields correspond to the path root, directory, base filename,
-   * extension, and filename without extension, matching the shape consumed by
-   * `Path.format`.
+   * The fields correspond to the path root, directory, base filename, extension, and filename
+   * without extension, matching the shape consumed by `Path.format`.
    *
    * **Example** (Parsing and formatting paths)
    *
    * ```ts
-   * import { Effect, Path } from "effect"
+   * import { Effect, Path } from "effect";
    *
-   * const program = Effect.gen(function*() {
-   *   const path = yield* Path.Path
+   * const program = Effect.gen(function* () {
+   *   const path = yield* Path.Path;
    *
    *   // Parse a path into its components
-   *   const parsed = path.parse("/home/user/documents/file.txt")
-   *   console.log(parsed)
+   *   const parsed = path.parse("/home/user/documents/file.txt");
+   *   console.log(parsed);
    *   // {
    *   //   root: "/",
    *   //   dir: "/home/user/documents",
@@ -171,21 +166,21 @@ export declare namespace Path {
    *   const formatted = path.format({
    *     dir: "/home/user",
    *     name: "newfile",
-   *     ext: ".ts"
-   *   })
-   *   console.log(formatted) // "/home/user/newfile.ts"
-   * })
+   *     ext: ".ts",
+   *   });
+   *   console.log(formatted); // "/home/user/newfile.ts"
+   * });
    * ```
    *
-   * @category models
    * @since 4.0.0
+   * @category Models
    */
   export interface Parsed {
-    readonly root: string
-    readonly dir: string
-    readonly base: string
-    readonly ext: string
-    readonly name: string
+    readonly root: string;
+    readonly dir: string;
+    readonly base: string;
+    readonly ext: string;
+    readonly name: string;
   }
 }
 
@@ -199,28 +194,26 @@ export declare namespace Path {
  * **Example** (Providing a custom Path service)
  *
  * ```ts
- * import { Effect, Layer, Path } from "effect"
+ * import { Effect, Layer, Path } from "effect";
  *
  * // Create a custom path implementation
  * const customPath: Path.Path = {
  *   [Path.TypeId]: Path.TypeId,
  *   sep: "/",
  *   basename: (path: string, suffix?: string) => {
- *     const base = path.split("/").pop() || ""
- *     return suffix && base.endsWith(suffix)
- *       ? base.slice(0, -suffix.length)
- *       : base
+ *     const base = path.split("/").pop() || "";
+ *     return suffix && base.endsWith(suffix) ? base.slice(0, -suffix.length) : base;
  *   },
  *   dirname: (path: string) => path.split("/").slice(0, -1).join("/") || "/",
  *   extname: (path: string) => {
- *     const match = path.match(/\.[^.]*$/)
- *     return match ? match[0] : ""
+ *     const match = path.match(/\.[^.]*$/);
+ *     return match ? match[0] : "";
  *   },
  *   format: (pathObject) => {
- *     const dir = pathObject.dir || ""
- *     const name = pathObject.name || ""
- *     const ext = pathObject.ext || ""
- *     return dir ? `${dir}/${name}${ext}` : `${name}${ext}`
+ *     const dir = pathObject.dir || "";
+ *     const name = pathObject.name || "";
+ *     const ext = pathObject.ext || "";
+ *     return dir ? `${dir}/${name}${ext}` : `${name}${ext}`;
  *   },
  *   fromFileUrl: (url: URL) => Effect.succeed(url.pathname),
  *   isAbsolute: (path: string) => path.startsWith("/"),
@@ -231,122 +224,127 @@ export declare namespace Path {
  *     dir: path.split("/").slice(0, -1).join("/") || "/",
  *     base: path.split("/").pop() || "",
  *     ext: path.match(/\.[^.]*$/)?.[0] || "",
- *     name: path.split("/").pop()?.replace(/\.[^.]*$/, "") || ""
+ *     name:
+ *       path
+ *         .split("/")
+ *         .pop()
+ *         ?.replace(/\.[^.]*$/, "") || "",
  *   }),
  *   relative: (from: string, to: string) => to.replace(from, ""),
  *   resolve: (...pathSegments: ReadonlyArray<string>) => pathSegments.join("/"),
  *   toFileUrl: (path: string) => Effect.succeed(new URL(`file://${path}`)),
- *   toNamespacedPath: (path: string) => path
- * }
+ *   toNamespacedPath: (path: string) => path,
+ * };
  *
  * // Provide the path service
- * const customPathLayer = Layer.succeed(Path.Path)(customPath)
+ * const customPathLayer = Layer.succeed(Path.Path)(customPath);
  *
- * const program = Effect.gen(function*() {
- *   const path = yield* Path.Path
- *   const joined = path.join("home", "user", "file.txt")
- *   console.log(joined) // "home/user/file.txt"
- * })
+ * const program = Effect.gen(function* () {
+ *   const path = yield* Path.Path;
+ *   const joined = path.join("home", "user", "file.txt");
+ *   console.log(joined); // "home/user/file.txt"
+ * });
  *
  * // Run with custom path implementation
- * const result = Effect.provide(program, customPathLayer)
+ * const result = Effect.provide(program, customPathLayer);
  * ```
  *
- * @category services
  * @since 4.0.0
+ * @category Services
  */
-export const Path: Context.Service<Path, Path> = Context.Service("effect/Path")
+export const Path: Context.Service<Path, Path> = Context.Service("effect/Path");
 
 /**
  * The following functions are adapted from the Node.js source code:
  * https://github.com/nodejs/node/blob/main/lib/internal/url.js
  *
- * The following license applies to these functions:
- * - MIT
+ * The following license applies to these functions: - MIT
  */
 
 // Resolves . and .. elements in a path with directory names
 function normalizeStringPosix(path: string, allowAboveRoot: boolean) {
-  let res = ""
-  let lastSegmentLength = 0
-  let lastSlash = -1
-  let dots = 0
-  let code
+  let res = "";
+  let lastSegmentLength = 0;
+  let lastSlash = -1;
+  let dots = 0;
+  let code;
   for (let i = 0; i <= path.length; ++i) {
     if (i < path.length) {
-      code = path.charCodeAt(i)
+      code = path.charCodeAt(i);
     } else if (code === 47 /*/*/) {
-      break
+      break;
     } else {
-      code = 47 /*/*/
+      code = 47; /*/*/
     }
     if (code === 47 /*/*/) {
       if (lastSlash === i - 1 || dots === 1) {
         // NOOP
       } else if (lastSlash !== i - 1 && dots === 2) {
         if (
-          res.length < 2 || lastSegmentLength !== 2 || res.charCodeAt(res.length - 1) !== 46 /*.*/ ||
+          res.length < 2 ||
+          lastSegmentLength !== 2 ||
+          res.charCodeAt(res.length - 1) !== 46 /*.*/ ||
           res.charCodeAt(res.length - 2) !== 46 /*.*/
         ) {
           if (res.length > 2) {
-            const lastSlashIndex = res.lastIndexOf("/")
+            const lastSlashIndex = res.lastIndexOf("/");
             if (lastSlashIndex !== res.length - 1) {
               if (lastSlashIndex === -1) {
-                res = ""
-                lastSegmentLength = 0
+                res = "";
+                lastSegmentLength = 0;
               } else {
-                res = res.slice(0, lastSlashIndex)
-                lastSegmentLength = res.length - 1 - res.lastIndexOf("/")
+                res = res.slice(0, lastSlashIndex);
+                lastSegmentLength = res.length - 1 - res.lastIndexOf("/");
               }
-              lastSlash = i
-              dots = 0
-              continue
+              lastSlash = i;
+              dots = 0;
+              continue;
             }
           } else if (res.length === 2 || res.length === 1) {
-            res = ""
-            lastSegmentLength = 0
-            lastSlash = i
-            dots = 0
-            continue
+            res = "";
+            lastSegmentLength = 0;
+            lastSlash = i;
+            dots = 0;
+            continue;
           }
         }
         if (allowAboveRoot) {
           if (res.length > 0) {
-            res += "/.."
+            res += "/..";
           } else {
-            res = ".."
+            res = "..";
           }
-          lastSegmentLength = 2
+          lastSegmentLength = 2;
         }
       } else {
         if (res.length > 0) {
-          res += "/" + path.slice(lastSlash + 1, i)
+          res += "/" + path.slice(lastSlash + 1, i);
         } else {
-          res = path.slice(lastSlash + 1, i)
+          res = path.slice(lastSlash + 1, i);
         }
-        lastSegmentLength = i - lastSlash - 1
+        lastSegmentLength = i - lastSlash - 1;
       }
-      lastSlash = i
-      dots = 0
+      lastSlash = i;
+      dots = 0;
     } else if (code === 46 /*.*/ && dots !== -1) {
-      ++dots
+      ++dots;
     } else {
-      dots = -1
+      dots = -1;
     }
   }
-  return res
+  return res;
 }
 
 function _format(sep: string, pathObject: Partial<Path.Parsed>) {
-  const dir = pathObject.dir || pathObject.root
-  const base = pathObject.base || (pathObject.name || "") + (pathObject.ext || "")
+  const dir = pathObject.dir || pathObject.root;
+  const base = pathObject.base || (pathObject.name || "") + (pathObject.ext || "");
   if (!dir) {
-    return base
+    return base;
   }
   if (dir === pathObject.root) {
-    return dir + base
+    return dir + base;
   }
-  return dir + sep + base
+  return dir + sep + base;
 }
 
 function fromFileUrl(url: URL): Effect.Effect<string, BadArgument> {
@@ -355,247 +353,245 @@ function fromFileUrl(url: URL): Effect.Effect<string, BadArgument> {
       new BadArgument({
         module: "Path",
         method: "fromFileUrl",
-        description: "URL must be of scheme file"
-      })
-    )
+        description: "URL must be of scheme file",
+      }),
+    );
   } else if (url.hostname !== "") {
     return Effect.fail(
       new BadArgument({
         module: "Path",
         method: "fromFileUrl",
-        description: "Invalid file URL host"
-      })
-    )
+        description: "Invalid file URL host",
+      }),
+    );
   }
-  const pathname = url.pathname
+  const pathname = url.pathname;
   for (let n = 0; n < pathname.length; n++) {
     if (pathname[n] === "%") {
-      const third = pathname.codePointAt(n + 2)! | 0x20
+      const third = pathname.codePointAt(n + 2)! | 0x20;
       if (pathname[n + 1] === "2" && third === 102) {
         return Effect.fail(
           new BadArgument({
             module: "Path",
             method: "fromFileUrl",
-            description: "must not include encoded / characters"
-          })
-        )
+            description: "must not include encoded / characters",
+          }),
+        );
       }
     }
   }
-  return Effect.succeed(decodeURIComponent(pathname))
+  return Effect.succeed(decodeURIComponent(pathname));
 }
 
 const resolve: Path["resolve"] = function resolve() {
-  let resolvedPath = ""
-  let resolvedAbsolute = false
-  let cwd: string | undefined = undefined
+  let resolvedPath = "";
+  let resolvedAbsolute = false;
+  let cwd: string | undefined = undefined;
 
   for (let i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
-    let path: string
+    let path: string;
     if (i >= 0) {
-      path = arguments[i]
+      path = arguments[i];
     } else {
-      const process = (globalThis as any).process
+      const process = (globalThis as any).process;
       if (
-        cwd === undefined && "process" in globalThis &&
+        cwd === undefined &&
+        "process" in globalThis &&
         typeof process === "object" &&
         process !== null &&
         typeof process.cwd === "function"
       ) {
-        cwd = process.cwd()
+        cwd = process.cwd();
       }
-      path = cwd!
+      path = cwd!;
     }
 
     // Skip empty entries
     if (path.length === 0) {
-      continue
+      continue;
     }
 
-    resolvedPath = path + "/" + resolvedPath
-    resolvedAbsolute = path.charCodeAt(0) === 47 /*/*/
+    resolvedPath = path + "/" + resolvedPath;
+    resolvedAbsolute = path.charCodeAt(0) === 47; /*/*/
   }
 
   // At this point the path should be resolved to a full absolute path, but
   // handle relative paths to be safe (might happen when process.cwd() fails)
 
   // Normalize the path
-  resolvedPath = normalizeStringPosix(resolvedPath, !resolvedAbsolute)
+  resolvedPath = normalizeStringPosix(resolvedPath, !resolvedAbsolute);
 
   if (resolvedAbsolute) {
     if (resolvedPath.length > 0) {
-      return "/" + resolvedPath
+      return "/" + resolvedPath;
     } else {
-      return "/"
+      return "/";
     }
   } else if (resolvedPath.length > 0) {
-    return resolvedPath
+    return resolvedPath;
   } else {
-    return "."
+    return ".";
   }
-}
+};
 
-const CHAR_FORWARD_SLASH = 47
+const CHAR_FORWARD_SLASH = 47;
 
 function toFileUrl(filepath: string) {
-  const outURL = new URL("file://")
-  let resolved = resolve(filepath)
+  const outURL = new URL("file://");
+  let resolved = resolve(filepath);
   // path.resolve strips trailing slashes so we must add them back
-  const filePathLast = filepath.charCodeAt(filepath.length - 1)
-  if (
-    (filePathLast === CHAR_FORWARD_SLASH) &&
-    resolved[resolved.length - 1] !== "/"
-  ) {
-    resolved += "/"
+  const filePathLast = filepath.charCodeAt(filepath.length - 1);
+  if (filePathLast === CHAR_FORWARD_SLASH && resolved[resolved.length - 1] !== "/") {
+    resolved += "/";
   }
-  outURL.pathname = encodePathChars(resolved)
-  return Effect.succeed(outURL)
+  outURL.pathname = encodePathChars(resolved);
+  return Effect.succeed(outURL);
 }
 
-const percentRegExp = /%/g
-const backslashRegExp = /\\/g
-const newlineRegExp = /\n/g
-const carriageReturnRegExp = /\r/g
-const tabRegExp = /\t/g
+const percentRegExp = /%/g;
+const backslashRegExp = /\\/g;
+const newlineRegExp = /\n/g;
+const carriageReturnRegExp = /\r/g;
+const tabRegExp = /\t/g;
 
 function encodePathChars(filepath: string) {
   if (filepath.includes("%")) {
-    filepath = filepath.replace(percentRegExp, "%25")
+    filepath = filepath.replace(percentRegExp, "%25");
   }
   if (filepath.includes("\\")) {
-    filepath = filepath.replace(backslashRegExp, "%5C")
+    filepath = filepath.replace(backslashRegExp, "%5C");
   }
   if (filepath.includes("\n")) {
-    filepath = filepath.replace(newlineRegExp, "%0A")
+    filepath = filepath.replace(newlineRegExp, "%0A");
   }
   if (filepath.includes("\r")) {
-    filepath = filepath.replace(carriageReturnRegExp, "%0D")
+    filepath = filepath.replace(carriageReturnRegExp, "%0D");
   }
   if (filepath.includes("\t")) {
-    filepath = filepath.replace(tabRegExp, "%09")
+    filepath = filepath.replace(tabRegExp, "%09");
   }
-  return filepath
+  return filepath;
 }
 
 const posixImpl = Path.of({
   [TypeId]: TypeId,
   resolve,
   normalize(path) {
-    if (path.length === 0) return "."
+    if (path.length === 0) return ".";
 
-    const isAbsolute = path.charCodeAt(0) === 47 /*/*/
-    const trailingSeparator = path.charCodeAt(path.length - 1) === 47 /*/*/
+    const isAbsolute = path.charCodeAt(0) === 47; /*/*/
+    const trailingSeparator = path.charCodeAt(path.length - 1) === 47; /*/*/
 
     // Normalize the path
-    path = normalizeStringPosix(path, !isAbsolute)
+    path = normalizeStringPosix(path, !isAbsolute);
 
-    if (path.length === 0 && !isAbsolute) path = "."
-    if (path.length > 0 && trailingSeparator) path += "/"
+    if (path.length === 0 && !isAbsolute) path = ".";
+    if (path.length > 0 && trailingSeparator) path += "/";
 
-    if (isAbsolute) return "/" + path
-    return path
+    if (isAbsolute) return "/" + path;
+    return path;
   },
 
   isAbsolute(path) {
-    return path.length > 0 && path.charCodeAt(0) === 47 /*/*/
+    return path.length > 0 && path.charCodeAt(0) === 47; /*/*/
   },
 
   join() {
     if (arguments.length === 0) {
-      return "."
+      return ".";
     }
-    let joined
+    let joined;
     for (let i = 0; i < arguments.length; ++i) {
-      const arg = arguments[i]
+      const arg = arguments[i];
       if (arg.length > 0) {
         if (joined === undefined) {
-          joined = arg
+          joined = arg;
         } else {
-          joined += "/" + arg
+          joined += "/" + arg;
         }
       }
     }
     if (joined === undefined) {
-      return "."
+      return ".";
     }
-    return posixImpl.normalize(joined)
+    return posixImpl.normalize(joined);
   },
 
   relative(from, to) {
-    if (from === to) return ""
+    if (from === to) return "";
 
-    from = posixImpl.resolve(from)
-    to = posixImpl.resolve(to)
+    from = posixImpl.resolve(from);
+    to = posixImpl.resolve(to);
 
-    if (from === to) return ""
+    if (from === to) return "";
 
     // Trim any leading backslashes
-    let fromStart = 1
+    let fromStart = 1;
     for (; fromStart < from.length; ++fromStart) {
       if (from.charCodeAt(fromStart) !== 47 /*/*/) {
-        break
+        break;
       }
     }
-    const fromEnd = from.length
-    const fromLen = fromEnd - fromStart
+    const fromEnd = from.length;
+    const fromLen = fromEnd - fromStart;
 
     // Trim any leading backslashes
-    let toStart = 1
+    let toStart = 1;
     for (; toStart < to.length; ++toStart) {
       if (to.charCodeAt(toStart) !== 47 /*/*/) {
-        break
+        break;
       }
     }
-    const toEnd = to.length
-    const toLen = toEnd - toStart
+    const toEnd = to.length;
+    const toLen = toEnd - toStart;
 
     // Compare paths to find the longest common path from root
-    const length = fromLen < toLen ? fromLen : toLen
-    let lastCommonSep = -1
-    let i = 0
+    const length = fromLen < toLen ? fromLen : toLen;
+    let lastCommonSep = -1;
+    let i = 0;
     for (; i <= length; ++i) {
       if (i === length) {
         if (toLen > length) {
           if (to.charCodeAt(toStart + i) === 47 /*/*/) {
             // We get here if `from` is the exact base path for `to`.
             // For example: from='/foo/bar'; to='/foo/bar/baz'
-            return to.slice(toStart + i + 1)
+            return to.slice(toStart + i + 1);
           } else if (i === 0) {
             // We get here if `from` is the root
             // For example: from='/'; to='/foo'
-            return to.slice(toStart + i)
+            return to.slice(toStart + i);
           }
         } else if (fromLen > length) {
           if (from.charCodeAt(fromStart + i) === 47 /*/*/) {
             // We get here if `to` is the exact base path for `from`.
             // For example: from='/foo/bar/baz'; to='/foo/bar'
-            lastCommonSep = i
+            lastCommonSep = i;
           } else if (i === 0) {
             // We get here if `to` is the root.
             // For example: from='/foo'; to='/'
-            lastCommonSep = 0
+            lastCommonSep = 0;
           }
         }
-        break
+        break;
       }
-      const fromCode = from.charCodeAt(fromStart + i)
-      const toCode = to.charCodeAt(toStart + i)
+      const fromCode = from.charCodeAt(fromStart + i);
+      const toCode = to.charCodeAt(toStart + i);
       if (fromCode !== toCode) {
-        break
+        break;
       } else if (fromCode === 47 /*/*/) {
-        lastCommonSep = i
+        lastCommonSep = i;
       }
     }
 
-    let out = ""
+    let out = "";
     // Generate the relative path based on the path difference between `to`
     // and `from`
     for (i = fromStart + lastCommonSep + 1; i <= fromEnd; ++i) {
       if (i === fromEnd || from.charCodeAt(i) === 47 /*/*/) {
         if (out.length === 0) {
-          out += ".."
+          out += "..";
         } else {
-          out += "/.."
+          out += "/..";
         }
       }
     }
@@ -603,65 +599,65 @@ const posixImpl = Path.of({
     // Lastly, append the rest of the destination (`to`) path that comes after
     // the common path parts
     if (out.length > 0) {
-      return out + to.slice(toStart + lastCommonSep)
+      return out + to.slice(toStart + lastCommonSep);
     } else {
-      toStart += lastCommonSep
+      toStart += lastCommonSep;
       if (to.charCodeAt(toStart) === 47 /*/*/) {
-        ++toStart
+        ++toStart;
       }
-      return to.slice(toStart)
+      return to.slice(toStart);
     }
   },
 
   dirname(path) {
-    if (path.length === 0) return "."
-    let code = path.charCodeAt(0)
-    const hasRoot = code === 47 /*/*/
-    let end = -1
-    let matchedSlash = true
+    if (path.length === 0) return ".";
+    let code = path.charCodeAt(0);
+    const hasRoot = code === 47; /*/*/
+    let end = -1;
+    let matchedSlash = true;
     for (let i = path.length - 1; i >= 1; --i) {
-      code = path.charCodeAt(i)
+      code = path.charCodeAt(i);
       if (code === 47 /*/*/) {
         if (!matchedSlash) {
-          end = i
-          break
+          end = i;
+          break;
         }
       } else {
         // We saw the first non-path separator
-        matchedSlash = false
+        matchedSlash = false;
       }
     }
 
-    if (end === -1) return hasRoot ? "/" : "."
-    if (hasRoot && end === 1) return "//"
-    return path.slice(0, end)
+    if (end === -1) return hasRoot ? "/" : ".";
+    if (hasRoot && end === 1) return "//";
+    return path.slice(0, end);
   },
 
   basename(path, ext) {
-    let start = 0
-    let end = -1
-    let matchedSlash = true
-    let i
+    let start = 0;
+    let end = -1;
+    let matchedSlash = true;
+    let i;
 
     if (ext !== undefined && ext.length > 0 && ext.length <= path.length) {
-      if (ext.length === path.length && ext === path) return ""
-      let extIdx = ext.length - 1
-      let firstNonSlashEnd = -1
+      if (ext.length === path.length && ext === path) return "";
+      let extIdx = ext.length - 1;
+      let firstNonSlashEnd = -1;
       for (i = path.length - 1; i >= 0; --i) {
-        const code = path.charCodeAt(i)
+        const code = path.charCodeAt(i);
         if (code === 47 /*/*/) {
           // If we reached a path separator that was not part of a set of path
           // separators at the end of the string, stop now
           if (!matchedSlash) {
-            start = i + 1
-            break
+            start = i + 1;
+            break;
           }
         } else {
           if (firstNonSlashEnd === -1) {
             // We saw the first non-path separator, remember this index in case
             // we need it if the extension ends up not matching
-            matchedSlash = false
-            firstNonSlashEnd = i + 1
+            matchedSlash = false;
+            firstNonSlashEnd = i + 1;
           }
           if (extIdx >= 0) {
             // Try to match the explicit extension
@@ -669,202 +665,205 @@ const posixImpl = Path.of({
               if (--extIdx === -1) {
                 // We matched the extension, so mark this as the end of our path
                 // component
-                end = i
+                end = i;
               }
             } else {
               // Extension does not match, so our result is the entire path
               // component
-              extIdx = -1
-              end = firstNonSlashEnd
+              extIdx = -1;
+              end = firstNonSlashEnd;
             }
           }
         }
       }
 
-      if (start === end) end = firstNonSlashEnd
-      else if (end === -1) end = path.length
-      return path.slice(start, end)
+      if (start === end) end = firstNonSlashEnd;
+      else if (end === -1) end = path.length;
+      return path.slice(start, end);
     } else {
       for (i = path.length - 1; i >= 0; --i) {
         if (path.charCodeAt(i) === 47 /*/*/) {
           // If we reached a path separator that was not part of a set of path
           // separators at the end of the string, stop now
           if (!matchedSlash) {
-            start = i + 1
-            break
+            start = i + 1;
+            break;
           }
         } else if (end === -1) {
           // We saw the first non-path separator, mark this as the end of our
           // path component
-          matchedSlash = false
-          end = i + 1
+          matchedSlash = false;
+          end = i + 1;
         }
       }
 
-      if (end === -1) return ""
-      return path.slice(start, end)
+      if (end === -1) return "";
+      return path.slice(start, end);
     }
   },
 
   extname(path) {
-    let startDot = -1
-    let startPart = 0
-    let end = -1
-    let matchedSlash = true
+    let startDot = -1;
+    let startPart = 0;
+    let end = -1;
+    let matchedSlash = true;
     // Track the state of characters (if any) we see before our first dot and
     // after any path separator we find
-    let preDotState = 0
+    let preDotState = 0;
     for (let i = path.length - 1; i >= 0; --i) {
-      const code = path.charCodeAt(i)
+      const code = path.charCodeAt(i);
       if (code === 47 /*/*/) {
         // If we reached a path separator that was not part of a set of path
         // separators at the end of the string, stop now
         if (!matchedSlash) {
-          startPart = i + 1
-          break
+          startPart = i + 1;
+          break;
         }
-        continue
+        continue;
       }
       if (end === -1) {
         // We saw the first non-path separator, mark this as the end of our
         // extension
-        matchedSlash = false
-        end = i + 1
+        matchedSlash = false;
+        end = i + 1;
       }
       if (code === 46 /*.*/) {
         // If this is our first dot, mark it as the start of our extension
         if (startDot === -1) {
-          startDot = i
+          startDot = i;
         } else if (preDotState !== 1) {
-          preDotState = 1
+          preDotState = 1;
         }
       } else if (startDot !== -1) {
         // We saw a non-dot and non-path separator before our dot, so we should
         // have a good chance at having a non-empty extension
-        preDotState = -1
+        preDotState = -1;
       }
     }
 
     if (
-      startDot === -1 || end === -1 ||
+      startDot === -1 ||
+      end === -1 ||
       // We saw a non-dot character immediately before the dot
       preDotState === 0 ||
       // The (right-most) trimmed path component is exactly '..'
-      preDotState === 1 && startDot === end - 1 && startDot === startPart + 1
+      (preDotState === 1 && startDot === end - 1 && startDot === startPart + 1)
     ) {
-      return ""
+      return "";
     }
-    return path.slice(startDot, end)
+    return path.slice(startDot, end);
   },
 
   format: function format(pathObject) {
     if (pathObject === null || typeof pathObject !== "object") {
-      throw new TypeError("The \"pathObject\" argument must be of type Object. Received type " + typeof pathObject)
+      throw new TypeError(
+        'The "pathObject" argument must be of type Object. Received type ' + typeof pathObject,
+      );
     }
-    return _format("/", pathObject)
+    return _format("/", pathObject);
   },
 
   parse(path) {
-    const ret = { root: "", dir: "", base: "", ext: "", name: "" }
-    if (path.length === 0) return ret
-    let code = path.charCodeAt(0)
-    const isAbsolute = code === 47 /*/*/
-    let start
+    const ret = { root: "", dir: "", base: "", ext: "", name: "" };
+    if (path.length === 0) return ret;
+    let code = path.charCodeAt(0);
+    const isAbsolute = code === 47; /*/*/
+    let start;
     if (isAbsolute) {
-      ret.root = "/"
-      start = 1
+      ret.root = "/";
+      start = 1;
     } else {
-      start = 0
+      start = 0;
     }
-    let startDot = -1
-    let startPart = 0
-    let end = -1
-    let matchedSlash = true
-    let i = path.length - 1
+    let startDot = -1;
+    let startPart = 0;
+    let end = -1;
+    let matchedSlash = true;
+    let i = path.length - 1;
 
     // Track the state of characters (if any) we see before our first dot and
     // after any path separator we find
-    let preDotState = 0
+    let preDotState = 0;
 
     // Get non-dir info
     for (; i >= start; --i) {
-      code = path.charCodeAt(i)
+      code = path.charCodeAt(i);
       if (code === 47 /*/*/) {
         // If we reached a path separator that was not part of a set of path
         // separators at the end of the string, stop now
         if (!matchedSlash) {
-          startPart = i + 1
-          break
+          startPart = i + 1;
+          break;
         }
-        continue
+        continue;
       }
       if (end === -1) {
         // We saw the first non-path separator, mark this as the end of our
         // extension
-        matchedSlash = false
-        end = i + 1
+        matchedSlash = false;
+        end = i + 1;
       }
       if (code === 46 /*.*/) {
         // If this is our first dot, mark it as the start of our extension
-        if (startDot === -1) startDot = i
-        else if (preDotState !== 1) preDotState = 1
+        if (startDot === -1) startDot = i;
+        else if (preDotState !== 1) preDotState = 1;
       } else if (startDot !== -1) {
         // We saw a non-dot and non-path separator before our dot, so we should
         // have a good chance at having a non-empty extension
-        preDotState = -1
+        preDotState = -1;
       }
     }
 
     if (
-      startDot === -1 || end === -1 ||
+      startDot === -1 ||
+      end === -1 ||
       // We saw a non-dot character immediately before the dot
       preDotState === 0 ||
       // The (right-most) trimmed path component is exactly '..'
-      preDotState === 1 && startDot === end - 1 && startDot === startPart + 1
+      (preDotState === 1 && startDot === end - 1 && startDot === startPart + 1)
     ) {
       if (end !== -1) {
-        if (startPart === 0 && isAbsolute) ret.base = ret.name = path.slice(1, end)
-        else ret.base = ret.name = path.slice(startPart, end)
+        if (startPart === 0 && isAbsolute) ret.base = ret.name = path.slice(1, end);
+        else ret.base = ret.name = path.slice(startPart, end);
       }
     } else {
       if (startPart === 0 && isAbsolute) {
-        ret.name = path.slice(1, startDot)
-        ret.base = path.slice(1, end)
+        ret.name = path.slice(1, startDot);
+        ret.base = path.slice(1, end);
       } else {
-        ret.name = path.slice(startPart, startDot)
-        ret.base = path.slice(startPart, end)
+        ret.name = path.slice(startPart, startDot);
+        ret.base = path.slice(startPart, end);
       }
-      ret.ext = path.slice(startDot, end)
+      ret.ext = path.slice(startDot, end);
     }
 
-    if (startPart > 0) ret.dir = path.slice(0, startPart - 1)
-    else if (isAbsolute) ret.dir = "/"
+    if (startPart > 0) ret.dir = path.slice(0, startPart - 1);
+    else if (isAbsolute) ret.dir = "/";
 
-    return ret
+    return ret;
   },
 
   sep: "/",
   fromFileUrl,
   toFileUrl,
-  toNamespacedPath: identity
-})
+  toNamespacedPath: identity,
+});
 
 /**
  * Layer that provides the built-in POSIX `Path` implementation.
  *
  * **When to use**
  *
- * Use when you need an effect that requires the `Path` service to run with the
- * built-in POSIX path implementation.
+ * Use when you need an effect that requires the `Path` service to run with the built-in POSIX path
+ * implementation.
  *
  * **Details**
  *
- * The layer provides a static service whose separator is `/` and whose
- * operations use POSIX path semantics.
+ * The layer provides a static service whose separator is `/` and whose operations use POSIX path
+ * semantics.
  *
- * @see {@link Path} for accessing the `Path` service from an effect
- *
- * @category layers
  * @since 4.0.0
+ * @category Layers
+ * @see {@link Path} for accessing the `Path` service from an effect
  */
-export const layer: Layer.Layer<Path> = Layer.succeed(Path)(posixImpl)
+export const layer: Layer.Layer<Path> = Layer.succeed(Path)(posixImpl);

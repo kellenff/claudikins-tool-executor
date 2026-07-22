@@ -17,7 +17,7 @@ inputSchema:
       description: Path relative to the project root
     minSeverity:
       type: string
-      description: 'Minimum severity level: ERROR, WARNING, WEAK_WARNING, INFORMATION. Default: WEAK_WARNING'
+      description: "Minimum severity level: ERROR, WARNING, WEAK_WARNING, INFORMATION. Default: WEAK_WARNING"
     timeout:
       type: integer
       description: Timeout in milliseconds

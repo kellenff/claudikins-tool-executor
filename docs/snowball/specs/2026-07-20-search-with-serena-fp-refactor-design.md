@@ -40,29 +40,29 @@ All helpers are pure (no I/O, no closure-over-mutable-state), named exports, exp
 
 Escapes regex metacharacters in a single search term. Extracted from the inline `.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)` in the current implementation.
 
-| Input | Output |
-|---|---|
-| `"generate"` | `"generate"` |
-| `"a+b"` | `"a\\+b"` |
-| `"foo.bar"` | `"foo\\.bar"` |
+| Input        | Output        |
+| ------------ | ------------- |
+| `"generate"` | `"generate"`  |
+| `"a+b"`      | `"a\\+b"`     |
+| `"foo.bar"`  | `"foo\\.bar"` |
 
 ### `tokenizeQuery(query: string): string[]`
 
 Splits the query on whitespace, drops empty fragments. Empty / whitespace-only input returns `[]`.
 
-| Input | Output |
-|---|---|
-| `"generate image"` | `["generate", "image"]` |
+| Input                    | Output                  |
+| ------------------------ | ----------------------- |
+| `"generate image"`       | `["generate", "image"]` |
 | `"  generate   image  "` | `["generate", "image"]` |
-| `""` | `[]` |
-| `"   "` | `[]` |
+| `""`                     | `[]`                    |
+| `"   "`                  | `[]`                    |
 
 ### `buildLookaheadPattern(terms: string[]): string`
 
 Builds the regex substring pattern that Serena's `search_for_pattern` consumes.
 
 - `terms.length === 1` → return `terms[0]` directly (already escaped).
-- `terms.length > 1` → return `terms.map((t) => `(?=.*${t})`).join("") + ".*"`.
+- `terms.length > 1` → return `terms.map((t) => `(?=._${t})`).join("") + "._"`.
 - `terms.length === 0` → return `".*"`. This matches the current implicit behavior, where `[].map(...).join("") + ".*"` produces the literal two-character string `".*"` (period followed by asterisk). In regex, `.*` means "zero or more of any character" — i.e. "match anything".
 
 This preserves the exact pattern format that the existing `searchTools` test "returns Serena results when registry search succeeds" expects:?
@@ -97,10 +97,7 @@ Resolves the match against `REGISTRY_ROOT`, calls the existing `loadToolDefiniti
 New orchestration body (illustrative — final code in the implementation plan):
 
 ```typescript
-const searchWithSerena = async (
-  query: string,
-  limit: number,
-): Promise<SearchResult[] | null> => {
+const searchWithSerena = async (query: string, limit: number): Promise<SearchResult[] | null> => {
   try {
     const serena = await getRegistrySerena();
     if (!serena) return null;
@@ -144,7 +141,7 @@ const searchWithSerena = async (
   - "returns Serena results when registry search succeeds" uses `limit=1` and checks `matchContext` `stringContaining("generate-diagram.yaml")` — first match, first text, pass.
   - "paginates Serena results and stops loading at requested limit" uses `limit=1` — first match only, pass.
   - Neither test exercises multi-result scenarios where the divergence would be visible.
-  
+
   Accepting this divergence trades a tiny semantic drift (visible only to consumers that read `matchContext` for second-or-later results) for a strictly pure pipeline. **If exact source-item attribution matters, use the mitigation below.** The implementation plan should call this out explicitly as an `implementation note` so the reviewer can object.
 
   **Mitigation:** if exact source-item attribution matters, switch `loadToolResult` to accept `(match, contextText)` and have the orchestration call `texts.flatMap((text) => extractRegistryPaths(text).map((p) => ({ path: p, context: text })))` before `dedupePaths`. The implementer chooses between this and the simpler `texts[0] ?? ""` form based on whether source-item attribution is load-bearing.
@@ -207,9 +204,7 @@ describe(buildLookaheadPattern, () => {
   });
 
   it("joins multiple terms with lookaheads", () => {
-    expect(buildLookaheadPattern(["generate", "diagram"])).toBe(
-      "(?=.*generate)(?=.*diagram).*",
-    );
+    expect(buildLookaheadPattern(["generate", "diagram"])).toBe("(?=.*generate)(?=.*diagram).*");
   });
 
   it("returns .* for empty terms", () => {

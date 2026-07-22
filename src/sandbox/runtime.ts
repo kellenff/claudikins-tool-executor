@@ -24,9 +24,7 @@ type SandboxGlobals = Record<string, unknown> & {
   clients: Record<string, ClientProxy>;
 };
 
-/**
- * Summarise logs aggressively to minimize context usage
- */
+/** Summarise logs aggressively to minimize context usage */
 function summariseLogs(logs: unknown[]): unknown[] {
   if (logs.length === 0) {
     return [];
@@ -42,8 +40,8 @@ function summariseLogs(logs: unknown[]): unknown[] {
 }
 
 /**
- * Create a proxy that wraps an MCP client's tool calls
- * Large responses are auto-saved to workspace, returning references
+ * Create a proxy that wraps an MCP client's tool calls Large responses are auto-saved to workspace,
+ * returning references
  */
 function createClientProxy(name: string): ClientProxy {
   return new Proxy({} as ClientProxy, {
@@ -124,9 +122,7 @@ function createClientProxy(name: string): ClientProxy {
   });
 }
 
-/**
- * Convert arbitrary MCP server names into JavaScript-safe sandbox bindings.
- */
+/** Convert arbitrary MCP server names into JavaScript-safe sandbox bindings. */
 function toSandboxIdentifier(name: string): string {
   const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_") || "_";
   return /^[0-9]/.test(identifier) ? `_${identifier}` : identifier;
@@ -202,9 +198,7 @@ function toGlobalIdentifier(name: string, usedIdentifiers: Set<string>): string 
   return candidate;
 }
 
-/**
- * Map server names to guaranteed-usable sandbox bindings.
- */
+/** Map server names to guaranteed-usable sandbox bindings. */
 function buildServerBindingMap(): Map<string, string> {
   const bindings = new Map<string, string>();
   const used = new Set(["console", "workspace", "clients", "globalThis"]);
@@ -218,9 +212,7 @@ function buildServerBindingMap(): Map<string, string> {
   return bindings;
 }
 
-/**
- * Create a mock console that captures output
- */
+/** Create a mock console that captures output */
 function createMockConsole(): { console: MockConsole; logs: unknown[] } {
   const logs: unknown[] = [];
   const mockConsole = {
@@ -243,9 +235,7 @@ function createMockConsole(): { console: MockConsole; logs: unknown[] } {
   return { console: mockConsole, logs };
 }
 
-/**
- * Build the sandbox globals object with all MCP clients and workspace
- */
+/** Build the sandbox globals object with all MCP clients and workspace */
 function buildSandboxGlobals(mockConsole: MockConsole): SandboxGlobals {
   const bindingMap = buildServerBindingMap();
   const clients: Record<string, ClientProxy> = {};
@@ -268,9 +258,7 @@ function buildSandboxGlobals(mockConsole: MockConsole): SandboxGlobals {
   return globals;
 }
 
-/**
- * Execute TypeScript/JavaScript code in a sandboxed environment
- */
+/** Execute TypeScript/JavaScript code in a sandboxed environment */
 export async function executeCode(
   code: string,
   timeout = DEFAULT_TIMEOUT,
@@ -315,16 +303,12 @@ export async function executeCode(
   }
 }
 
-/**
- * Get a list of available MCP clients (for error messages)
- */
+/** Get a list of available MCP clients (for error messages) */
 export function getAvailableClientNames(): string[] {
   return SERVER_CONFIGS.map((config) => config.name);
 }
 
-/**
- * Get available MCP client bindings as exposed inside execute_code.
- */
+/** Get available MCP client bindings as exposed inside execute_code. */
 export function getSandboxClientBindings(): string[] {
   return SERVER_CONFIGS.map((config) => {
     const identifier = buildServerBindingMap().get(config.name) || toSandboxIdentifier(config.name);

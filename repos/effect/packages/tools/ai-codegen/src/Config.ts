@@ -3,31 +3,31 @@
  *
  * @since 4.0.0
  */
-import * as Data from "effect/Data"
-import type * as Path from "effect/Path"
-import * as Schema from "effect/Schema"
+import * as Data from "effect/Data";
+import type * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
 
 /**
  * A text replacement to apply to generated code.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export class Replacement extends Schema.Class<Replacement>("Replacement")({
   from: Schema.String,
-  to: Schema.String
+  to: Schema.String,
 }) {}
 
 /**
  * Structured spec source configuration for Stainless stats indirection.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const SpecSourceConfig = Schema.Struct({
   type: Schema.Literal("stainless-stats"),
-  statsUrl: Schema.String
-})
+  statsUrl: Schema.String,
+});
 
 /**
  * Configuration for AI provider code generation.
@@ -35,21 +35,21 @@ export const SpecSourceConfig = Schema.Struct({
  * **Example** (Decoding a codegen configuration)
  *
  * ```ts
- * import * as Config from "@effect/ai-codegen/Config"
- * import { Schema } from "effect"
+ * import * as Config from "@effect/ai-codegen/Config";
+ * import { Schema } from "effect";
  *
  * const config = Schema.decodeUnknownSync(Config.CodegenConfig)({
  *   spec: "https://example.com/openapi.json",
  *   output: "Generated.ts",
- *   name: "MyClient"
- * })
+ *   name: "MyClient",
+ * });
  *
- * console.log(config.spec)
+ * console.log(config.spec);
  * // "https://example.com/openapi.json"
  * ```
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export class CodegenConfig extends Schema.Class<CodegenConfig>("CodegenConfig")({
   spec: Schema.Union([Schema.String, SpecSourceConfig]),
@@ -60,7 +60,7 @@ export class CodegenConfig extends Schema.Class<CodegenConfig>("CodegenConfig")(
   patches: Schema.optional(Schema.Array(Schema.String)),
   replacements: Schema.optional(Schema.Array(Replacement)),
   excludeAnnotations: Schema.optional(Schema.Array(Schema.String)),
-  disableAdditionalProperties: Schema.optional(Schema.Boolean)
+  disableAdditionalProperties: Schema.optional(Schema.Boolean),
 }) {
   /**
    * Get the client name, defaulting to "Client" if not specified.
@@ -68,7 +68,7 @@ export class CodegenConfig extends Schema.Class<CodegenConfig>("CodegenConfig")(
    * @since 4.0.0
    */
   get clientName(): string {
-    return this.name ?? "Client"
+    return this.name ?? "Client";
   }
 
   /**
@@ -77,7 +77,7 @@ export class CodegenConfig extends Schema.Class<CodegenConfig>("CodegenConfig")(
    * @since 4.0.0
    */
   get isTypeOnly(): boolean {
-    return this.typeOnly ?? false
+    return this.typeOnly ?? false;
   }
 
   /**
@@ -86,7 +86,7 @@ export class CodegenConfig extends Schema.Class<CodegenConfig>("CodegenConfig")(
    * @since 4.0.0
    */
   get patchList(): ReadonlyArray<string> {
-    return this.patches ?? []
+    return this.patches ?? [];
   }
 
   /**
@@ -95,7 +95,7 @@ export class CodegenConfig extends Schema.Class<CodegenConfig>("CodegenConfig")(
    * @since 4.0.0
    */
   get replacementList(): ReadonlyArray<Replacement> {
-    return this.replacements ?? []
+    return this.replacements ?? [];
   }
 
   /**
@@ -104,7 +104,7 @@ export class CodegenConfig extends Schema.Class<CodegenConfig>("CodegenConfig")(
    * @since 4.0.0
    */
   get headerContent(): string | undefined {
-    return this.header
+    return this.header;
   }
 
   /**
@@ -113,7 +113,7 @@ export class CodegenConfig extends Schema.Class<CodegenConfig>("CodegenConfig")(
    * @since 4.0.0
    */
   get excludeAnnotationsList(): ReadonlyArray<string> | undefined {
-    return this.excludeAnnotations
+    return this.excludeAnnotations;
   }
 
   /**
@@ -122,17 +122,17 @@ export class CodegenConfig extends Schema.Class<CodegenConfig>("CodegenConfig")(
    * @since 4.0.0
    */
   get shouldDisableAdditionalProperties(): boolean {
-    return this.disableAdditionalProperties ?? false
+    return this.disableAdditionalProperties ?? false;
   }
 }
 
 /**
  * Represents the source of an OpenAPI specification.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
-export type SpecSource = SpecSource.Url | SpecSource.File | SpecSource.StainlessStats
+export type SpecSource = SpecSource.Url | SpecSource.File | SpecSource.StainlessStats;
 
 /**
  * Namespace containing the supported OpenAPI specification source variants.
@@ -143,34 +143,34 @@ export declare namespace SpecSource {
   /**
    * A URL-based spec source.
    *
-   * @category models
    * @since 4.0.0
+   * @category Models
    */
   export interface Url {
-    readonly _tag: "Url"
-    readonly url: string
+    readonly _tag: "Url";
+    readonly url: string;
   }
 
   /**
    * A file-based spec source.
    *
-   * @category models
    * @since 4.0.0
+   * @category Models
    */
   export interface File {
-    readonly _tag: "File"
-    readonly path: string
+    readonly _tag: "File";
+    readonly path: string;
   }
 
   /**
    * Stainless SDK stats.yml indirection - fetches stats file and extracts openapi_spec_url.
    *
-   * @category models
    * @since 4.0.0
+   * @category Models
    */
   export interface StainlessStats {
-    readonly _tag: "StainlessStats"
-    readonly statsUrl: string
+    readonly _tag: "StainlessStats";
+    readonly statsUrl: string;
   }
 }
 
@@ -180,17 +180,17 @@ export declare namespace SpecSource {
  * **Example** (Creating spec sources)
  *
  * ```ts
- * import * as Config from "@effect/ai-codegen/Config"
+ * import * as Config from "@effect/ai-codegen/Config";
  *
  * // Create a URL-based source
- * const urlSource = Config.SpecSource.Url("https://example.com/openapi.json")
+ * const urlSource = Config.SpecSource.Url("https://example.com/openapi.json");
  *
  * // Create a file-based source
- * const fileSource = Config.SpecSource.File("/path/to/spec.json")
+ * const fileSource = Config.SpecSource.File("/path/to/spec.json");
  * ```
  *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
  */
 export const SpecSource = {
   /**
@@ -215,16 +215,16 @@ export const SpecSource = {
   StainlessStats: (statsUrl: string): SpecSource => ({ _tag: "StainlessStats", statsUrl }),
 
   /**
-   * Parse a spec string into a `SpecSource`.
-   * URLs (http:// or https://) become `Url`, otherwise `File`.
+   * Parse a spec string into a `SpecSource`. URLs (http:// or https://) become `Url`, otherwise
+   * `File`.
    *
    * @since 4.0.0
    */
   fromString: (spec: string, packagePath: string, pathService: Path.Path): SpecSource => {
     if (spec.startsWith("http://") || spec.startsWith("https://")) {
-      return SpecSource.Url(spec)
+      return SpecSource.Url(spec);
     }
-    return SpecSource.File(pathService.join(packagePath, spec))
+    return SpecSource.File(pathService.join(packagePath, spec));
   },
 
   /**
@@ -235,17 +235,17 @@ export const SpecSource = {
   fromConfig: (
     spec: string | { readonly type: string; readonly statsUrl?: string },
     packagePath: string,
-    pathService: Path.Path
+    pathService: Path.Path,
   ): SpecSource => {
     if (typeof spec === "string") {
-      return SpecSource.fromString(spec, packagePath, pathService)
+      return SpecSource.fromString(spec, packagePath, pathService);
     }
     if (spec.type === "stainless-stats" && spec.statsUrl) {
-      return SpecSource.StainlessStats(spec.statsUrl)
+      return SpecSource.StainlessStats(spec.statsUrl);
     }
-    throw new Error(`Unknown spec type: ${spec.type}`)
-  }
-}
+    throw new Error(`Unknown spec type: ${spec.type}`);
+  },
+};
 
 /**
  * Error when parsing a codegen configuration file fails.
@@ -253,20 +253,20 @@ export const SpecSource = {
  * **Example** (Creating a config parse error)
  *
  * ```ts
- * import * as Config from "@effect/ai-codegen/Config"
+ * import * as Config from "@effect/ai-codegen/Config";
  *
  * const error = new Config.ConfigParseError({
  *   path: "/path/to/codegen.json",
- *   cause: new Error("Invalid JSON")
- * })
+ *   cause: new Error("Invalid JSON"),
+ * });
  * ```
  *
- * @category errors
  * @since 4.0.0
+ * @category Errors
  */
 export class ConfigParseError extends Data.TaggedError("ConfigParseError")<{
-  readonly path: string
-  readonly cause: unknown
+  readonly path: string;
+  readonly cause: unknown;
 }> {}
 
 /**
@@ -275,18 +275,18 @@ export class ConfigParseError extends Data.TaggedError("ConfigParseError")<{
  * **Example** (Creating a config not found error)
  *
  * ```ts
- * import * as Config from "@effect/ai-codegen/Config"
+ * import * as Config from "@effect/ai-codegen/Config";
  *
  * const error = new Config.ConfigNotFoundError({
  *   provider: "openai",
- *   expectedPath: "/path/to/packages/ai/openai/codegen.json"
- * })
+ *   expectedPath: "/path/to/packages/ai/openai/codegen.json",
+ * });
  * ```
  *
- * @category errors
  * @since 4.0.0
+ * @category Errors
  */
 export class ConfigNotFoundError extends Data.TaggedError("ConfigNotFoundError")<{
-  readonly provider: string
-  readonly expectedPath: string
+  readonly provider: string;
+  readonly expectedPath: string;
 }> {}

@@ -13,10 +13,10 @@ inputSchema:
       description: Absolute path to the PHP project root directory
     host:
       type: string
-      description: 'Host to bind the dev server to (default: localhost)'
+      description: "Host to bind the dev server to (default: localhost)"
     port:
       type: integer
-      description: 'Port for the dev server (default: 8081)'
+      description: "Port for the dev server (default: 8081)"
     projectPath:
       type: string
       description: |2-

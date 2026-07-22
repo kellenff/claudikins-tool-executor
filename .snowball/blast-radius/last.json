@@ -4,11 +4,7 @@
   "output": {
     "change_scope": {
       "fileCount": 3,
-      "files": [
-        "src/search.ts",
-        "src/search.test.ts",
-        ".serena/project.yml"
-      ],
+      "files": ["src/search.ts", "src/search.test.ts", ".serena/project.yml"],
       "sharedInfraFileCount": 0,
       "crossModuleEditCount": 0,
       "level": "low"

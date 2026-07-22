@@ -1,139 +1,137 @@
 /**
  * Defines the experimental wire schema used by the Effect devtools protocol.
  *
- * The module contains the serialized message shapes exchanged between devtools
- * clients and servers: span snapshots, span events, metric snapshots,
- * heartbeats, and request/response unions. Use these schemas at protocol
- * boundaries to encode, decode, or validate custom transports that need to
+ * The module contains the serialized message shapes exchanged between devtools clients and servers:
+ * span snapshots, span events, metric snapshots, heartbeats, and request/response unions. Use these
+ * schemas at protocol boundaries to encode, decode, or validate custom transports that need to
  * interoperate with the built-in unstable devtools client and server.
  *
  * @since 4.0.0
  */
-import * as Exit from "../../Exit.ts"
-import { identity } from "../../Function.ts"
-import type * as Option from "../../Option.ts"
-import * as Schema from "../../Schema.ts"
-import * as SchemaTransformation from "../../SchemaTransformation.ts"
+import * as Exit from "../../Exit.ts";
+import { identity } from "../../Function.ts";
+import type * as Option from "../../Option.ts";
+import * as Schema from "../../Schema.ts";
+import * as SchemaTransformation from "../../SchemaTransformation.ts";
 
 /**
- * Schema for a span status representing a span that has started but not yet
- * ended.
+ * Schema for a span status representing a span that has started but not yet ended.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const SpanStatusStarted = Schema.Struct({
   _tag: Schema.tag("Started"),
-  startTime: Schema.BigInt
-})
+  startTime: Schema.BigInt,
+});
 
 /**
  * Type of a span status representing a span that has started but not yet ended.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type SpanStatusStarted = Schema.Schema.Type<typeof SpanStatusStarted>
+export type SpanStatusStarted = Schema.Schema.Type<typeof SpanStatusStarted>;
 
 /**
- * Schema for a span status representing an ended span, including start time,
- * end time, and encoded exit status. Encoding drops success values with
- * `Exit.asVoid`.
+ * Schema for a span status representing an ended span, including start time, end time, and encoded
+ * exit status. Encoding drops success values with `Exit.asVoid`.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const SpanStatusEnded = Schema.Struct({
   _tag: Schema.tag("Ended"),
   startTime: Schema.BigInt,
   endTime: Schema.BigInt,
-  exit: Schema.Exit(Schema.Void, Schema.Defect({ includeStack: true }), Schema.Defect({ includeStack: true })).pipe(
+  exit: Schema.Exit(
+    Schema.Void,
+    Schema.Defect({ includeStack: true }),
+    Schema.Defect({ includeStack: true }),
+  ).pipe(
     Schema.decodeTo(
       Schema.Exit(Schema.Unknown, Schema.Unknown, Schema.Unknown),
       SchemaTransformation.transform({
         decode: identity,
-        encode: Exit.asVoid
-      })
-    )
-  )
-})
+        encode: Exit.asVoid,
+      }),
+    ),
+  ),
+});
 
 /**
- * Type of a span status representing an ended span with start time, end time,
- * and exit status.
+ * Type of a span status representing an ended span with start time, end time, and exit status.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type SpanStatusEnded = Schema.Schema.Type<typeof SpanStatusEnded>
+export type SpanStatusEnded = Schema.Schema.Type<typeof SpanStatusEnded>;
 
 /**
  * Schema for devtools span status, either started or ended.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export const SpanStatus = Schema.Union([SpanStatusStarted, SpanStatusEnded])
+export const SpanStatus = Schema.Union([SpanStatusStarted, SpanStatusEnded]);
 
 /**
  * Type of a devtools span status, either started or ended.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type SpanStatus = Schema.Schema.Type<typeof SpanStatus>
+export type SpanStatus = Schema.Schema.Type<typeof SpanStatus>;
 
 /**
- * Serialized parent span context for a span created outside the current
- * devtools span tree.
+ * Serialized parent span context for a span created outside the current devtools span tree.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export interface ExternalSpan {
-  readonly _tag: "ExternalSpan"
-  readonly spanId: string
-  readonly traceId: string
-  readonly sampled: boolean
+  readonly _tag: "ExternalSpan";
+  readonly spanId: string;
+  readonly traceId: string;
+  readonly sampled: boolean;
 }
 
 /**
- * Schema for an external parent span context containing span id, trace id, and
- * sampling flag.
+ * Schema for an external parent span context containing span id, trace id, and sampling flag.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const ExternalSpan: Schema.Codec<ExternalSpan> = Schema.Struct({
   _tag: Schema.tag("ExternalSpan"),
   spanId: Schema.String,
   traceId: Schema.String,
-  sampled: Schema.Boolean
-})
+  sampled: Schema.Boolean,
+});
 
 /**
- * Telemetry payload for an Effect span sent to devtools, including identity,
- * attributes, status, sampling flag, and optional parent span.
+ * Telemetry payload for an Effect span sent to devtools, including identity, attributes, status,
+ * sampling flag, and optional parent span.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export interface Span {
-  readonly _tag: "Span"
-  readonly spanId: string
-  readonly traceId: string
-  readonly name: string
-  readonly sampled: boolean
-  readonly attributes: ReadonlyMap<string, unknown>
-  readonly status: SpanStatus
-  readonly parent: Option.Option<ParentSpan>
+  readonly _tag: "Span";
+  readonly spanId: string;
+  readonly traceId: string;
+  readonly name: string;
+  readonly sampled: boolean;
+  readonly attributes: ReadonlyMap<string, unknown>;
+  readonly status: SpanStatus;
+  readonly parent: Option.Option<ParentSpan>;
 }
 
 /**
  * Schema for an Effect span telemetry payload sent to devtools.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Span: Schema.Codec<Span> = Schema.Struct({
   _tag: Schema.tag("Span"),
@@ -143,15 +141,15 @@ export const Span: Schema.Codec<Span> = Schema.Struct({
   sampled: Schema.Boolean,
   attributes: Schema.ReadonlyMap(Schema.String, Schema.Any),
   status: SpanStatus,
-  parent: Schema.Option(Schema.suspend(() => ParentSpan))
-})
+  parent: Schema.Option(Schema.suspend(() => ParentSpan)),
+});
 
 /**
- * Schema for a named event emitted by a span, including trace id, span id,
- * start time, and optional attributes.
+ * Schema for a named event emitted by a span, including trace id, span id, start time, and optional
+ * attributes.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const SpanEvent = Schema.Struct({
   _tag: Schema.tag("SpanEvent"),
@@ -159,107 +157,106 @@ export const SpanEvent = Schema.Struct({
   spanId: Schema.String,
   name: Schema.String,
   startTime: Schema.BigInt,
-  attributes: Schema.UndefinedOr(Schema.Record(Schema.String, Schema.Any))
-})
+  attributes: Schema.UndefinedOr(Schema.Record(Schema.String, Schema.Any)),
+});
 
 /**
  * Type of a named event emitted by a span and sent to devtools.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type SpanEvent = Schema.Schema.Type<typeof SpanEvent>
+export type SpanEvent = Schema.Schema.Type<typeof SpanEvent>;
 
 /**
- * Type of a span parent, represented either by a devtools `Span` payload or an
- * `ExternalSpan` context.
+ * Type of a span parent, represented either by a devtools `Span` payload or an `ExternalSpan`
+ * context.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type ParentSpan = Span | ExternalSpan
+export type ParentSpan = Span | ExternalSpan;
 
 /**
- * Schema for a span parent, either a full devtools `Span` payload or an
- * `ExternalSpan` context.
+ * Schema for a span parent, either a full devtools `Span` payload or an `ExternalSpan` context.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export const ParentSpan = Schema.Union([Span, ExternalSpan])
+export const ParentSpan = Schema.Union([Span, ExternalSpan]);
 
 /**
  * Schema for the devtools heartbeat request sent by the client.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Ping = Schema.Struct({
-  _tag: Schema.tag("Ping")
-})
+  _tag: Schema.tag("Ping"),
+});
 
 /**
  * Type of the devtools heartbeat request sent by the client.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Ping = Schema.Schema.Type<typeof Ping>
+export type Ping = Schema.Schema.Type<typeof Ping>;
 
 /**
  * Schema for the devtools heartbeat response.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Pong = Schema.Struct({
-  _tag: Schema.tag("Pong")
-})
+  _tag: Schema.tag("Pong"),
+});
 
 /**
  * Type of the devtools heartbeat response.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Pong = Schema.Schema.Type<typeof Pong>
+export type Pong = Schema.Schema.Type<typeof Pong>;
 
 /**
  * Schema for a devtools request asking the client to send a metrics snapshot.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const MetricsRequest = Schema.Struct({
-  _tag: Schema.tag("MetricsRequest")
-})
+  _tag: Schema.tag("MetricsRequest"),
+});
 
 /**
  * Type of a devtools request asking the client to send a metrics snapshot.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type MetricsRequest = Schema.Schema.Type<typeof MetricsRequest>
+export type MetricsRequest = Schema.Schema.Type<typeof MetricsRequest>;
 
 /**
  * Schema for a metric label key/value pair in a devtools metrics snapshot.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const MetricLabel = Schema.Struct({
   key: Schema.String,
-  value: Schema.String
-})
+  value: Schema.String,
+});
 
 /**
  * Type of a metric label key/value pair in a devtools metrics snapshot.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type MetricLabel = Schema.Schema.Type<typeof MetricLabel>
+export type MetricLabel = Schema.Schema.Type<typeof MetricLabel>;
 
 const metric = <Type extends string, State extends Schema.Constraint>(type: Type, state: State) =>
   Schema.Struct({
@@ -267,36 +264,34 @@ const metric = <Type extends string, State extends Schema.Constraint>(type: Type
     type: Schema.tag(type),
     description: Schema.UndefinedOr(Schema.String),
     attributes: Schema.UndefinedOr(Schema.Record(Schema.String, Schema.String)),
-    state
-  })
+    state,
+  });
 
 /**
- * Schema for a counter metric snapshot, including the count and whether updates
- * are incremental.
+ * Schema for a counter metric snapshot, including the count and whether updates are incremental.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Counter = metric(
   "Counter",
   Schema.Struct({
     count: Schema.Union([Schema.Number, Schema.BigInt]),
-    incremental: Schema.Boolean
-  })
-)
+    incremental: Schema.Boolean,
+  }),
+);
 
 /**
  * Type of a devtools counter metric snapshot.
  *
  * **Details**
  *
- * The state contains the current count and whether the counter reports
- * incremental updates.
+ * The state contains the current count and whether the counter reports incremental updates.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Counter = Schema.Schema.Type<typeof Counter>
+export type Counter = Schema.Schema.Type<typeof Counter>;
 
 /**
  * Schema for a devtools frequency metric snapshot.
@@ -305,15 +300,15 @@ export type Counter = Schema.Schema.Type<typeof Counter>
  *
  * The metric state records occurrence counts by string key.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Frequency = metric(
   "Frequency",
   Schema.Struct({
-    occurrences: Schema.ReadonlyMap(Schema.String, Schema.Number)
-  })
-)
+    occurrences: Schema.ReadonlyMap(Schema.String, Schema.Number),
+  }),
+);
 
 /**
  * Type of a devtools frequency metric snapshot.
@@ -322,10 +317,10 @@ export const Frequency = metric(
  *
  * The state maps observed string values to occurrence counts.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Frequency = Schema.Schema.Type<typeof Frequency>
+export type Frequency = Schema.Schema.Type<typeof Frequency>;
 
 /**
  * Schema for a devtools gauge metric snapshot.
@@ -334,15 +329,15 @@ export type Frequency = Schema.Schema.Type<typeof Frequency>
  *
  * The metric state contains the current numeric or bigint value.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Gauge = metric(
   "Gauge",
   Schema.Struct({
-    value: Schema.Union([Schema.Number, Schema.BigInt])
-  })
-)
+    value: Schema.Union([Schema.Number, Schema.BigInt]),
+  }),
+);
 
 /**
  * Type of a devtools gauge metric snapshot.
@@ -351,21 +346,20 @@ export const Gauge = metric(
  *
  * The state contains the current numeric or bigint value.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Gauge = Schema.Schema.Type<typeof Gauge>
+export type Gauge = Schema.Schema.Type<typeof Gauge>;
 
 /**
  * Schema for a devtools histogram metric snapshot.
  *
  * **Details**
  *
- * The metric state includes bucket counts plus the total count, minimum,
- * maximum, and sum.
+ * The metric state includes bucket counts plus the total count, minimum, maximum, and sum.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Histogram = metric(
   "Histogram",
@@ -374,33 +368,31 @@ export const Histogram = metric(
     count: Schema.Number,
     min: Schema.Number,
     max: Schema.Number,
-    sum: Schema.Number
-  })
-)
+    sum: Schema.Number,
+  }),
+);
 
 /**
  * Type of a devtools histogram metric snapshot.
  *
  * **Details**
  *
- * The state includes bucket counts plus the total count, minimum, maximum, and
- * sum.
+ * The state includes bucket counts plus the total count, minimum, maximum, and sum.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Histogram = Schema.Schema.Type<typeof Histogram>
+export type Histogram = Schema.Schema.Type<typeof Histogram>;
 
 /**
  * Schema for a devtools summary metric snapshot.
  *
  * **Details**
  *
- * The metric state contains quantile values plus the total count, minimum,
- * maximum, and sum.
+ * The metric state contains quantile values plus the total count, minimum, maximum, and sum.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const Summary = metric(
   "Summary",
@@ -409,35 +401,33 @@ export const Summary = metric(
     count: Schema.Number,
     min: Schema.Number,
     max: Schema.Number,
-    sum: Schema.Number
-  })
-)
+    sum: Schema.Number,
+  }),
+);
 
 /**
  * Type of a devtools summary metric snapshot.
  *
  * **Details**
  *
- * The state contains quantile values plus the total count, minimum, maximum,
- * and sum.
+ * The state contains quantile values plus the total count, minimum, maximum, and sum.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Summary = Schema.Schema.Type<typeof Summary>
+export type Summary = Schema.Schema.Type<typeof Summary>;
 
 /**
  * Schema for any devtools metric snapshot.
  *
  * **Details**
  *
- * Accepted metric kinds are counters, frequencies, gauges, histograms, and
- * summaries.
+ * Accepted metric kinds are counters, frequencies, gauges, histograms, and summaries.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export const Metric = Schema.Union([Counter, Frequency, Gauge, Histogram, Summary])
+export const Metric = Schema.Union([Counter, Frequency, Gauge, Histogram, Summary]);
 
 /**
  * Type of any devtools metric snapshot.
@@ -446,30 +436,29 @@ export const Metric = Schema.Union([Counter, Frequency, Gauge, Histogram, Summar
  *
  * The union covers counters, frequencies, gauges, histograms, and summaries.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Metric = Schema.Schema.Type<typeof Metric>
+export type Metric = Schema.Schema.Type<typeof Metric>;
 
 /**
- * Schema for a devtools protocol message containing the current metric
- * snapshots.
+ * Schema for a devtools protocol message containing the current metric snapshots.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
 export const MetricsSnapshot = Schema.Struct({
   _tag: Schema.tag("MetricsSnapshot"),
-  metrics: Schema.Array(Metric)
-})
+  metrics: Schema.Array(Metric),
+});
 
 /**
  * Type of a devtools protocol message containing the current metric snapshots.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type MetricsSnapshot = Schema.Schema.Type<typeof MetricsSnapshot>
+export type MetricsSnapshot = Schema.Schema.Type<typeof MetricsSnapshot>;
 
 /**
  * Schema for devtools protocol requests accepted by the server.
@@ -478,10 +467,10 @@ export type MetricsSnapshot = Schema.Schema.Type<typeof MetricsSnapshot>
  *
  * Requests include heartbeat pings, spans, span events, and metric snapshots.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export const Request = Schema.Union([Ping, Span, SpanEvent, MetricsSnapshot])
+export const Request = Schema.Union([Ping, Span, SpanEvent, MetricsSnapshot]);
 
 /**
  * Type of devtools protocol requests accepted by the server.
@@ -490,10 +479,10 @@ export const Request = Schema.Union([Ping, Span, SpanEvent, MetricsSnapshot])
  *
  * Requests include heartbeat pings, spans, span events, and metric snapshots.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Request = Schema.Schema.Type<typeof Request>
+export type Request = Schema.Schema.Type<typeof Request>;
 
 /**
  * Namespace containing helper types for devtools protocol requests.
@@ -506,12 +495,11 @@ export declare namespace Request {
    *
    * **Details**
    *
-   * `DevToolsServer` handles `Ping` internally and exposes only these requests
-   * to client handlers.
+   * `DevToolsServer` handles `Ping` internally and exposes only these requests to client handlers.
    *
    * @since 4.0.0
    */
-  export type WithoutPing = Exclude<Request, { readonly _tag: "Ping" }>
+  export type WithoutPing = Exclude<Request, { readonly _tag: "Ping" }>;
 }
 
 /**
@@ -521,10 +509,10 @@ export declare namespace Request {
  *
  * Responses include heartbeat pongs and requests for metric snapshots.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export const Response = Schema.Union([Pong, MetricsRequest])
+export const Response = Schema.Union([Pong, MetricsRequest]);
 
 /**
  * Type of devtools protocol responses sent by the server.
@@ -533,10 +521,10 @@ export const Response = Schema.Union([Pong, MetricsRequest])
  *
  * Responses include heartbeat pongs and requests for metric snapshots.
  *
- * @category schemas
  * @since 4.0.0
+ * @category Schemas
  */
-export type Response = Schema.Schema.Type<typeof Response>
+export type Response = Schema.Schema.Type<typeof Response>;
 
 /**
  * Namespace containing helper types for devtools protocol responses.
@@ -549,10 +537,9 @@ export declare namespace Response {
    *
    * **Details**
    *
-   * `DevToolsServer` sends `Pong` internally and accepts only these responses
-   * from client handlers.
+   * `DevToolsServer` sends `Pong` internally and accepts only these responses from client handlers.
    *
    * @since 4.0.0
    */
-  export type WithoutPong = Exclude<Response, { readonly _tag: "Pong" }>
+  export type WithoutPong = Exclude<Response, { readonly _tag: "Pong" }>;
 }

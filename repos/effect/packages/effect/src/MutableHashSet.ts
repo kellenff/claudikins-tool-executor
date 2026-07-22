@@ -1,72 +1,65 @@
 /**
  * Stores unique values in a mutable hash set.
  *
- * `MutableHashSet` updates the same collection in place and supports fast
- * membership checks, insertion, removal, clearing, and iteration. It is built
- * on `MutableHashMap`: each set value is stored as a map key, so uniqueness
- * follows the same hashing and equality rules as the underlying mutable hash
- * map.
+ * `MutableHashSet` updates the same collection in place and supports fast membership checks,
+ * insertion, removal, clearing, and iteration. It is built on `MutableHashMap`: each set value is
+ * stored as a map key, so uniqueness follows the same hashing and equality rules as the underlying
+ * mutable hash map.
  *
  * @since 2.0.0
  */
-import { format } from "./Formatter.ts"
-import * as Dual from "./Function.ts"
-import { type Inspectable, NodeInspectSymbol, toJson } from "./Inspectable.ts"
-import * as MutableHashMap from "./MutableHashMap.ts"
-import type { Pipeable } from "./Pipeable.ts"
-import { pipeArguments } from "./Pipeable.ts"
-import { hasProperty } from "./Predicate.ts"
+import { format } from "./Formatter.ts";
+import * as Dual from "./Function.ts";
+import { type Inspectable, NodeInspectSymbol, toJson } from "./Inspectable.ts";
+import * as MutableHashMap from "./MutableHashMap.ts";
+import type { Pipeable } from "./Pipeable.ts";
+import { pipeArguments } from "./Pipeable.ts";
+import { hasProperty } from "./Predicate.ts";
 
-const TypeId = "~effect/collections/MutableHashSet"
+const TypeId = "~effect/collections/MutableHashSet";
 
 /**
- * A mutable hash set for storing unique values with Effect structural equality
- * support.
+ * A mutable hash set for storing unique values with Effect structural equality support.
  *
  * **When to use**
  *
- * Use to store and mutate a collection of unique values with Effect hashing and
- * equality semantics.
+ * Use to store and mutate a collection of unique values with Effect hashing and equality semantics.
  *
  * **Details**
  *
- * Operations mutate the set in place. Values that implement `Equal` / `Hash`
- * can be de-duplicated structurally; other values use normal JavaScript
- * reference or primitive equality.
+ * Operations mutate the set in place. Values that implement `Equal` / `Hash` can be de-duplicated
+ * structurally; other values use normal JavaScript reference or primitive equality.
  *
  * **Example** (Using a mutable hash set)
  *
  * ```ts
- * import { MutableHashSet } from "effect"
+ * import { MutableHashSet } from "effect";
  *
  * // Create a mutable hash set
- * const set: MutableHashSet.MutableHashSet<string> = MutableHashSet.make(
- *   "apple",
- *   "banana"
- * )
+ * const set: MutableHashSet.MutableHashSet<string> = MutableHashSet.make("apple", "banana");
  *
  * // Add elements
- * MutableHashSet.add(set, "cherry")
+ * MutableHashSet.add(set, "cherry");
  *
  * // Check if elements exist
- * console.log(MutableHashSet.has(set, "apple")) // true
- * console.log(MutableHashSet.has(set, "grape")) // false
+ * console.log(MutableHashSet.has(set, "apple")); // true
+ * console.log(MutableHashSet.has(set, "grape")); // false
  *
  * // Iterate over elements
  * for (const value of set) {
- *   console.log(value) // "apple", "banana", "cherry"
+ *   console.log(value); // "apple", "banana", "cherry"
  * }
  *
  * // Get size
- * console.log(MutableHashSet.size(set)) // 3
+ * console.log(MutableHashSet.size(set)); // 3
  * ```
  *
- * @category models
  * @since 2.0.0
+ * @category Models
  */
 export interface MutableHashSet<out V> extends Iterable<V>, Pipeable, Inspectable {
-  readonly [TypeId]: typeof TypeId
-  readonly keyMap: MutableHashMap.MutableHashMap<V, boolean>
+  readonly [TypeId]: typeof TypeId;
+  readonly keyMap: MutableHashMap.MutableHashMap<V, boolean>;
 }
 
 /**
@@ -84,40 +77,42 @@ export interface MutableHashSet<out V> extends Iterable<V>, Pipeable, Inspectabl
  *
  * Native `Set` values do not satisfy this check.
  *
- * @see {@link MutableHashSet} for the mutable hash set interface
- *
- * @category refinements
  * @since 4.0.0
+ * @category Refinements
+ * @see {@link MutableHashSet} for the mutable hash set interface
  */
-export const isMutableHashSet = <V>(value: unknown): value is MutableHashSet<V> => hasProperty(value, TypeId)
+export const isMutableHashSet = <V>(value: unknown): value is MutableHashSet<V> =>
+  hasProperty(value, TypeId);
 
 const MutableHashSetProto: Omit<MutableHashSet<unknown>, "keyMap"> = {
   [TypeId]: TypeId,
   [Symbol.iterator](this: MutableHashSet<unknown>): Iterator<unknown> {
-    return Array.from(this.keyMap).map(([_]) => _)[Symbol.iterator]()
+    return Array.from(this.keyMap)
+      .map(([_]) => _)
+      [Symbol.iterator]();
   },
   toString() {
-    return `MutableHashSet(${format(Array.from(this))})`
+    return `MutableHashSet(${format(Array.from(this))})`;
   },
   toJSON() {
     return {
       _id: "MutableHashSet",
-      values: toJson(Array.from(this))
-    }
+      values: toJson(Array.from(this)),
+    };
   },
   [NodeInspectSymbol]() {
-    return this.toJSON()
+    return this.toJSON();
   },
   pipe() {
-    return pipeArguments(this, arguments)
-  }
-}
+    return pipeArguments(this, arguments);
+  },
+};
 
 const fromHashMap = <V>(keyMap: MutableHashMap.MutableHashMap<V, boolean>): MutableHashSet<V> => {
-  const set = Object.create(MutableHashSetProto)
-  set.keyMap = keyMap
-  return set
-}
+  const set = Object.create(MutableHashSetProto);
+  set.keyMap = keyMap;
+  return set;
+};
 
 /**
  * Creates an empty MutableHashSet.
@@ -133,31 +128,30 @@ const fromHashMap = <V>(keyMap: MutableHashMap.MutableHashMap<V, boolean>): Muta
  * **Example** (Creating an empty set)
  *
  * ```ts
- * import { MutableHashSet } from "effect"
+ * import { MutableHashSet } from "effect";
  *
- * const set = MutableHashSet.empty<string>()
+ * const set = MutableHashSet.empty<string>();
  *
  * // Add some values
- * MutableHashSet.add(set, "apple")
- * MutableHashSet.add(set, "banana")
- * MutableHashSet.add(set, "apple") // Duplicate, no effect
+ * MutableHashSet.add(set, "apple");
+ * MutableHashSet.add(set, "banana");
+ * MutableHashSet.add(set, "apple"); // Duplicate, no effect
  *
- * console.log(MutableHashSet.size(set)) // 2
- * console.log(Array.from(set)) // ["apple", "banana"]
+ * console.log(MutableHashSet.size(set)); // 2
+ * console.log(Array.from(set)); // ["apple", "banana"]
  * ```
  *
+ * @since 2.0.0
+ * @category Constructors
  * @see {@link make} for creating a set from explicit values
  * @see {@link fromIterable} for creating a set from an iterable of values
  * @see {@link clear} for emptying an existing mutable set
- *
- * @category constructors
- * @since 2.0.0
  */
-export const empty = <K = never>(): MutableHashSet<K> => fromHashMap(MutableHashMap.empty())
+export const empty = <K = never>(): MutableHashSet<K> => fromHashMap(MutableHashMap.empty());
 
 /**
- * Creates a MutableHashSet from an iterable collection of values.
- * Duplicates are automatically removed.
+ * Creates a MutableHashSet from an iterable collection of values. Duplicates are automatically
+ * removed.
  *
  * **When to use**
  *
@@ -166,32 +160,31 @@ export const empty = <K = never>(): MutableHashSet<K> => fromHashMap(MutableHash
  * **Example** (Creating a set from an iterable)
  *
  * ```ts
- * import { MutableHashSet } from "effect"
+ * import { MutableHashSet } from "effect";
  *
- * const values = ["apple", "banana", "apple", "cherry", "banana"]
- * const set = MutableHashSet.fromIterable(values)
+ * const values = ["apple", "banana", "apple", "cherry", "banana"];
+ * const set = MutableHashSet.fromIterable(values);
  *
- * console.log(MutableHashSet.size(set)) // 3
- * console.log(Array.from(set)) // ["apple", "banana", "cherry"]
+ * console.log(MutableHashSet.size(set)); // 3
+ * console.log(Array.from(set)); // ["apple", "banana", "cherry"]
  *
  * // Works with any iterable
- * const fromSet = MutableHashSet.fromIterable(new Set([1, 2, 3]))
- * console.log(MutableHashSet.size(fromSet)) // 3
+ * const fromSet = MutableHashSet.fromIterable(new Set([1, 2, 3]));
+ * console.log(MutableHashSet.size(fromSet)); // 3
  *
  * // From string characters
- * const fromString = MutableHashSet.fromIterable("hello")
- * console.log(Array.from(fromString)) // ["h", "e", "l", "o"]
+ * const fromString = MutableHashSet.fromIterable("hello");
+ * console.log(Array.from(fromString)); // ["h", "e", "l", "o"]
  * ```
  *
- * @category constructors
  * @since 2.0.0
+ * @category Constructors
  */
 export const fromIterable = <K = never>(keys: Iterable<K>): MutableHashSet<K> =>
-  fromHashMap(MutableHashMap.fromIterable(Array.from(keys).map((k) => [k, true])))
+  fromHashMap(MutableHashMap.fromIterable(Array.from(keys).map((k) => [k, true])));
 
 /**
- * Creates a MutableHashSet from a variable number of values.
- * Duplicates are automatically removed.
+ * Creates a MutableHashSet from a variable number of values. Duplicates are automatically removed.
  *
  * **When to use**
  *
@@ -200,33 +193,33 @@ export const fromIterable = <K = never>(keys: Iterable<K>): MutableHashSet<K> =>
  * **Example** (Creating a set from values)
  *
  * ```ts
- * import { MutableHashSet } from "effect"
+ * import { MutableHashSet } from "effect";
  *
- * const set = MutableHashSet.make("apple", "banana", "apple", "cherry")
+ * const set = MutableHashSet.make("apple", "banana", "apple", "cherry");
  *
- * console.log(MutableHashSet.size(set)) // 3
- * console.log(Array.from(set)) // ["apple", "banana", "cherry"]
+ * console.log(MutableHashSet.size(set)); // 3
+ * console.log(Array.from(set)); // ["apple", "banana", "cherry"]
  *
  * // With numbers
- * const numbers = MutableHashSet.make(1, 2, 3, 2, 1)
- * console.log(MutableHashSet.size(numbers)) // 3
- * console.log(Array.from(numbers)) // [1, 2, 3]
+ * const numbers = MutableHashSet.make(1, 2, 3, 2, 1);
+ * console.log(MutableHashSet.size(numbers)); // 3
+ * console.log(Array.from(numbers)); // [1, 2, 3]
  *
  * // Mixed types
- * const mixed = MutableHashSet.make("hello", 42, true, "hello")
- * console.log(MutableHashSet.size(mixed)) // 3
+ * const mixed = MutableHashSet.make("hello", 42, true, "hello");
+ * console.log(MutableHashSet.size(mixed)); // 3
  * ```
  *
- * @category constructors
  * @since 2.0.0
+ * @category Constructors
  */
 export const make = <Keys extends ReadonlyArray<unknown>>(
   ...keys: Keys
-): MutableHashSet<Keys[number]> => fromIterable(keys)
+): MutableHashSet<Keys[number]> => fromIterable(keys);
 
 /**
- * Adds a value to the MutableHashSet, mutating the set in place.
- * If the value already exists, the set remains unchanged.
+ * Adds a value to the MutableHashSet, mutating the set in place. If the value already exists, the
+ * set remains unchanged.
  *
  * **When to use**
  *
@@ -235,37 +228,37 @@ export const make = <Keys extends ReadonlyArray<unknown>>(
  * **Example** (Adding values)
  *
  * ```ts
- * import { MutableHashSet } from "effect"
+ * import { MutableHashSet } from "effect";
  *
- * const set = MutableHashSet.empty<string>()
+ * const set = MutableHashSet.empty<string>();
  *
  * // Add new values
- * MutableHashSet.add(set, "apple")
- * MutableHashSet.add(set, "banana")
+ * MutableHashSet.add(set, "apple");
+ * MutableHashSet.add(set, "banana");
  *
- * console.log(MutableHashSet.size(set)) // 2
- * console.log(MutableHashSet.has(set, "apple")) // true
+ * console.log(MutableHashSet.size(set)); // 2
+ * console.log(MutableHashSet.has(set, "apple")); // true
  *
  * // Add duplicate (no effect)
- * MutableHashSet.add(set, "apple")
- * console.log(MutableHashSet.size(set)) // 2
+ * MutableHashSet.add(set, "apple");
+ * console.log(MutableHashSet.size(set)); // 2
  *
  * // Pipe-able version
- * const addFruit = MutableHashSet.add("cherry")
- * addFruit(set)
- * console.log(MutableHashSet.size(set)) // 3
+ * const addFruit = MutableHashSet.add("cherry");
+ * addFruit(set);
+ * console.log(MutableHashSet.size(set)); // 3
  * ```
  *
- * @category mutations
  * @since 2.0.0
+ * @category Mutations
  */
 export const add: {
-  <V>(key: V): (self: MutableHashSet<V>) => MutableHashSet<V>
-  <V>(self: MutableHashSet<V>, key: V): MutableHashSet<V>
+  <V>(key: V): (self: MutableHashSet<V>) => MutableHashSet<V>;
+  <V>(self: MutableHashSet<V>, key: V): MutableHashSet<V>;
 } = Dual.dual<
   <V>(key: V) => (self: MutableHashSet<V>) => MutableHashSet<V>,
   <V>(self: MutableHashSet<V>, key: V) => MutableHashSet<V>
->(2, (self, key) => (MutableHashMap.set(self.keyMap, key, true), self))
+>(2, (self, key) => (MutableHashMap.set(self.keyMap, key, true), self));
 
 /**
  * Checks whether the MutableHashSet contains the specified value.
@@ -276,45 +269,43 @@ export const add: {
  *
  * **Details**
  *
- * Membership follows the same hashing and equality rules as the underlying
- * `MutableHashMap`.
+ * Membership follows the same hashing and equality rules as the underlying `MutableHashMap`.
  *
  * **Example** (Checking for a value)
  *
  * ```ts
- * import { MutableHashSet } from "effect"
+ * import { MutableHashSet } from "effect";
  *
- * const set = MutableHashSet.make("apple", "banana", "cherry")
+ * const set = MutableHashSet.make("apple", "banana", "cherry");
  *
- * console.log(MutableHashSet.has(set, "apple")) // true
- * console.log(MutableHashSet.has(set, "grape")) // false
+ * console.log(MutableHashSet.has(set, "apple")); // true
+ * console.log(MutableHashSet.has(set, "grape")); // false
  *
  * // Pipe-able version
- * const hasApple = MutableHashSet.has("apple")
- * console.log(hasApple(set)) // true
+ * const hasApple = MutableHashSet.has("apple");
+ * console.log(hasApple(set)); // true
  *
  * // Check after adding
- * MutableHashSet.add(set, "grape")
- * console.log(MutableHashSet.has(set, "grape")) // true
+ * MutableHashSet.add(set, "grape");
+ * console.log(MutableHashSet.has(set, "grape")); // true
  * ```
  *
+ * @since 2.0.0
+ * @category Elements
  * @see {@link add} for adding a value to the set
  * @see {@link remove} for removing a value from the set
- *
- * @category elements
- * @since 2.0.0
  */
 export const has: {
-  <V>(key: V): (self: MutableHashSet<V>) => boolean
-  <V>(self: MutableHashSet<V>, key: V): boolean
+  <V>(key: V): (self: MutableHashSet<V>) => boolean;
+  <V>(self: MutableHashSet<V>, key: V): boolean;
 } = Dual.dual<
   <V>(key: V) => (self: MutableHashSet<V>) => boolean,
   <V>(self: MutableHashSet<V>, key: V) => boolean
->(2, (self, key) => MutableHashMap.has(self.keyMap, key))
+>(2, (self, key) => MutableHashMap.has(self.keyMap, key));
 
 /**
- * Removes the specified value from the MutableHashSet, mutating the set in place.
- * If the value doesn't exist, the set remains unchanged.
+ * Removes the specified value from the MutableHashSet, mutating the set in place. If the value
+ * doesn't exist, the set remains unchanged.
  *
  * **When to use**
  *
@@ -323,37 +314,37 @@ export const has: {
  * **Example** (Removing a value)
  *
  * ```ts
- * import { MutableHashSet } from "effect"
+ * import { MutableHashSet } from "effect";
  *
- * const set = MutableHashSet.make("apple", "banana", "cherry")
+ * const set = MutableHashSet.make("apple", "banana", "cherry");
  *
- * console.log(MutableHashSet.size(set)) // 3
+ * console.log(MutableHashSet.size(set)); // 3
  *
  * // Remove existing value
- * MutableHashSet.remove(set, "banana")
- * console.log(MutableHashSet.size(set)) // 2
- * console.log(MutableHashSet.has(set, "banana")) // false
+ * MutableHashSet.remove(set, "banana");
+ * console.log(MutableHashSet.size(set)); // 2
+ * console.log(MutableHashSet.has(set, "banana")); // false
  *
  * // Remove non-existent value (no effect)
- * MutableHashSet.remove(set, "grape")
- * console.log(MutableHashSet.size(set)) // 2
+ * MutableHashSet.remove(set, "grape");
+ * console.log(MutableHashSet.size(set)); // 2
  *
  * // Pipe-able version
- * const removeFruit = MutableHashSet.remove("apple")
- * removeFruit(set)
- * console.log(MutableHashSet.size(set)) // 1
+ * const removeFruit = MutableHashSet.remove("apple");
+ * removeFruit(set);
+ * console.log(MutableHashSet.size(set)); // 1
  * ```
  *
- * @category mutations
  * @since 2.0.0
+ * @category Mutations
  */
 export const remove: {
-  <V>(key: V): (self: MutableHashSet<V>) => MutableHashSet<V>
-  <V>(self: MutableHashSet<V>, key: V): MutableHashSet<V>
+  <V>(key: V): (self: MutableHashSet<V>) => MutableHashSet<V>;
+  <V>(self: MutableHashSet<V>, key: V): MutableHashSet<V>;
 } = Dual.dual<
   <V>(key: V) => (self: MutableHashSet<V>) => MutableHashSet<V>,
   <V>(self: MutableHashSet<V>, key: V) => MutableHashSet<V>
->(2, (self, key) => (MutableHashMap.remove(self.keyMap, key), self))
+>(2, (self, key) => (MutableHashMap.remove(self.keyMap, key), self));
 
 /**
  * Returns the number of unique values in the MutableHashSet.
@@ -365,31 +356,31 @@ export const remove: {
  * **Example** (Checking set size)
  *
  * ```ts
- * import { MutableHashSet } from "effect"
+ * import { MutableHashSet } from "effect";
  *
- * const set = MutableHashSet.empty<string>()
- * console.log(MutableHashSet.size(set)) // 0
+ * const set = MutableHashSet.empty<string>();
+ * console.log(MutableHashSet.size(set)); // 0
  *
- * MutableHashSet.add(set, "apple")
- * MutableHashSet.add(set, "banana")
- * MutableHashSet.add(set, "apple") // Duplicate
- * console.log(MutableHashSet.size(set)) // 2
+ * MutableHashSet.add(set, "apple");
+ * MutableHashSet.add(set, "banana");
+ * MutableHashSet.add(set, "apple"); // Duplicate
+ * console.log(MutableHashSet.size(set)); // 2
  *
- * MutableHashSet.remove(set, "apple")
- * console.log(MutableHashSet.size(set)) // 1
+ * MutableHashSet.remove(set, "apple");
+ * console.log(MutableHashSet.size(set)); // 1
  *
- * MutableHashSet.clear(set)
- * console.log(MutableHashSet.size(set)) // 0
+ * MutableHashSet.clear(set);
+ * console.log(MutableHashSet.size(set)); // 0
  * ```
  *
- * @category elements
  * @since 2.0.0
+ * @category Elements
  */
-export const size = <V>(self: MutableHashSet<V>): number => MutableHashMap.size(self.keyMap)
+export const size = <V>(self: MutableHashSet<V>): number => MutableHashMap.size(self.keyMap);
 
 /**
- * Removes all values from the MutableHashSet, mutating the set in place.
- * The set becomes empty after this operation.
+ * Removes all values from the MutableHashSet, mutating the set in place. The set becomes empty
+ * after this operation.
  *
  * **When to use**
  *
@@ -398,25 +389,28 @@ export const size = <V>(self: MutableHashSet<V>): number => MutableHashMap.size(
  * **Example** (Clearing all values)
  *
  * ```ts
- * import { MutableHashSet } from "effect"
+ * import { MutableHashSet } from "effect";
  *
- * const set = MutableHashSet.make("apple", "banana", "cherry")
+ * const set = MutableHashSet.make("apple", "banana", "cherry");
  *
- * console.log(MutableHashSet.size(set)) // 3
+ * console.log(MutableHashSet.size(set)); // 3
  *
  * // Clear all values
- * MutableHashSet.clear(set)
+ * MutableHashSet.clear(set);
  *
- * console.log(MutableHashSet.size(set)) // 0
- * console.log(MutableHashSet.has(set, "apple")) // false
- * console.log(Array.from(set)) // []
+ * console.log(MutableHashSet.size(set)); // 0
+ * console.log(MutableHashSet.has(set, "apple")); // false
+ * console.log(Array.from(set)); // []
  *
  * // Can still add new values after clearing
- * MutableHashSet.add(set, "new")
- * console.log(MutableHashSet.size(set)) // 1
+ * MutableHashSet.add(set, "new");
+ * console.log(MutableHashSet.size(set)); // 1
  * ```
  *
- * @category mutations
  * @since 2.0.0
+ * @category Mutations
  */
-export const clear = <V>(self: MutableHashSet<V>): MutableHashSet<V> => (MutableHashMap.clear(self.keyMap), self)
+export const clear = <V>(self: MutableHashSet<V>): MutableHashSet<V> => (
+  MutableHashMap.clear(self.keyMap),
+  self
+);

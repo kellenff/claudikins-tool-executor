@@ -1,7 +1,7 @@
 name: cancel_sql_query
 server: intellij
 category: code-nav
-description: 'Cancels a running query using its unique ID. '
+description: "Cancels a running query using its unique ID. "
 inputSchema:
   type: object
   properties:

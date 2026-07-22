@@ -23,10 +23,7 @@ const server = new McpServer({
   version: MCP_CLIENT_VERSION,
 });
 
-/**
- * Tool: search_tools
- * Search for MCP tools across all wrapped servers
- */
+/** Tool: search_tools Search for MCP tools across all wrapped servers */
 server.registerTool(
   "search_tools",
   {
@@ -53,10 +50,7 @@ Example queries:
   handleSearchTools,
 );
 
-/**
- * Tool: get_tool_schema
- * Get full inputSchema for a specific tool
- */
+/** Tool: get_tool_schema Get full inputSchema for a specific tool */
 server.registerTool(
   "get_tool_schema",
   {
@@ -75,10 +69,7 @@ Example: get_tool_schema("gemini-generate-image") - returns full schema with all
   handleGetToolSchema,
 );
 
-/**
- * Tool: execute_code
- * Execute TypeScript/JavaScript code in sandbox
- */
+/** Tool: execute_code Execute TypeScript/JavaScript code in sandbox */
 const clientList = getSandboxClientBindings()
   .map((binding) => `- ${binding}`)
   .join("\n");
@@ -132,9 +123,7 @@ Results are summarised if console.log output exceeds ${MAX_LOG_CHARS} chars.`,
   handleExecuteCode as unknown as Parameters<typeof server.registerTool>[2],
 );
 
-/**
- * Main entry point
- */
+/** Main entry point */
 async function main(): Promise<void> {
   startLifecycleManagement();
 

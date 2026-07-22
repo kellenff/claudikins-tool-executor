@@ -1,89 +1,89 @@
 /**
  * Manages at most one fiber inside a scope.
  *
- * A `FiberHandle<A, E>` can hold one `Fiber<A, E>`. Installing a new fiber
- * interrupts the previous one unless the operation is configured with
- * `onlyIfMissing`, and closing the owning scope interrupts the current fiber.
- * This module includes constructors for handles and scoped runtimes, helpers
- * for setting, reading, clearing, and running fibers, and operations for joining
- * the current fiber or waiting until the handle is empty.
+ * A `FiberHandle<A, E>` can hold one `Fiber<A, E>`. Installing a new fiber interrupts the previous
+ * one unless the operation is configured with `onlyIfMissing`, and closing the owning scope
+ * interrupts the current fiber. This module includes constructors for handles and scoped runtimes,
+ * helpers for setting, reading, clearing, and running fibers, and operations for joining the
+ * current fiber or waiting until the handle is empty.
  *
  * @since 2.0.0
  */
-import * as Cause from "./Cause.ts"
-import type { Context } from "./Context.ts"
-import * as Deferred from "./Deferred.ts"
-import * as Effect from "./Effect.ts"
-import * as Exit from "./Exit.ts"
-import * as Fiber from "./Fiber.ts"
-import * as Filter from "./Filter.ts"
-import { dual } from "./Function.ts"
-import type * as Inspectable from "./Inspectable.ts"
-import { PipeInspectableProto } from "./internal/core.ts"
-import * as Option from "./Option.ts"
-import type { Pipeable } from "./Pipeable.ts"
-import * as Predicate from "./Predicate.ts"
-import type { Scheduler } from "./Scheduler.ts"
-import type * as Scope from "./Scope.ts"
+import * as Cause from "./Cause.ts";
+import type { Context } from "./Context.ts";
+import * as Deferred from "./Deferred.ts";
+import * as Effect from "./Effect.ts";
+import * as Exit from "./Exit.ts";
+import * as Fiber from "./Fiber.ts";
+import * as Filter from "./Filter.ts";
+import { dual } from "./Function.ts";
+import type * as Inspectable from "./Inspectable.ts";
+import { PipeInspectableProto } from "./internal/core.ts";
+import * as Option from "./Option.ts";
+import type { Pipeable } from "./Pipeable.ts";
+import * as Predicate from "./Predicate.ts";
+import type { Scheduler } from "./Scheduler.ts";
+import type * as Scope from "./Scope.ts";
 
-const TypeId = "~effect/FiberHandle"
+const TypeId = "~effect/FiberHandle";
 
 /**
- * Scoped handle that manages at most one fiber, interrupts the current fiber
- * when the handle's scope closes, and removes managed fibers from the handle
- * when they complete.
+ * Scoped handle that manages at most one fiber, interrupts the current fiber when the handle's
+ * scope closes, and removes managed fibers from the handle when they complete.
  *
  * **Example** (Managing a single fiber)
  *
  * ```ts
- * import { Effect, Fiber, FiberHandle } from "effect"
+ * import { Effect, Fiber, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
+ * Effect.gen(function* () {
  *   // Create a FiberHandle that can hold fibers producing strings
- *   const handle = yield* FiberHandle.make<string, never>()
+ *   const handle = yield* FiberHandle.make<string, never>();
  *
  *   // The handle can store and manage a single fiber
- *   const fiber = yield* FiberHandle.run(handle, Effect.succeed("hello"))
- *   const result = yield* Fiber.await(fiber)
- *   console.log(result) // "hello"
- * })
+ *   const fiber = yield* FiberHandle.run(handle, Effect.succeed("hello"));
+ *   const result = yield* Fiber.await(fiber);
+ *   console.log(result); // "hello"
+ * });
  * ```
  *
- * @category models
  * @since 2.0.0
+ * @category Models
  */
-export interface FiberHandle<out A = unknown, out E = unknown> extends Pipeable, Inspectable.Inspectable {
-  readonly [TypeId]: typeof TypeId
-  readonly deferred: Deferred.Deferred<void, unknown>
-  state: {
-    readonly _tag: "Open"
-    fiber: Fiber.Fiber<A, E> | undefined
-  } | {
-    readonly _tag: "Closed"
-  }
+export interface FiberHandle<out A = unknown, out E = unknown>
+  extends Pipeable, Inspectable.Inspectable {
+  readonly [TypeId]: typeof TypeId;
+  readonly deferred: Deferred.Deferred<void, unknown>;
+  state:
+    | {
+        readonly _tag: "Open";
+        fiber: Fiber.Fiber<A, E> | undefined;
+      }
+    | {
+        readonly _tag: "Closed";
+      };
 }
 
 /**
- * Returns `true` if a value is a `FiberHandle` by checking for the
- * `FiberHandle` runtime marker.
+ * Returns `true` if a value is a `FiberHandle` by checking for the `FiberHandle` runtime marker.
  *
  * **Example** (Checking fiber handles)
  *
  * ```ts
- * import { Effect, FiberHandle } from "effect"
+ * import { Effect, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
  *
- *   console.log(FiberHandle.isFiberHandle(handle)) // true
- *   console.log(FiberHandle.isFiberHandle("not a handle")) // false
- * })
+ *   console.log(FiberHandle.isFiberHandle(handle)); // true
+ *   console.log(FiberHandle.isFiberHandle("not a handle")); // false
+ * });
  * ```
  *
- * @category refinements
  * @since 2.0.0
+ * @category Refinements
  */
-export const isFiberHandle = (u: unknown): u is FiberHandle => Predicate.hasProperty(u, TypeId)
+export const isFiberHandle = (u: unknown): u is FiberHandle => Predicate.hasProperty(u, TypeId);
 
 const Proto = {
   [TypeId]: TypeId,
@@ -91,352 +91,351 @@ const Proto = {
   toJSON(this: FiberHandle) {
     return {
       _id: "FiberHandle",
-      state: this.state
-    }
-  }
-}
+      state: this.state,
+    };
+  },
+};
 
 const makeUnsafe = <A = unknown, E = unknown>(): FiberHandle<A, E> => {
-  const self = Object.create(Proto)
-  self.state = { _tag: "Open", fiber: undefined }
-  self.deferred = Deferred.makeUnsafe()
-  return self
-}
+  const self = Object.create(Proto);
+  self.state = { _tag: "Open", fiber: undefined };
+  self.deferred = Deferred.makeUnsafe();
+  return self;
+};
 
 /**
  * Creates a scoped `FiberHandle` that can store a single fiber.
  *
  * **Details**
  *
- * When the associated `Scope` is closed, the contained fiber will be
- * interrupted. You can add a fiber to the handle using `FiberHandle.run`, and
- * the fiber will be automatically removed from the `FiberHandle` when it
- * completes.
+ * When the associated `Scope` is closed, the contained fiber will be interrupted. You can add a
+ * fiber to the handle using `FiberHandle.run`, and the fiber will be automatically removed from the
+ * `FiberHandle` when it completes.
  *
  * **Example** (Creating a scoped fiber handle)
  *
  * ```ts
- * import { Effect, FiberHandle } from "effect"
+ * import { Effect, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
  *
  *   // run some effects
- *   yield* FiberHandle.run(handle, Effect.never)
+ *   yield* FiberHandle.run(handle, Effect.never);
  *   // this will interrupt the previous fiber
- *   yield* FiberHandle.run(handle, Effect.never)
+ *   yield* FiberHandle.run(handle, Effect.never);
  *
- *   yield* Effect.sleep(1000)
+ *   yield* Effect.sleep(1000);
  * }).pipe(
- *   Effect.scoped // The fiber will be interrupted when the scope is closed
- * )
+ *   Effect.scoped, // The fiber will be interrupted when the scope is closed
+ * );
  * ```
  *
- * @category constructors
  * @since 2.0.0
+ * @category Constructors
  */
-export const make = <A = unknown, E = unknown>(): Effect.Effect<FiberHandle<A, E>, never, Scope.Scope> =>
+export const make = <A = unknown, E = unknown>(): Effect.Effect<
+  FiberHandle<A, E>,
+  never,
+  Scope.Scope
+> =>
   Effect.acquireRelease(
     Effect.sync(() => makeUnsafe<A, E>()),
     (handle) => {
-      const state = handle.state
-      if (state._tag === "Closed") return Effect.void
-      handle.state = { _tag: "Closed" }
-      return state.fiber ?
-        Deferred.into(
-          Effect.asVoid(Fiber.interruptAs(state.fiber, internalFiberId)),
-          handle.deferred
-        ) :
-        Deferred.done(handle.deferred, Exit.void)
-    }
-  )
+      const state = handle.state;
+      if (state._tag === "Closed") return Effect.void;
+      handle.state = { _tag: "Closed" };
+      return state.fiber
+        ? Deferred.into(
+            Effect.asVoid(Fiber.interruptAs(state.fiber, internalFiberId)),
+            handle.deferred,
+          )
+        : Deferred.done(handle.deferred, Exit.void);
+    },
+  );
 
 /**
  * Creates a scoped run function that forks effects into a new `FiberHandle`.
  *
  * **Details**
  *
- * Each call returns the forked fiber, stores it in the handle, and interrupts
- * the previous fiber unless `onlyIfMissing` is set. The managed fiber is
- * interrupted when the handle's scope closes.
+ * Each call returns the forked fiber, stores it in the handle, and interrupts the previous fiber
+ * unless `onlyIfMissing` is set. The managed fiber is interrupted when the handle's scope closes.
  *
  * **Example** (Running effects with a fiber handle)
  *
  * ```ts
- * import { Effect, Fiber, FiberHandle } from "effect"
+ * import { Effect, Fiber, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const run = yield* FiberHandle.makeRuntime<never>()
+ * Effect.gen(function* () {
+ *   const run = yield* FiberHandle.makeRuntime<never>();
  *
  *   // Run effects and get fibers back
- *   const fiberA = run(Effect.succeed("first"))
- *   const fiberB = run(Effect.succeed("second"))
+ *   const fiberA = run(Effect.succeed("first"));
+ *   const fiberB = run(Effect.succeed("second"));
  *
  *   // The second fiber will interrupt the first
- *   const resultA = yield* Fiber.await(fiberA)
- *   const resultB = yield* Fiber.await(fiberB)
- * }).pipe(Effect.scoped)
+ *   const resultA = yield* Fiber.await(fiberA);
+ *   const resultB = yield* Fiber.await(fiberB);
+ * }).pipe(Effect.scoped);
  * ```
  *
- * @category constructors
  * @since 2.0.0
+ * @category Constructors
  */
 export const makeRuntime = <R, E = unknown, A = unknown>(): Effect.Effect<
   <XE extends E, XA extends A>(
     effect: Effect.Effect<XA, XE, R>,
     options?:
       | {
-        readonly signal?: AbortSignal | undefined
-        readonly scheduler?: Scheduler | undefined
-        readonly onlyIfMissing?: boolean | undefined
-        readonly propagateInterruption?: boolean | undefined
-      }
-      | undefined
+          readonly signal?: AbortSignal | undefined;
+          readonly scheduler?: Scheduler | undefined;
+          readonly onlyIfMissing?: boolean | undefined;
+          readonly propagateInterruption?: boolean | undefined;
+        }
+      | undefined,
   ) => Fiber.Fiber<XA, XE>,
   never,
   Scope.Scope | R
-> =>
-  Effect.flatMap(
-    make<A, E>(),
-    (self) => runtime(self)<R>()
-  )
+> => Effect.flatMap(make<A, E>(), (self) => runtime(self)<R>());
 
 /**
- * Creates a scoped run function that forks effects into a new `FiberHandle`
- * and returns a `Promise` for each effect result.
+ * Creates a scoped run function that forks effects into a new `FiberHandle` and returns a `Promise`
+ * for each effect result.
  *
  * **When to use**
  *
- * Use when integrating a scoped `FiberHandle` runner with Promise-based APIs
- * and Promise rejection from squashed failures is the desired boundary.
+ * Use when integrating a scoped `FiberHandle` runner with Promise-based APIs and Promise rejection
+ * from squashed failures is the desired boundary.
  *
  * **Details**
  *
- * Each call stores the fiber in the handle and interrupts the previous fiber
- * unless `onlyIfMissing` is set. The returned Promise resolves with the
- * effect's success value or rejects with the squashed failure cause.
+ * Each call stores the fiber in the handle and interrupts the previous fiber unless `onlyIfMissing`
+ * is set. The returned Promise resolves with the effect's success value or rejects with the
+ * squashed failure cause.
  *
  * **Example** (Running effects as promises)
  *
  * ```ts
- * import { Effect, FiberHandle } from "effect"
+ * import { Effect, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const run = yield* FiberHandle.makeRuntimePromise()
+ * Effect.gen(function* () {
+ *   const run = yield* FiberHandle.makeRuntimePromise();
  *
  *   // Run effects and get promises back
- *   const promise = run(Effect.succeed("hello"))
- *   const result = yield* Effect.promise(() => promise)
- *   console.log(result) // "hello"
- * }).pipe(Effect.scoped)
+ *   const promise = run(Effect.succeed("hello"));
+ *   const result = yield* Effect.promise(() => promise);
+ *   console.log(result); // "hello"
+ * }).pipe(Effect.scoped);
  * ```
  *
- * @category constructors
  * @since 3.13.0
+ * @category Constructors
  */
 export const makeRuntimePromise = <R = never, A = unknown, E = unknown>(): Effect.Effect<
   <XE extends E, XA extends A>(
     effect: Effect.Effect<XA, XE, R>,
-    options?: {
-      readonly signal?: AbortSignal | undefined
-      readonly scheduler?: Scheduler | undefined
-      readonly onlyIfMissing?: boolean | undefined
-      readonly propagateInterruption?: boolean | undefined
-    } | undefined
+    options?:
+      | {
+          readonly signal?: AbortSignal | undefined;
+          readonly scheduler?: Scheduler | undefined;
+          readonly onlyIfMissing?: boolean | undefined;
+          readonly propagateInterruption?: boolean | undefined;
+        }
+      | undefined,
   ) => Promise<XA>,
   never,
   Scope.Scope | R
-> =>
-  Effect.flatMap(
-    make<A, E>(),
-    (self) => runtimePromise(self)<R>()
-  )
+> => Effect.flatMap(make<A, E>(), (self) => runtimePromise(self)<R>());
 
-const internalFiberId = -1
-const isInternalInterruption = Filter.toPredicate(Filter.compose(
-  Cause.filterInterruptors,
-  Filter.has(internalFiberId)
-))
+const internalFiberId = -1;
+const isInternalInterruption = Filter.toPredicate(
+  Filter.compose(Cause.filterInterruptors, Filter.has(internalFiberId)),
+);
 
 /**
- * Sets the fiber in a FiberHandle. When the fiber completes, it will be removed from the FiberHandle.
- * If a fiber is already running, it will be interrupted unless `options.onlyIfMissing` is set.
+ * Sets the fiber in a FiberHandle. When the fiber completes, it will be removed from the
+ * FiberHandle. If a fiber is already running, it will be interrupted unless `options.onlyIfMissing`
+ * is set.
  *
  * **When to use**
  *
- * Use when an existing forked fiber must be installed synchronously into a
- * handle and immediate interruption of replaced or closed fibers is acceptable.
+ * Use when an existing forked fiber must be installed synchronously into a handle and immediate
+ * interruption of replaced or closed fibers is acceptable.
  *
  * **Example** (Setting a fiber unsafely)
  *
  * ```ts
- * import { Effect, Fiber, FiberHandle } from "effect"
+ * import { Effect, Fiber, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
- *   const fiber = Effect.runFork(Effect.succeed("hello"))
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
+ *   const fiber = Effect.runFork(Effect.succeed("hello"));
  *
  *   // Set the fiber directly (unsafe)
- *   FiberHandle.setUnsafe(handle, fiber)
+ *   FiberHandle.setUnsafe(handle, fiber);
  *
  *   // The fiber is now managed by the handle
- *   const result = yield* Fiber.await(fiber)
- *   console.log(result) // "hello"
- * })
+ *   const result = yield* Fiber.await(fiber);
+ *   console.log(result); // "hello"
+ * });
  * ```
  *
- * @category combinators
  * @since 4.0.0
+ * @category Combinators
  */
 export const setUnsafe: {
   <A, E, XE extends E, XA extends A>(
     fiber: Fiber.Fiber<XA, XE>,
     options?: {
-      readonly onlyIfMissing?: boolean | undefined
-      readonly propagateInterruption?: boolean | undefined
-    }
-  ): (self: FiberHandle<A, E>) => void
+      readonly onlyIfMissing?: boolean | undefined;
+      readonly propagateInterruption?: boolean | undefined;
+    },
+  ): (self: FiberHandle<A, E>) => void;
   <A, E, XE extends E, XA extends A>(
     self: FiberHandle<A, E>,
     fiber: Fiber.Fiber<XA, XE>,
     options?: {
-      readonly onlyIfMissing?: boolean | undefined
-      readonly propagateInterruption?: boolean | undefined
+      readonly onlyIfMissing?: boolean | undefined;
+      readonly propagateInterruption?: boolean | undefined;
+    },
+  ): void;
+} = dual(
+  (args) => isFiberHandle(args[0]),
+  <A, E, XE extends E, XA extends A>(
+    self: FiberHandle<A, E>,
+    fiber: Fiber.Fiber<XA, XE>,
+    options?: {
+      readonly onlyIfMissing?: boolean | undefined;
+      readonly propagateInterruption?: boolean | undefined;
+    },
+  ): void => {
+    if (self.state._tag === "Closed") {
+      fiber.interruptUnsafe(internalFiberId);
+      return;
+    } else if (self.state.fiber !== undefined) {
+      if (options?.onlyIfMissing === true) {
+        fiber.interruptUnsafe(internalFiberId);
+        return;
+      } else if (self.state.fiber === fiber) {
+        return;
+      }
+      self.state.fiber.interruptUnsafe(internalFiberId);
+      self.state.fiber = undefined;
     }
-  ): void
-} = dual((args) => isFiberHandle(args[0]), <A, E, XE extends E, XA extends A>(
-  self: FiberHandle<A, E>,
-  fiber: Fiber.Fiber<XA, XE>,
-  options?: {
-    readonly onlyIfMissing?: boolean | undefined
-    readonly propagateInterruption?: boolean | undefined
-  }
-): void => {
-  if (self.state._tag === "Closed") {
-    fiber.interruptUnsafe(internalFiberId)
-    return
-  } else if (self.state.fiber !== undefined) {
-    if (options?.onlyIfMissing === true) {
-      fiber.interruptUnsafe(internalFiberId)
-      return
-    } else if (self.state.fiber === fiber) {
-      return
-    }
-    self.state.fiber.interruptUnsafe(internalFiberId)
-    self.state.fiber = undefined
-  }
 
-  self.state.fiber = fiber
-  fiber.addObserver((exit) => {
-    if (self.state._tag === "Open" && fiber === self.state.fiber) {
-      self.state.fiber = undefined
-    }
-    if (
-      Exit.isFailure(exit) &&
-      (
-        options?.propagateInterruption === true ?
-          !isInternalInterruption(exit.cause) :
-          !Cause.hasInterruptsOnly(exit.cause)
-      )
-    ) {
-      Deferred.doneUnsafe(self.deferred, exit as any)
-    }
-  })
-})
+    self.state.fiber = fiber;
+    fiber.addObserver((exit) => {
+      if (self.state._tag === "Open" && fiber === self.state.fiber) {
+        self.state.fiber = undefined;
+      }
+      if (
+        Exit.isFailure(exit) &&
+        (options?.propagateInterruption === true
+          ? !isInternalInterruption(exit.cause)
+          : !Cause.hasInterruptsOnly(exit.cause))
+      ) {
+        Deferred.doneUnsafe(self.deferred, exit as any);
+      }
+    });
+  },
+);
 
 /**
  * Sets the fiber in the `FiberHandle`.
  *
  * **Details**
  *
- * When the fiber completes, it will be removed from the `FiberHandle`. If a
- * fiber already exists in the `FiberHandle`, it will be interrupted unless
- * `options.onlyIfMissing` is set.
+ * When the fiber completes, it will be removed from the `FiberHandle`. If a fiber already exists in
+ * the `FiberHandle`, it will be interrupted unless `options.onlyIfMissing` is set.
  *
  * **Example** (Setting a fiber safely)
  *
  * ```ts
- * import { Effect, Fiber, FiberHandle } from "effect"
+ * import { Effect, Fiber, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
- *   const fiber = Effect.runFork(Effect.succeed("hello"))
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
+ *   const fiber = Effect.runFork(Effect.succeed("hello"));
  *
  *   // Set the fiber safely
- *   yield* FiberHandle.set(handle, fiber)
+ *   yield* FiberHandle.set(handle, fiber);
  *
  *   // The fiber is now managed by the handle
- *   const result = yield* Fiber.await(fiber)
- *   console.log(result) // "hello"
- * })
+ *   const result = yield* Fiber.await(fiber);
+ *   console.log(result); // "hello"
+ * });
  * ```
  *
- * @category combinators
  * @since 2.0.0
+ * @category Combinators
  */
 export const set: {
   <A, E, XE extends E, XA extends A>(
     fiber: Fiber.Fiber<XA, XE>,
     options?: {
-      readonly onlyIfMissing?: boolean
-      readonly propagateInterruption?: boolean | undefined
-    }
-  ): (self: FiberHandle<A, E>) => Effect.Effect<void>
+      readonly onlyIfMissing?: boolean;
+      readonly propagateInterruption?: boolean | undefined;
+    },
+  ): (self: FiberHandle<A, E>) => Effect.Effect<void>;
   <A, E, XE extends E, XA extends A>(
     self: FiberHandle<A, E>,
     fiber: Fiber.Fiber<XA, XE>,
     options?: {
-      readonly onlyIfMissing?: boolean
-      readonly propagateInterruption?: boolean | undefined
-    }
-  ): Effect.Effect<void>
-} = dual((args) => isFiberHandle(args[0]), <A, E, XE extends E, XA extends A>(
-  self: FiberHandle<A, E>,
-  fiber: Fiber.Fiber<XA, XE>,
-  options?: {
-    readonly onlyIfMissing?: boolean
-    readonly propagateInterruption?: boolean | undefined
-  }
-): Effect.Effect<void> =>
-  Effect.sync(() =>
-    setUnsafe(self, fiber, {
-      onlyIfMissing: options?.onlyIfMissing,
-      propagateInterruption: options?.propagateInterruption
-    })
-  ))
+      readonly onlyIfMissing?: boolean;
+      readonly propagateInterruption?: boolean | undefined;
+    },
+  ): Effect.Effect<void>;
+} = dual(
+  (args) => isFiberHandle(args[0]),
+  <A, E, XE extends E, XA extends A>(
+    self: FiberHandle<A, E>,
+    fiber: Fiber.Fiber<XA, XE>,
+    options?: {
+      readonly onlyIfMissing?: boolean;
+      readonly propagateInterruption?: boolean | undefined;
+    },
+  ): Effect.Effect<void> =>
+    Effect.sync(() =>
+      setUnsafe(self, fiber, {
+        onlyIfMissing: options?.onlyIfMissing,
+        propagateInterruption: options?.propagateInterruption,
+      }),
+    ),
+);
 
 /**
  * Retrieves the fiber from the FiberHandle synchronously.
  *
  * **When to use**
  *
- * Use when synchronous inspection of the current fiber is needed and an
- * `Option` result is enough outside the Effect workflow.
+ * Use when synchronous inspection of the current fiber is needed and an `Option` result is enough
+ * outside the Effect workflow.
  *
  * **Example** (Reading the current fiber unsafely)
  *
  * ```ts
- * import { Effect, FiberHandle } from "effect"
+ * import { Effect, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
  *
  *   // No fiber initially
- *   const emptyFiber = FiberHandle.getUnsafe(handle)
- *   console.log(emptyFiber._tag === "None") // true
+ *   const emptyFiber = FiberHandle.getUnsafe(handle);
+ *   console.log(emptyFiber._tag === "None"); // true
  *
  *   // Add a fiber
- *   yield* FiberHandle.run(handle, Effect.succeed("hello"))
- *   const fiber = FiberHandle.getUnsafe(handle)
- *   console.log(fiber._tag === "Some") // true
- * })
+ *   yield* FiberHandle.run(handle, Effect.succeed("hello"));
+ *   const fiber = FiberHandle.getUnsafe(handle);
+ *   console.log(fiber._tag === "Some"); // true
+ * });
  * ```
  *
- * @category combinators
  * @since 4.0.0
+ * @category Combinators
  */
 export function getUnsafe<A, E>(self: FiberHandle<A, E>): Option.Option<Fiber.Fiber<A, E>> {
-  return self.state._tag === "Closed" ? Option.none() : Option.fromUndefinedOr(self.state.fiber)
+  return self.state._tag === "Closed" ? Option.none() : Option.fromUndefinedOr(self.state.fiber);
 }
 
 /**
@@ -445,342 +444,346 @@ export function getUnsafe<A, E>(self: FiberHandle<A, E>): Option.Option<Fiber.Fi
  * **Example** (Reading the current fiber)
  *
  * ```ts
- * import { Effect, Fiber, FiberHandle } from "effect"
+ * import { Effect, Fiber, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
  *
  *   // Add a fiber
- *   yield* FiberHandle.run(handle, Effect.succeed("hello"))
+ *   yield* FiberHandle.run(handle, Effect.succeed("hello"));
  *
  *   // Get the current fiber if present
- *   const fiber = yield* FiberHandle.get(handle)
+ *   const fiber = yield* FiberHandle.get(handle);
  *   if (fiber._tag === "Some") {
- *     const result = yield* Fiber.await(fiber.value)
- *     console.log(result) // "hello"
+ *     const result = yield* Fiber.await(fiber.value);
+ *     console.log(result); // "hello"
  *   }
- * })
+ * });
  * ```
  *
- * @category combinators
  * @since 2.0.0
+ * @category Combinators
  */
-export function get<A, E>(self: FiberHandle<A, E>): Effect.Effect<Option.Option<Fiber.Fiber<A, E>>> {
-  return Effect.suspend(() => Effect.succeed(getUnsafe(self)))
+export function get<A, E>(
+  self: FiberHandle<A, E>,
+): Effect.Effect<Option.Option<Fiber.Fiber<A, E>>> {
+  return Effect.suspend(() => Effect.succeed(getUnsafe(self)));
 }
 
 /**
- * Interrupts the fiber currently stored in the `FiberHandle`, if any, and
- * leaves the handle empty.
+ * Interrupts the fiber currently stored in the `FiberHandle`, if any, and leaves the handle empty.
  *
  * **Example** (Clearing a fiber handle)
  *
  * ```ts
- * import { Effect, FiberHandle } from "effect"
+ * import { Effect, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
  *
  *   // Add a fiber
- *   yield* FiberHandle.run(handle, Effect.never)
+ *   yield* FiberHandle.run(handle, Effect.never);
  *
  *   // Clear the handle, interrupting the fiber
- *   yield* FiberHandle.clear(handle)
+ *   yield* FiberHandle.clear(handle);
  *
  *   // The handle is now empty
- *   const fiber = FiberHandle.getUnsafe(handle)
- *   console.log(fiber) // Option.none()
- * })
+ *   const fiber = FiberHandle.getUnsafe(handle);
+ *   console.log(fiber); // Option.none()
+ * });
  * ```
  *
- * @category combinators
  * @since 2.0.0
+ * @category Combinators
  */
 export const clear = <A, E>(self: FiberHandle<A, E>): Effect.Effect<void> =>
   Effect.uninterruptibleMask((restore) => {
     if (self.state._tag === "Closed" || self.state.fiber === undefined) {
-      return Effect.void
+      return Effect.void;
     }
     return Effect.andThen(
       restore(Fiber.interruptAs(self.state.fiber, internalFiberId)),
       Effect.sync(() => {
         if (self.state._tag === "Open") {
-          self.state.fiber = undefined
+          self.state.fiber = undefined;
         }
-      })
-    )
-  })
+      }),
+    );
+  });
 
-const constInterruptedFiber = (function() {
-  let fiber: Fiber.Fiber<never, never> | undefined = undefined
+const constInterruptedFiber = (function () {
+  let fiber: Fiber.Fiber<never, never> | undefined = undefined;
   return () => {
     if (fiber === undefined) {
-      fiber = Effect.runFork(Effect.interrupt)
+      fiber = Effect.runFork(Effect.interrupt);
     }
-    return fiber
-  }
-})()
+    return fiber;
+  };
+})();
 
 /**
  * Forks an Effect and stores the resulting fiber in the `FiberHandle`.
  *
  * **Details**
  *
- * The handle manages only one fiber: running a new effect interrupts the
- * previous fiber unless `onlyIfMissing` is set. When the managed fiber
- * completes, it is removed from the handle.
+ * The handle manages only one fiber: running a new effect interrupts the previous fiber unless
+ * `onlyIfMissing` is set. When the managed fiber completes, it is removed from the handle.
  *
  * **Example** (Running an effect in a fiber handle)
  *
  * ```ts
- * import { Effect, Fiber, FiberHandle } from "effect"
+ * import { Effect, Fiber, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
  *
  *   // Run an effect and get the fiber
- *   const fiber = yield* FiberHandle.run(handle, Effect.succeed("hello"))
- *   const result = yield* Fiber.await(fiber)
- *   console.log(result) // "hello"
+ *   const fiber = yield* FiberHandle.run(handle, Effect.succeed("hello"));
+ *   const result = yield* Fiber.await(fiber);
+ *   console.log(result); // "hello"
  *
  *   // Running another effect will interrupt the previous one
- *   const fiber2 = yield* FiberHandle.run(handle, Effect.succeed("world"))
- *   const result2 = yield* Fiber.await(fiber2)
- *   console.log(result2) // "world"
- * })
+ *   const fiber2 = yield* FiberHandle.run(handle, Effect.succeed("world"));
+ *   const result2 = yield* Fiber.await(fiber2);
+ *   console.log(result2); // "world"
+ * });
  * ```
  *
- * @category combinators
  * @since 2.0.0
+ * @category Combinators
  */
 export const run: {
   <A, E>(
     self: FiberHandle<A, E>,
     options?: {
-      readonly onlyIfMissing?: boolean
-      readonly propagateInterruption?: boolean | undefined
-      readonly startImmediately?: boolean | undefined
-    }
+      readonly onlyIfMissing?: boolean;
+      readonly propagateInterruption?: boolean | undefined;
+      readonly startImmediately?: boolean | undefined;
+    },
   ): <R, XE extends E, XA extends A>(
-    effect: Effect.Effect<XA, XE, R>
-  ) => Effect.Effect<Fiber.Fiber<XA, XE>, never, R>
+    effect: Effect.Effect<XA, XE, R>,
+  ) => Effect.Effect<Fiber.Fiber<XA, XE>, never, R>;
   <A, E, R, XE extends E, XA extends A>(
     self: FiberHandle<A, E>,
     effect: Effect.Effect<XA, XE, R>,
     options?: {
-      readonly onlyIfMissing?: boolean
-      readonly propagateInterruption?: boolean | undefined
-      readonly startImmediately?: boolean | undefined
-    }
-  ): Effect.Effect<Fiber.Fiber<XA, XE>, never, R>
-} = function() {
-  const self = arguments[0] as FiberHandle
+      readonly onlyIfMissing?: boolean;
+      readonly propagateInterruption?: boolean | undefined;
+      readonly startImmediately?: boolean | undefined;
+    },
+  ): Effect.Effect<Fiber.Fiber<XA, XE>, never, R>;
+} = function () {
+  const self = arguments[0] as FiberHandle;
   if (Effect.isEffect(arguments[1])) {
-    return runImpl(self, arguments[1], arguments[2]) as any
+    return runImpl(self, arguments[1], arguments[2]) as any;
   }
-  const options = arguments[1]
-  return (effect: Effect.Effect<unknown, unknown, any>) => runImpl(self, effect, options)
-}
+  const options = arguments[1];
+  return (effect: Effect.Effect<unknown, unknown, any>) => runImpl(self, effect, options);
+};
 
 const runImpl = <A, E, R, XE extends E, XA extends A>(
   self: FiberHandle<A, E>,
   effect: Effect.Effect<XA, XE, R>,
   options?: {
-    readonly onlyIfMissing?: boolean | undefined
-  }
+    readonly onlyIfMissing?: boolean | undefined;
+  },
 ): Effect.Effect<Fiber.Fiber<XA, XE>, never, R> =>
   Effect.withFiber((parent) => {
     if (self.state._tag === "Closed") {
-      return Effect.interrupt
+      return Effect.interrupt;
     } else if (self.state.fiber !== undefined && options?.onlyIfMissing === true) {
-      return Effect.sync(constInterruptedFiber)
+      return Effect.sync(constInterruptedFiber);
     }
-    const fiber = Effect.runForkWith(parent.context as Context<R>)(effect)
-    setUnsafe(self, fiber, options)
-    return Effect.succeed(fiber)
-  })
+    const fiber = Effect.runForkWith(parent.context as Context<R>)(effect);
+    setUnsafe(self, fiber, options);
+    return Effect.succeed(fiber);
+  });
 
 /**
- * Captures the current runtime and returns a function for forking effects into
- * an existing `FiberHandle`.
+ * Captures the current runtime and returns a function for forking effects into an existing
+ * `FiberHandle`.
  *
  * **Details**
  *
- * Each call returns the forked fiber, stores it in the handle, and interrupts
- * the previous fiber unless `onlyIfMissing` is set.
+ * Each call returns the forked fiber, stores it in the handle, and interrupts the previous fiber
+ * unless `onlyIfMissing` is set.
  *
  * **Example** (Capturing a runtime for fiber handles)
  *
  * ```ts
- * import { Context, Effect, FiberHandle } from "effect"
+ * import { Context, Effect, FiberHandle } from "effect";
  *
  * interface Users {
- *   readonly _: unique symbol
+ *   readonly _: unique symbol;
  * }
- * const Users = Context.Service<Users, {
- *   getAll: Effect.Effect<Array<unknown>>
- * }>("Users")
+ * const Users = Context.Service<
+ *   Users,
+ *   {
+ *     getAll: Effect.Effect<Array<unknown>>;
+ *   }
+ * >("Users");
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
- *   const run = yield* FiberHandle.runtime(handle)<Users>()
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
+ *   const run = yield* FiberHandle.runtime(handle)<Users>();
  *
  *   // run an effect and set the fiber in the handle
- *   run(Effect.andThen(Users, (_) => _.getAll))
+ *   run(Effect.andThen(Users, (_) => _.getAll));
  *
  *   // this will interrupt the previous fiber
- *   run(Effect.andThen(Users, (_) => _.getAll))
+ *   run(Effect.andThen(Users, (_) => _.getAll));
  * }).pipe(
- *   Effect.scoped // The fiber will be interrupted when the scope is closed
- * )
+ *   Effect.scoped, // The fiber will be interrupted when the scope is closed
+ * );
  * ```
  *
- * @category combinators
  * @since 2.0.0
+ * @category Combinators
  */
 export const runtime: <A, E>(
-  self: FiberHandle<A, E>
+  self: FiberHandle<A, E>,
 ) => <R = never>() => Effect.Effect<
   <XE extends E, XA extends A>(
     effect: Effect.Effect<XA, XE, R>,
     options?:
       | {
-        readonly signal?: AbortSignal | undefined
-        readonly scheduler?: Scheduler | undefined
-        readonly onlyIfMissing?: boolean | undefined
-        readonly propagateInterruption?: boolean | undefined
-      }
-      | undefined
+          readonly signal?: AbortSignal | undefined;
+          readonly scheduler?: Scheduler | undefined;
+          readonly onlyIfMissing?: boolean | undefined;
+          readonly propagateInterruption?: boolean | undefined;
+        }
+      | undefined,
   ) => Fiber.Fiber<XA, XE>,
   never,
   R
-> = <A, E>(self: FiberHandle<A, E>) => <R>() =>
-  Effect.map(
-    Effect.context<R>(),
-    (services) => {
-      const runFork = Effect.runForkWith(services)
+> =
+  <A, E>(self: FiberHandle<A, E>) =>
+  <R>() =>
+    Effect.map(Effect.context<R>(), (services) => {
+      const runFork = Effect.runForkWith(services);
       return <XE extends E, XA extends A>(
         effect: Effect.Effect<XA, XE, R>,
         options?:
           | {
-            readonly signal?: AbortSignal | undefined
-            readonly scheduler?: Scheduler | undefined
-            readonly onlyIfMissing?: boolean | undefined
-            readonly propagateInterruption?: boolean | undefined
-          }
-          | undefined
+              readonly signal?: AbortSignal | undefined;
+              readonly scheduler?: Scheduler | undefined;
+              readonly onlyIfMissing?: boolean | undefined;
+              readonly propagateInterruption?: boolean | undefined;
+            }
+          | undefined,
       ) => {
         if (self.state._tag === "Closed") {
-          return constInterruptedFiber()
+          return constInterruptedFiber();
         } else if (self.state.fiber !== undefined && options?.onlyIfMissing === true) {
-          return constInterruptedFiber()
+          return constInterruptedFiber();
         }
-        const fiber = runFork(effect, options)
-        setUnsafe(self, fiber, options)
-        return fiber
-      }
-    }
-  )
+        const fiber = runFork(effect, options);
+        setUnsafe(self, fiber, options);
+        return fiber;
+      };
+    });
 
 /**
- * Captures the current runtime and returns a function for running effects in
- * an existing `FiberHandle` as Promises.
+ * Captures the current runtime and returns a function for running effects in an existing
+ * `FiberHandle` as Promises.
  *
  * **Details**
  *
- * Each call stores the forked fiber in the handle and interrupts the previous
- * fiber unless `onlyIfMissing` is set. The Promise resolves with the effect's
- * success value or rejects with the squashed failure cause.
+ * Each call stores the forked fiber in the handle and interrupts the previous fiber unless
+ * `onlyIfMissing` is set. The Promise resolves with the effect's success value or rejects with the
+ * squashed failure cause.
  *
  * **Example** (Capturing a runtime for promises)
  *
  * ```ts
- * import { Effect, FiberHandle } from "effect"
+ * import { Effect, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
- *   const runPromise = yield* FiberHandle.runtimePromise(handle)<never>()
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
+ *   const runPromise = yield* FiberHandle.runtimePromise(handle)<never>();
  *
  *   // Run an effect and get a promise
- *   const promise = runPromise(Effect.succeed("hello"))
- *   const result = yield* Effect.promise(() => promise)
- *   console.log(result) // "hello"
- * })
+ *   const promise = runPromise(Effect.succeed("hello"));
+ *   const result = yield* Effect.promise(() => promise);
+ *   console.log(result); // "hello"
+ * });
  * ```
  *
- * @category combinators
  * @since 3.13.0
+ * @category Combinators
  */
-export const runtimePromise = <A, E>(self: FiberHandle<A, E>): <R = never>() => Effect.Effect<
-  <XE extends E, XA extends A>(
-    effect: Effect.Effect<XA, XE, R>,
-    options?:
-      | {
-        readonly signal?: AbortSignal | undefined
-        readonly scheduler?: Scheduler | undefined
-        readonly onlyIfMissing?: boolean | undefined
-        readonly propagateInterruption?: boolean | undefined
-      }
-      | undefined
-  ) => Promise<XA>,
-  never,
-  R
-> =>
-<R>() =>
-  Effect.map(
-    runtime(self)<R>(),
-    (runFork) =>
+export const runtimePromise =
+  <A, E>(
+    self: FiberHandle<A, E>,
+  ): (<R = never>() => Effect.Effect<
     <XE extends E, XA extends A>(
       effect: Effect.Effect<XA, XE, R>,
       options?:
         | {
-          readonly signal?: AbortSignal | undefined
-          readonly scheduler?: Scheduler | undefined
-          readonly onlyIfMissing?: boolean | undefined
-          readonly propagateInterruption?: boolean | undefined
-        }
-        | undefined
-    ): Promise<XA> =>
-      new Promise((resolve, reject) =>
-        runFork(effect, options).addObserver((exit) => {
-          if (Exit.isSuccess(exit)) {
-            resolve(exit.value)
-          } else {
-            reject(Cause.squash(exit.cause))
+            readonly signal?: AbortSignal | undefined;
+            readonly scheduler?: Scheduler | undefined;
+            readonly onlyIfMissing?: boolean | undefined;
+            readonly propagateInterruption?: boolean | undefined;
           }
-        })
-      )
-  )
+        | undefined,
+    ) => Promise<XA>,
+    never,
+    R
+  >) =>
+  <R>() =>
+    Effect.map(
+      runtime(self)<R>(),
+      (runFork) =>
+        <XE extends E, XA extends A>(
+          effect: Effect.Effect<XA, XE, R>,
+          options?:
+            | {
+                readonly signal?: AbortSignal | undefined;
+                readonly scheduler?: Scheduler | undefined;
+                readonly onlyIfMissing?: boolean | undefined;
+                readonly propagateInterruption?: boolean | undefined;
+              }
+            | undefined,
+        ): Promise<XA> =>
+          new Promise((resolve, reject) =>
+            runFork(effect, options).addObserver((exit) => {
+              if (Exit.isSuccess(exit)) {
+                resolve(exit.value);
+              } else {
+                reject(Cause.squash(exit.cause));
+              }
+            }),
+          ),
+    );
 
 /**
  * Waits for the `FiberHandle` to fail or close.
  *
  * **Details**
  *
- * The returned Effect fails with the first managed fiber failure that is not
- * ignored by the handle's interruption rules. Normal successful completion of
- * a managed fiber only removes it from the handle; use `awaitEmpty` to wait
- * for the current fiber to finish.
+ * The returned Effect fails with the first managed fiber failure that is not ignored by the
+ * handle's interruption rules. Normal successful completion of a managed fiber only removes it from
+ * the handle; use `awaitEmpty` to wait for the current fiber to finish.
  *
  * **Example** (Propagating fiber failures)
  *
  * ```ts
- * import { Effect, FiberHandle } from "effect"
+ * import { Effect, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
- *   yield* FiberHandle.set(handle, Effect.runFork(Effect.fail("error")))
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
+ *   yield* FiberHandle.set(handle, Effect.runFork(Effect.fail("error")));
  *
  *   // parent fiber will fail with "error"
- *   yield* FiberHandle.join(handle)
- * })
+ *   yield* FiberHandle.join(handle);
+ * });
  * ```
  *
- * @category combinators
  * @since 2.0.0
+ * @category Combinators
  */
 export const join = <A, E>(self: FiberHandle<A, E>): Effect.Effect<void, E> =>
-  Deferred.await(self.deferred as Deferred.Deferred<void, E>)
+  Deferred.await(self.deferred as Deferred.Deferred<void, E>);
 
 /**
  * Waits for the fiber in the FiberHandle to complete.
@@ -788,28 +791,28 @@ export const join = <A, E>(self: FiberHandle<A, E>): Effect.Effect<void, E> =>
  * **Example** (Waiting for a fiber to complete)
  *
  * ```ts
- * import { Effect, FiberHandle } from "effect"
+ * import { Effect, FiberHandle } from "effect";
  *
- * Effect.gen(function*() {
- *   const handle = yield* FiberHandle.make()
+ * Effect.gen(function* () {
+ *   const handle = yield* FiberHandle.make();
  *
  *   // Start a long-running effect
- *   yield* FiberHandle.run(handle, Effect.sleep(1000))
+ *   yield* FiberHandle.run(handle, Effect.sleep(1000));
  *
  *   // Wait for the fiber to complete
- *   yield* FiberHandle.awaitEmpty(handle)
+ *   yield* FiberHandle.awaitEmpty(handle);
  *
- *   console.log("Fiber completed")
- * })
+ *   console.log("Fiber completed");
+ * });
  * ```
  *
- * @category combinators
  * @since 3.13.0
+ * @category Combinators
  */
 export const awaitEmpty = <A, E>(self: FiberHandle<A, E>): Effect.Effect<void, E> =>
   Effect.suspend(() => {
     if (self.state._tag === "Closed" || self.state.fiber === undefined) {
-      return Effect.void
+      return Effect.void;
     }
-    return Fiber.await(self.state.fiber)
-  })
+    return Fiber.await(self.state.fiber);
+  });

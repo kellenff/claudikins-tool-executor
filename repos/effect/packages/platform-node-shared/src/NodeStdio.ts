@@ -1,28 +1,26 @@
 /**
  * Shared Node.js implementation of the Effect `Stdio` service.
  *
- * `NodeStdio` provides {@link Stdio.Stdio} from the current Node process. The
- * exported {@link layer} reads command-line arguments from `process.argv`,
- * consumes input from `process.stdin`, and writes normal and error output to
- * `process.stdout` and `process.stderr`. Standard input remains open, and
- * standard output and error output are not ended unless requested.
+ * `NodeStdio` provides {@link Stdio.Stdio} from the current Node process. The exported {@link layer}
+ * reads command-line arguments from `process.argv`, consumes input from `process.stdin`, and writes
+ * normal and error output to `process.stdout` and `process.stderr`. Standard input remains open,
+ * and standard output and error output are not ended unless requested.
  *
  * @since 4.0.0
  */
-import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import { systemError } from "effect/PlatformError"
-import * as Stdio from "effect/Stdio"
-import { fromWritable } from "./NodeSink.ts"
-import { fromReadable } from "./NodeStream.ts"
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import { systemError } from "effect/PlatformError";
+import * as Stdio from "effect/Stdio";
+import { fromWritable } from "./NodeSink.ts";
+import { fromReadable } from "./NodeStream.ts";
 
 /**
- * Provides `Stdio` from `process.argv`, `process.stdin`, `process.stdout`,
- * and `process.stderr`; stdin remains open and stdout/stderr are not ended by
- * default.
+ * Provides `Stdio` from `process.argv`, `process.stdin`, `process.stdout`, and `process.stderr`;
+ * stdin remains open and stdout/stderr are not ended by default.
  *
- * @category layers
  * @since 4.0.0
+ * @category Layers
  */
 export const layer: Layer.Layer<Stdio.Stdio> = Layer.succeed(
   Stdio.Stdio,
@@ -36,9 +34,9 @@ export const layer: Layer.Layer<Stdio.Stdio> = Layer.succeed(
             module: "Stdio",
             method: "stdout",
             _tag: "Unknown",
-            cause
+            cause,
           }),
-        endOnDone: options?.endOnDone ?? false
+        endOnDone: options?.endOnDone ?? false,
       }),
     stderr: (options) =>
       fromWritable({
@@ -48,9 +46,9 @@ export const layer: Layer.Layer<Stdio.Stdio> = Layer.succeed(
             module: "Stdio",
             method: "stderr",
             _tag: "Unknown",
-            cause
+            cause,
           }),
-        endOnDone: options?.endOnDone ?? false
+        endOnDone: options?.endOnDone ?? false,
       }),
     stdin: fromReadable({
       evaluate: () => process.stdin,
@@ -59,9 +57,9 @@ export const layer: Layer.Layer<Stdio.Stdio> = Layer.succeed(
           module: "Stdio",
           method: "stdin",
           _tag: "Unknown",
-          cause
+          cause,
         }),
-      closeOnDone: false
-    })
-  })
-)
+      closeOnDone: false,
+    }),
+  }),
+);

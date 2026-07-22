@@ -1,34 +1,32 @@
 /**
- * Network addresses for locating cluster runners. A `RunnerAddress` stores the
- * host and port for a runner and provides schema support, structural equality,
- * hashing, Node.js inspection, and a stable primary key formatted from the host
- * and port.
+ * Network addresses for locating cluster runners. A `RunnerAddress` stores the host and port for a
+ * runner and provides schema support, structural equality, hashing, Node.js inspection, and a
+ * stable primary key formatted from the host and port.
  *
  * @since 4.0.0
  */
-import * as Equal from "../../Equal.ts"
-import * as Hash from "../../Hash.ts"
-import { NodeInspectSymbol } from "../../Inspectable.ts"
-import * as PrimaryKey from "../../PrimaryKey.ts"
-import * as Schema from "../../Schema.ts"
+import * as Equal from "../../Equal.ts";
+import * as Hash from "../../Hash.ts";
+import { NodeInspectSymbol } from "../../Inspectable.ts";
+import * as PrimaryKey from "../../PrimaryKey.ts";
+import * as Schema from "../../Schema.ts";
 
-const TypeId = "~effect/cluster/RunnerAddress"
+const TypeId = "~effect/cluster/RunnerAddress";
 
 /**
- * Represents the network address of a cluster runner, identified by host and
- * port.
+ * Represents the network address of a cluster runner, identified by host and port.
  *
  * **When to use**
  *
- * Use to represent the host and port that identify a runner in cluster routing,
- * registration, and health checks.
+ * Use to represent the host and port that identify a runner in cluster routing, registration, and
+ * health checks.
  *
- * @category models
  * @since 4.0.0
+ * @category Models
  */
 export class RunnerAddress extends Schema.Class<RunnerAddress>(TypeId)({
   host: Schema.String,
-  port: Schema.Number
+  port: Schema.Number,
 }) {
   /**
    * Marks this value as a cluster runner address for runtime guards.
@@ -43,7 +41,7 @@ export class RunnerAddress extends Schema.Class<RunnerAddress>(TypeId)({
    * @since 4.0.0
    */
   [Equal.symbol](that: RunnerAddress): boolean {
-    return this.host === that.host && this.port === that.port
+    return this.host === that.host && this.port === that.port;
   }
 
   /**
@@ -52,7 +50,7 @@ export class RunnerAddress extends Schema.Class<RunnerAddress>(TypeId)({
    * @since 4.0.0
    */
   [Hash.symbol]() {
-    return Hash.string(`${this.host}:${this.port}`)
+    return Hash.string(`${this.host}:${this.port}`);
   }
 
   /**
@@ -61,7 +59,7 @@ export class RunnerAddress extends Schema.Class<RunnerAddress>(TypeId)({
    * @since 4.0.0
    */
   [PrimaryKey.symbol](): string {
-    return `${this.host}:${this.port}`
+    return `${this.host}:${this.port}`;
   }
 
   /**
@@ -70,7 +68,7 @@ export class RunnerAddress extends Schema.Class<RunnerAddress>(TypeId)({
    * @since 4.0.0
    */
   override toString(): string {
-    return `RunnerAddress(${this.host}:${this.port})`
+    return `RunnerAddress(${this.host}:${this.port})`;
   }
 
   /**
@@ -79,7 +77,7 @@ export class RunnerAddress extends Schema.Class<RunnerAddress>(TypeId)({
    * @since 4.0.0
    */
   [NodeInspectSymbol](): string {
-    return this.toString()
+    return this.toString();
   }
 }
 
@@ -88,25 +86,22 @@ export class RunnerAddress extends Schema.Class<RunnerAddress>(TypeId)({
  *
  * **When to use**
  *
- * Use to create the stable network identity for a cluster runner when
- * configuring sharding, registering runner metadata, or targeting a runner by
- * host and port.
+ * Use to create the stable network identity for a cluster runner when configuring sharding,
+ * registering runner metadata, or targeting a runner by host and port.
  *
  * **Details**
  *
- * The returned `RunnerAddress` stores the supplied `host` and `port`. Equality,
- * hashing, and the primary key use both fields, with the primary key formatted
- * as `host:port`.
+ * The returned `RunnerAddress` stores the supplied `host` and `port`. Equality, hashing, and the
+ * primary key use both fields, with the primary key formatted as `host:port`.
  *
  * **Gotchas**
  *
- * `make` does not normalize the host. Pass the host string exactly as the
- * cluster routing and storage layers should identify it.
+ * `make` does not normalize the host. Pass the host string exactly as the cluster routing and
+ * storage layers should identify it.
  *
- * @see {@link RunnerAddress} for the constructed address type and its equality, hashing, primary-key, and formatting behavior
- *
- * @category constructors
  * @since 4.0.0
+ * @category Constructors
+ * @see {@link RunnerAddress} for the constructed address type and its equality, hashing, primary-key, and formatting behavior
  */
 export const make = (host: string, port: number): RunnerAddress =>
-  new RunnerAddress({ host, port }, { disableChecks: true })
+  new RunnerAddress({ host, port }, { disableChecks: true });

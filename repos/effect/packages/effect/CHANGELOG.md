@@ -959,9 +959,7 @@
 
   const experimental = Command.make("experimental").pipe(Command.withHidden);
 
-  const root = Command.make("mycli").pipe(
-    Command.withSubcommands([experimental]),
-  );
+  const root = Command.make("mycli").pipe(Command.withSubcommands([experimental]));
   ```
 
 - [#2244](https://github.com/Effect-TS/effect-smol/pull/2244) [`7212d70`](https://github.com/Effect-TS/effect-smol/commit/7212d701a3eee7b3553ff502e2c066126e52e839) Thanks @tim-smart! - Fix TestClock adjustment when its layer is provided to programs run without an ambient Scope.
@@ -2012,9 +2010,7 @@
 
   ```typescript
   const app = Command.make("myapp");
-  Command.run(app, { version: "1.0.0" }).pipe(
-    GlobalFlag.add(CustomFlag, customFlagValue),
-  );
+  Command.run(app, { version: "1.0.0" }).pipe(GlobalFlag.add(CustomFlag, customFlagValue));
   ```
 
 - [#1468](https://github.com/Effect-TS/effect-smol/pull/1468) [`e2d4fbf`](https://github.com/Effect-TS/effect-smol/commit/e2d4fbfeeda6a5d2a4c5aeb0501d8240c248b9eb) Thanks @lucas-barake! - Fix `Rpc.ExtractProvides` to use middleware service ID instead of constructor type.

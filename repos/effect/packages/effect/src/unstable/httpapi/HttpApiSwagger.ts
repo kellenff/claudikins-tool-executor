@@ -1,27 +1,26 @@
 /**
  * Swagger documentation UI for declarative `HttpApi` contracts.
  *
- * This module mounts a browser-based Swagger UI route on an `HttpRouter`. The
- * page renders the OpenAPI document derived from the supplied `HttpApi`, so a
- * running application can expose interactive API documentation without writing a
- * separate OpenAPI file.
+ * This module mounts a browser-based Swagger UI route on an `HttpRouter`. The page renders the
+ * OpenAPI document derived from the supplied `HttpApi`, so a running application can expose
+ * interactive API documentation without writing a separate OpenAPI file.
  *
  * @since 4.0.0
  */
-import * as Effect from "../../Effect.ts"
-import type * as Layer from "../../Layer.ts"
-import * as HttpRouter from "../http/HttpRouter.ts"
-import * as HttpServerResponse from "../http/HttpServerResponse.ts"
-import type * as HttpApi from "./HttpApi.ts"
-import type * as HttpApiGroup from "./HttpApiGroup.ts"
-import * as Html from "./internal/html.ts"
-import * as internal from "./internal/httpApiSwagger.ts"
-import * as OpenApi from "./OpenApi.ts"
+import * as Effect from "../../Effect.ts";
+import type * as Layer from "../../Layer.ts";
+import * as HttpRouter from "../http/HttpRouter.ts";
+import * as HttpServerResponse from "../http/HttpServerResponse.ts";
+import type * as HttpApi from "./HttpApi.ts";
+import type * as HttpApiGroup from "./HttpApiGroup.ts";
+import * as Html from "./internal/html.ts";
+import * as internal from "./internal/httpApiSwagger.ts";
+import * as OpenApi from "./OpenApi.ts";
 
 const makeHandler = <Id extends string, Groups extends HttpApiGroup.Constraint>(options: {
-  readonly api: HttpApi.HttpApi<Id, Groups>
+  readonly api: HttpApi.HttpApi<Id, Groups>;
 }) => {
-  const spec = OpenApi.fromApi(options.api)
+  const spec = OpenApi.fromApi(options.api);
   const response = HttpServerResponse.html(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,24 +44,26 @@ const makeHandler = <Id extends string, Groups extends HttpApiGroup.Constraint>(
     };
   </script>
 </body>
-</html>`)
-  return Effect.succeed(response)
-}
+</html>`);
+  return Effect.succeed(response);
+};
 
 /**
- * Mounts Swagger UI for an `HttpApi` at the configured path, defaulting to
- * `/docs`, using the OpenAPI specification generated from the API.
+ * Mounts Swagger UI for an `HttpApi` at the configured path, defaulting to `/docs`, using the
+ * OpenAPI specification generated from the API.
  *
- * @category layers
  * @since 4.0.0
+ * @category Layers
  */
 export const layer = <Id extends string, Groups extends HttpApiGroup.Constraint>(
   api: HttpApi.HttpApi<Id, Groups>,
   options?: {
-    readonly path?: `/${string}` | undefined
-  }
+    readonly path?: `/${string}` | undefined;
+  },
 ): Layer.Layer<never, never, HttpRouter.HttpRouter> =>
-  HttpRouter.use(Effect.fnUntraced(function*(router) {
-    const handler = makeHandler({ api })
-    yield* router.add("GET", options?.path ?? "/docs", handler)
-  }))
+  HttpRouter.use(
+    Effect.fnUntraced(function* (router) {
+      const handler = makeHandler({ api });
+      yield* router.add("GET", options?.path ?? "/docs", handler);
+    }),
+  );
