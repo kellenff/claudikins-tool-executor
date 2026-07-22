@@ -35,26 +35,46 @@ function resolvePath(relativePath: string): string {
   return fullPath;
 }
 
-/** Clean up old MCP results (older than maxAge ms) Default: 1 hour (DEFAULT_MCP_RESULTS_MAX_AGE_MS) */
+/** Age metadata for a file under the workspace. */
+export type FileAge = { filepath: string; mtimeMs: number };
+
+/** Pure: pick filepaths whose mtime is older than `maxAgeMs` at the reference time. */
+export function selectStaleFiles(
+  files: ReadonlyArray<FileAge>,
+  now: number,
+  maxAgeMs: number,
+): string[] {
+  return files.filter((entry) => now - entry.mtimeMs > maxAgeMs).map((entry) => entry.filepath);
+}
+
+/**
+ * Removes stale files from the MCP results directory whose age exceeds the specified threshold.
+ *
+ * @param {number} [maxAgeMs] Maximum age in milliseconds before a result file is considered stale
+ *   and eligible for deletion. Defaults to `DEFAULT_MCP_RESULTS_MAX_AGE_MS` when omitted.
+ * @returns {Promise<number>} A promise that resolves to the number of files successfully deleted.
+ *   Returns `0` when the results directory does not exist or when an unexpected error occurs.
+ */
 async function cleanupMcpResults(maxAgeMs = DEFAULT_MCP_RESULTS_MAX_AGE_MS): Promise<number> {
   const dir = join(WORKSPACE_ROOT, MCP_RESULTS_DIR);
 
   try {
     const files = await readdir(dir);
-    const now = Date.now();
-    let deleted = 0;
+    const entries: FileAge[] = await Promise.all(
+      files.map(async (file) => {
+        const filepath = join(dir, file);
+        const stats = await fsStat(filepath);
+        return { filepath, mtimeMs: stats.mtimeMs };
+      }),
+    );
 
-    for (const file of files) {
-      const filepath = join(dir, file);
-      const stats = await fsStat(filepath);
+    const toDelete = selectStaleFiles(entries, Date.now(), maxAgeMs);
 
-      if (now - stats.mtimeMs > maxAgeMs) {
-        await unlink(filepath);
-        deleted++;
-      }
+    for (const filepath of toDelete) {
+      await unlink(filepath);
     }
 
-    return deleted;
+    return toDelete.length;
   } catch (err) {
     // ENOENT is expected if directory doesn't exist yet
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
@@ -136,6 +156,13 @@ export const workspace = {
     await fsMkdir(fullPath, { recursive: true });
   },
 
+  /**
+   * Checks whether a file or directory exists at the specified path. Returns false if the path does
+   * not exist; throws on unexpected errors such as permission issues.
+   *
+   * @param path - The path to check for existence.
+   * @returns A promise resolving to true if the path exists, false otherwise.
+   */
   async exists(path: string): Promise<boolean> {
     try {
       const fullPath = resolvePath(path);

@@ -3,7 +3,41 @@ import { existsSync, mkdirSync, rmSync, utimesSync, writeFileSync } from "node:f
 import { join } from "node:path";
 
 import { MCP_RESULTS_DIR } from "../constants.js";
-import { workspace } from "./workspace.js";
+import { selectStaleFiles, workspace } from "./workspace.js";
+
+describe("selectStaleFiles", () => {
+  it("returns paths older than the cutoff", () => {
+    const now = 1_000_000;
+    const entries = [
+      { filepath: "/a", mtimeMs: now - 100 },
+      { filepath: "/b", mtimeMs: now - 5_000 },
+      { filepath: "/c", mtimeMs: now - 9_999 },
+    ];
+    expect(selectStaleFiles(entries, now, 1_000)).toEqual(["/b", "/c"]);
+  });
+
+  it("returns empty when nothing is stale", () => {
+    const now = 1_000_000;
+    const entries = [{ filepath: "/a", mtimeMs: now - 500 }];
+    expect(selectStaleFiles(entries, now, 1_000)).toEqual([]);
+  });
+
+  it("uses strict greater-than so exactly-at-cutoff is fresh", () => {
+    const now = 1_000_000;
+    const entries = [{ filepath: "/a", mtimeMs: now - 1_000 }];
+    expect(selectStaleFiles(entries, now, 1_000)).toEqual([]);
+  });
+
+  it("preserves input order", () => {
+    const now = 1_000_000;
+    const entries = [
+      { filepath: "/c", mtimeMs: now - 9_000 },
+      { filepath: "/a", mtimeMs: now - 9_000 },
+      { filepath: "/b", mtimeMs: now - 100 },
+    ];
+    expect(selectStaleFiles(entries, now, 1_000)).toEqual(["/c", "/a"]);
+  });
+});
 
 describe("workspace", () => {
   const prefix = "__tool_executor_unit__";
