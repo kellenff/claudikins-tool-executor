@@ -1,0 +1,28 @@
+{
+  "status": "degraded",
+  "backend": "heuristic",
+  "output": {
+    "change_scope": {
+      "fileCount": 3,
+      "files": [
+        "src/search.ts",
+        "src/search.test.ts",
+        ".serena/project.yml"
+      ],
+      "sharedInfraFileCount": 0,
+      "crossModuleEditCount": 0,
+      "level": "low"
+    },
+    "failure_impact": {
+      "estimatedFanOut": 0,
+      "sensitivePaths": [],
+      "level": "low"
+    },
+    "action_risk": {
+      "level": "low",
+      "tags": [],
+      "rationale": []
+    }
+  },
+  "reason": "repo-not-indexed"
+}

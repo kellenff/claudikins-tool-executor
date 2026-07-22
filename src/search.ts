@@ -155,7 +155,7 @@ export const buildLookaheadPattern = (terms: string[]): string => {
  * Matches substrings of the form `<category>/<server>/<file>.yaml` (or `.yml`),
  * case-insensitive. Returns an empty array if no matches.
  *
- * @param {string} text - Free-text snippet (e.g. one item from a Serena response).
+ * @param {string} text - Free-text snippet (e.g., one item from a Serena response).
  * @returns {string[]} Matched path substrings in source order, possibly empty.
  */
 export const extractRegistryPaths = (text: string): string[] =>
@@ -164,7 +164,7 @@ export const extractRegistryPaths = (text: string): string[] =>
 /**
  * Deduplicates a list of file paths while preserving first-occurrence order.
  *
- * @param {string[]} paths - Possibly-duplicated file paths.
+ * @param {string[]} paths - Possibly duplicated file paths.
  * @returns {string[]} The same paths with later duplicates removed.
  */
 export const dedupePaths = (paths: string[]): string[] => {
