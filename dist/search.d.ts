@@ -1,5 +1,5 @@
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { ToolDefinition } from './types.js';
-import '@modelcontextprotocol/sdk/client/index.js';
 
 /**
  * Search result from tool search
@@ -19,6 +19,47 @@ interface SearchResponse {
     suggestion?: string;
     fallbackReason?: string;
 }
+/**
+ * Pure: data shape for the Serena stdio transport. No I/O, fully testable.
+ * Field types match the underlying SDK's `StdioServerParameters` so the spec
+ * can be passed straight to the constructor without a cast.
+ */
+type SerenaTransportSpec = {
+    readonly command: string;
+    readonly args: string[];
+    readonly env: Record<string, string>;
+};
+/**
+ * Build the stdio transport spec for launching the Serena MCP server.
+ * Pure: no I/O, no globals read beyond `process.env` passed by reference.
+ */
+declare const buildSerenaTransportSpec: () => SerenaTransportSpec;
+/**
+ * Tagged failure modes for `connectRegistrySerena`. Distinguishing
+ * transport-spawn failures from `activate_project` rejections lets callers
+ * log a precise cause without inspecting thrown values.
+ */
+type RegistrySerenaConnectError = {
+    readonly tag: "connect_failed";
+    readonly cause: unknown;
+} | {
+    readonly tag: "activate_project_failed";
+    readonly cause: unknown;
+};
+type RegistrySerenaConnectResult = {
+    readonly ok: true;
+    readonly client: Client;
+} | {
+    readonly ok: false;
+    readonly error: RegistrySerenaConnectError;
+};
+/**
+ * Connect to the registry Serena MCP server and activate the registry project.
+ * Returns a tagged result; the caller (typically `getRegistrySerena`) decides
+ * whether to retain the client. Pure with respect to module state: does not
+ * assign to `registrySerena` itself.
+ */
+declare function connectRegistrySerena(): Promise<RegistrySerenaConnectResult>;
 /**
  * Escapes regex metacharacters in a single search term so the term can be
  * embedded into a lookahead pattern without altering its literal meaning.
@@ -89,4 +130,4 @@ declare function getToolByName(toolName: string): Promise<ToolDefinition | null>
  */
 declare function disconnectRegistrySerena(): Promise<void>;
 
-export { type SearchResponse, type SearchResult, buildLookaheadPattern, dedupePaths, disconnectRegistrySerena, escapeRegexTerm, extractRegistryPaths, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools, tokenizeQuery };
+export { type SearchResponse, type SearchResult, buildLookaheadPattern, buildSerenaTransportSpec, connectRegistrySerena, dedupePaths, disconnectRegistrySerena, escapeRegexTerm, extractRegistryPaths, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools, tokenizeQuery };

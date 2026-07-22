@@ -55,6 +55,49 @@ let registrySerena: Client | null = null;
 let connectionPromise: Promise<Client | null> | null = null;
 
 /**
+ * Pure: data shape for the Serena stdio transport. No I/O, fully testable.
+ * Field types match the underlying SDK's `StdioServerParameters` so the spec
+ * can be passed straight to the constructor without a cast.
+ */
+type SerenaTransportSpec = {
+  readonly command: string;
+  readonly args: string[];
+  readonly env: Record<string, string>;
+};
+
+/**
+ * Serena MCP server is launched via `uvx --from <pkg> <entrypoint> <command>`.
+ * The package pin lives in this single spec builder so transport details
+ * stay discoverable in one place and can be exercised without spawning a process.
+ */
+const SERENA_PACKAGE = "git+https://github.com/oraios/serena";
+const SERENA_ENTRYPOINT = "serena";
+const SERENA_MCP_SERVER_COMMAND = "start-mcp-server";
+
+/**
+ * Build the stdio transport spec for launching the Serena MCP server.
+ * Pure: no I/O, no globals read beyond `process.env` passed by reference.
+ */
+export const buildSerenaTransportSpec = (): SerenaTransportSpec => ({
+  command: "uvx",
+  args: ["--from", SERENA_PACKAGE, SERENA_ENTRYPOINT, SERENA_MCP_SERVER_COMMAND],
+  env: process.env as Record<string, string>,
+});
+
+/**
+ * Tagged failure modes for `connectRegistrySerena`. Distinguishing
+ * transport-spawn failures from `activate_project` rejections lets callers
+ * log a precise cause without inspecting thrown values.
+ */
+type RegistrySerenaConnectError =
+  | { readonly tag: "connect_failed"; readonly cause: unknown }
+  | { readonly tag: "activate_project_failed"; readonly cause: unknown };
+
+type RegistrySerenaConnectResult =
+  | { readonly ok: true; readonly client: Client }
+  | { readonly ok: false; readonly error: RegistrySerenaConnectError };
+
+/**
  * Get or create the registry Serena client
  */
 async function getRegistrySerena(): Promise<Client | null> {
@@ -69,7 +112,13 @@ async function getRegistrySerena(): Promise<Client | null> {
   }
 
   // Start new connection
-  connectionPromise = connectRegistrySerena();
+  connectionPromise = connectRegistrySerena().then((result) => {
+    if (result.ok) {
+      registrySerena = result.client;
+      return result.client;
+    }
+    return null;
+  });
   try {
     return await connectionPromise;
   } finally {
@@ -78,35 +127,36 @@ async function getRegistrySerena(): Promise<Client | null> {
 }
 
 /**
- * Internal connection logic for registry Serena
+ * Connect to the registry Serena MCP server and activate the registry project.
+ * Returns a tagged result; the caller (typically `getRegistrySerena`) decides
+ * whether to retain the client. Pure with respect to module state: does not
+ * assign to `registrySerena` itself.
  */
-async function connectRegistrySerena(): Promise<Client | null> {
+export async function connectRegistrySerena(): Promise<RegistrySerenaConnectResult> {
+  const client = new Client(
+    { name: "claudikins-registry-search", version: MCP_CLIENT_VERSION },
+    { capabilities: {} },
+  );
+
   try {
-    const client = new Client(
-      { name: "claudikins-registry-search", version: MCP_CLIENT_VERSION },
-      { capabilities: {} },
-    );
-    const transport = new StdioClientTransport({
-      command: "uvx",
-      args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
-      env: process.env as Record<string, string>,
-    });
+    await client.connect(new StdioClientTransport(buildSerenaTransportSpec()));
+  } catch (cause) {
+    console.error("Failed to connect registry Serena:", cause);
+    return { ok: false, error: { tag: "connect_failed", cause } };
+  }
 
-    await client.connect(transport);
-
-    // Activate the registry project
+  try {
     await client.callTool({
       name: "activate_project",
       arguments: { project: REGISTRY_ROOT },
     });
-
-    registrySerena = client;
-    console.error("Registry Serena connected and project activated");
-    return client;
-  } catch (error) {
-    console.error("Failed to connect registry Serena:", error);
-    return null;
+  } catch (cause) {
+    console.error("Failed to activate registry project:", cause);
+    return { ok: false, error: { tag: "activate_project_failed", cause } };
   }
+
+  console.error("Registry Serena connected and project activated");
+  return { ok: true, client };
 }
 
 /**

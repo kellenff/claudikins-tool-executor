@@ -38,6 +38,8 @@ import yaml from "js-yaml";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 import {
+  buildSerenaTransportSpec,
+  connectRegistrySerena,
   disconnectRegistrySerena,
   escapeRegexTerm,
   buildLookaheadPattern,
@@ -515,5 +517,85 @@ describe("search pure helpers", () => {
     it("returns .* for empty terms", () => {
       expect(buildLookaheadPattern([])).toBe(".*");
     });
+  });
+
+  describe("buildSerenaTransportSpec", () => {
+    it("returns the uvx command with serena package and start-mcp-server entrypoint", () => {
+      const spec = buildSerenaTransportSpec();
+
+      expect(spec.command).toBe("uvx");
+      expect(spec.args).toEqual([
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+      ]);
+    });
+
+    it("passes process.env through as the transport env", () => {
+      const spec = buildSerenaTransportSpec();
+
+      expect(spec.env).toBe(process.env);
+    });
+  });
+});
+
+describe("connectRegistrySerena", () => {
+  it("returns ok=true with the client when connect and activate_project both succeed", async () => {
+    const connect = vi.fn().mockResolvedValue(undefined);
+    const callTool = vi.fn().mockResolvedValue({ content: [] });
+    const close = vi.fn().mockResolvedValue(undefined);
+    mockClient.mockImplementationOnce(function () {
+      return { connect, callTool, close } as unknown as Client;
+    });
+
+    const result = await connectRegistrySerena();
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.client).toEqual({ connect, callTool, close });
+    }
+    expect(connect).toHaveBeenCalledTimes(1);
+    expect(callTool).toHaveBeenCalledWith({
+      name: "activate_project",
+      arguments: { project: expect.stringContaining("registry") },
+    });
+  });
+
+  it("returns ok=false with connect_failed when client.connect throws", async () => {
+    const cause = new Error("spawn failed");
+    const connect = vi.fn().mockRejectedValue(cause);
+    const callTool = vi.fn();
+    const close = vi.fn().mockResolvedValue(undefined);
+    mockClient.mockImplementationOnce(function () {
+      return { connect, callTool, close } as unknown as Client;
+    });
+
+    const result = await connectRegistrySerena();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.tag).toBe("connect_failed");
+      expect(result.error.cause).toBe(cause);
+    }
+    expect(callTool).not.toHaveBeenCalled();
+  });
+
+  it("returns ok=false with activate_project_failed when callTool throws", async () => {
+    const cause = new Error("activate_project rejected");
+    const connect = vi.fn().mockResolvedValue(undefined);
+    const callTool = vi.fn().mockRejectedValue(cause);
+    const close = vi.fn().mockResolvedValue(undefined);
+    mockClient.mockImplementationOnce(function () {
+      return { connect, callTool, close } as unknown as Client;
+    });
+
+    const result = await connectRegistrySerena();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.tag).toBe("activate_project_failed");
+      expect(result.error.cause).toBe(cause);
+    }
   });
 });
