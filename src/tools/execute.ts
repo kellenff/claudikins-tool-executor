@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 
 import { executeCode } from "../sandbox/runtime.js";
+import { getAppRuntime } from "../runtime.js";
 import type { ExecuteCodeInput } from "../schemas.js";
 
 type ExecuteCodeResult = {
@@ -31,5 +32,5 @@ export const executeCodeEffect = (
 
 /** Execute TypeScript/JavaScript code in sandbox */
 export async function handleExecuteCode(params: ExecuteCodeInput): Promise<ExecuteCodeResult> {
-  return Effect.runPromise(executeCodeEffect(params));
+  return getAppRuntime().runPromise(executeCodeEffect(params));
 }

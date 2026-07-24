@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 
 import { getToolByName } from "../search.js";
+import { getAppRuntime } from "../runtime.js";
 import type { GetToolSchemaInput } from "../schemas.js";
 import type { ToolDefinition } from "../types.js";
 
@@ -97,5 +98,5 @@ export async function handleGetToolSchema(params: GetToolSchemaInput): Promise<
       isError?: undefined;
     }
 > {
-  return Effect.runPromise(getToolSchemaEffect(params));
+  return getAppRuntime().runPromise(getToolSchemaEffect(params));
 }

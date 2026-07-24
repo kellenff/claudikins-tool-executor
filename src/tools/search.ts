@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 
+import { getAppRuntime } from "../runtime.js";
 import { searchTools } from "../search.js";
 import { MAX_ONE_LINER_CHARS, ONE_LINER_ELLIPSIS_RESERVE } from "../constants.js";
 import type { SearchToolsInput } from "../schemas.js";
@@ -89,7 +90,9 @@ export const searchToolsEffect = (
  * Search for MCP tools across all wrapped servers Returns MINIMAL results - just enough to identify
  * and call the tool
  */
-export async function handleSearchTools(params: SearchToolsInput): Promise<{
+export async function handleSearchTools(
+  params: SearchToolsInput,
+): Promise<{
   content: { type: "text"; text: string }[];
   structuredContent: {
     suggestion?: string | undefined;
@@ -107,5 +110,5 @@ export async function handleSearchTools(params: SearchToolsInput): Promise<{
     source: "serena" | "local";
   };
 }> {
-  return Effect.runPromise(searchToolsEffect(params));
+  return getAppRuntime().runPromise(searchToolsEffect(params));
 }
