@@ -1,10 +1,13 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { describe, expect, it } from "vitest";
 import { Schema } from "effect";
 
 import {
+  type AnyEffectToolRegistration,
   buildToolsList,
   callRegisteredTool,
   type EffectToolRegistration,
+  registerEffectTools,
 } from "./register-tools.js";
 import { parseSearchToolsInput, type SearchToolsInput, SearchToolsInputSchema } from "./schemas.js";
 
@@ -72,5 +75,10 @@ describe("register-tools", () => {
     });
     expect(doc.schema.type).toBe("object");
     expect(doc.schema.additionalProperties).toBe(false);
+  });
+
+  it("registerEffectTools does not throw on a real McpServer", () => {
+    const mcp = new McpServer({ name: "test", version: "0" });
+    expect(() => registerEffectTools(mcp, [searchReg as AnyEffectToolRegistration])).not.toThrow();
   });
 });

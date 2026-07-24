@@ -61,6 +61,42 @@ export function buildToolsList<Input>(
   };
 }
 
+function parseToolArguments(tool: AnyEffectToolRegistration, args: unknown): unknown {
+  try {
+    return tool.parse(args ?? {});
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new McpError(ErrorCode.InvalidParams, `Input validation error: ${message}`);
+  }
+}
+
+function createToolHandlerError(message: string): CallToolResult {
+  return {
+    content: [{ type: "text", text: message }],
+    isError: true,
+  };
+}
+
+async function invokeRegisteredTool(
+  tool: AnyEffectToolRegistration,
+  args: unknown,
+): Promise<CallToolResult> {
+  const parsed = parseToolArguments(tool, args);
+  try {
+    return await tool.handler(parsed);
+  } catch (error) {
+    if (error instanceof McpError) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    return createToolHandlerError(message);
+  }
+}
+
+/**
+ * Test helper mirroring the live `tools/call` path: parse failures throw `McpError(InvalidParams)`;
+ * handler failures return `{ isError: true }` (same as `McpServer.createToolError`).
+ */
 export async function callRegisteredTool<Input>(
   registrations: ReadonlyArray<EffectToolRegistration<Input>>,
   name: string,
@@ -70,16 +106,7 @@ export async function callRegisteredTool<Input>(
   if (!tool) {
     throw new McpError(ErrorCode.InvalidParams, `Tool ${name} not found`);
   }
-  try {
-    const parsed = tool.parse(args ?? {});
-    return await tool.handler(parsed);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new McpError(
-      ErrorCode.InvalidParams,
-      `Input validation error: Invalid arguments for tool ${name}: ${message}`,
-    );
-  }
+  return invokeRegisteredTool(tool as AnyEffectToolRegistration, args);
 }
 
 /**
@@ -92,6 +119,10 @@ export function registerEffectTools(
 ): void {
   const byName = new Map(registrations.map((tool) => [tool.name, tool]));
 
+  mcp.server.registerCapabilities({
+    tools: { listChanged: true },
+  });
+
   mcp.server.setRequestHandler(ListToolsRequestSchema, () => buildToolsList(registrations));
 
   mcp.server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -100,18 +131,6 @@ export function registerEffectTools(
     if (!tool) {
       throw new McpError(ErrorCode.InvalidParams, `Tool ${name} not found`);
     }
-    try {
-      const parsed = tool.parse(request.params.arguments ?? {});
-      return await tool.handler(parsed);
-    } catch (error) {
-      if (error instanceof McpError) {
-        throw error;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Input validation error: Invalid arguments for tool ${name}: ${message}`,
-      );
-    }
+    return invokeRegisteredTool(tool, request.params.arguments);
   });
 }
