@@ -47,6 +47,20 @@ interface FindConfigOptions {
     xdgConfigHome?: string | null;
     explicitPath?: string | null;
 }
+interface ResolvedCandidate {
+    readonly path: string;
+    readonly isExplicit: boolean;
+    readonly exists: boolean;
+}
+/**
+ * Pure dedupe by absolute path. Returns the preserved-order existing paths plus the first
+ * explicit-but-missing path (if any) so the caller can surface a warning — keeping IO and effects
+ * out of the rule.
+ */
+declare function dedupeByPath(resolved: readonly ResolvedCandidate[]): {
+    readonly paths: string[];
+    readonly missingExplicit: string | null;
+};
 /**
  * Walk the 5 lookup rules in precedence order (lowest → highest):
  *
@@ -75,4 +89,4 @@ declare function findConfigFiles(opts?: FindConfigOptions): string[];
  */
 declare function loadConfig(configPath?: string, opts?: FindConfigOptions): ConfigLoadResult | null;
 
-export { type ConfigLoadResult, type FindConfigOptions, type LoadedServer, type ServerConfigFromFile, ServerConfigSchema, type ToolExecutorConfig, ToolExecutorConfigSchema, findConfigFiles, loadConfig };
+export { type ConfigLoadResult, type FindConfigOptions, type LoadedServer, type ServerConfigFromFile, ServerConfigSchema, type ToolExecutorConfig, ToolExecutorConfigSchema, dedupeByPath, findConfigFiles, loadConfig };

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import {
+  dedupeByPath,
   findConfigFiles,
   loadConfig,
   ServerConfigSchema,
@@ -16,6 +17,69 @@ function writeJson(path: string, body: unknown): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, JSON.stringify(body, null, 2));
 }
+
+describe("dedupeByPath", () => {
+  it("returns empty results for an empty input list", () => {
+    expect(dedupeByPath([])).toEqual({ paths: [], missingExplicit: null });
+  });
+
+  it("returns existing paths in input order with no missing-explicit marker", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/b", isExplicit: false, exists: true },
+      { path: "/c", isExplicit: false, exists: true },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a", "/b", "/c"], missingExplicit: null });
+  });
+
+  it("dedupes duplicate existing paths, keeping first occurrence", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/b", isExplicit: false, exists: true },
+      { path: "/a", isExplicit: false, exists: true },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a", "/b"], missingExplicit: null });
+  });
+
+  it("drops missing non-explicit candidates silently", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/missing", isExplicit: false, exists: false },
+      { path: "/b", isExplicit: false, exists: true },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a", "/b"], missingExplicit: null });
+  });
+
+  it("records the first explicit-but-missing path in missingExplicit", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/explicit-missing", isExplicit: true, exists: false },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a"], missingExplicit: "/explicit-missing" });
+  });
+
+  it("records only the first explicit-but-missing path when multiple are missing", () => {
+    const resolved = [
+      { path: "/explicit-first", isExplicit: true, exists: false },
+      { path: "/explicit-second", isExplicit: true, exists: false },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: [], missingExplicit: "/explicit-first" });
+  });
+
+  it("does not include the missing-explicit path in paths", () => {
+    const resolved = [{ path: "/explicit", isExplicit: true, exists: false }];
+    expect(dedupeByPath(resolved)).toEqual({ paths: [], missingExplicit: "/explicit" });
+  });
+
+  it("does not let a missing entry block a later duplicate of an existing one", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/missing", isExplicit: false, exists: false },
+      { path: "/a", isExplicit: false, exists: true },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a"], missingExplicit: null });
+  });
+});
 
 describe("config", () => {
   let rootDir: string;

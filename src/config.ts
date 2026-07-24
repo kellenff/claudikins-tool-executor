@@ -79,6 +79,40 @@ function expandEnvVarsInObject(obj: unknown): unknown {
   return obj;
 }
 
+interface ResolvedCandidate {
+  readonly path: string;
+  readonly isExplicit: boolean;
+  readonly exists: boolean;
+}
+
+/**
+ * Pure dedupe by absolute path. Returns the preserved-order existing paths plus the first
+ * explicit-but-missing path (if any) so the caller can surface a warning — keeping IO and effects
+ * out of the rule.
+ */
+export function dedupeByPath(resolved: readonly ResolvedCandidate[]): {
+  readonly paths: string[];
+  readonly missingExplicit: string | null;
+} {
+  const seen = new Set<string>();
+  const paths: string[] = [];
+  let missingExplicit: string | null = null;
+  for (const candidate of resolved) {
+    if (!candidate.exists) {
+      if (candidate.isExplicit && missingExplicit === null) {
+        missingExplicit = candidate.path;
+      }
+      continue;
+    }
+    if (seen.has(candidate.path)) {
+      continue;
+    }
+    seen.add(candidate.path);
+    paths.push(candidate.path);
+  }
+  return { paths, missingExplicit };
+}
+
 /**
  * Walk the 5 lookup rules in precedence order (lowest → highest):
  *
@@ -118,22 +152,16 @@ export function findConfigFiles(opts: FindConfigOptions = {}): string[] {
     candidates.push({ path: resolve(explicit), isExplicit: true });
   }
 
-  const seen = new Set<string>();
-  const results: string[] = [];
-  for (const { path, isExplicit } of candidates) {
-    if (!existsSync(path)) {
-      if (isExplicit) {
-        console.error(`TOOL_EXECUTOR_CONFIG points to missing file: ${path}`);
-      }
-      continue;
-    }
-    if (seen.has(path)) {
-      continue;
-    }
-    seen.add(path);
-    results.push(path);
+  const resolved: ResolvedCandidate[] = candidates.map((candidate) => ({
+    path: candidate.path,
+    isExplicit: candidate.isExplicit,
+    exists: existsSync(candidate.path),
+  }));
+  const { paths, missingExplicit } = dedupeByPath(resolved);
+  if (missingExplicit !== null) {
+    console.error(`TOOL_EXECUTOR_CONFIG points to missing file: ${missingExplicit}`);
   }
-  return results;
+  return paths;
 }
 
 function parseLayer(path: string): ServerConfigFromFile[] | null {
