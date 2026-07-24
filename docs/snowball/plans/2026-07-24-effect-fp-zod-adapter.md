@@ -907,14 +907,14 @@ server.registerTool("search_tools", { /* ... */ }, (args) =>
 
 ### Task 19: Final success criteria checklist
 
-- [ ] Zod `registerTool` for all three tools
-- [ ] No custom Effect MCP registrar
-- [ ] Tool programs decode via adapted `effect.Schema`
-- [ ] Config native `effect.Schema` + Effect load (platform FS)
-- [ ] `AppLive` + `ManagedRuntime`
-- [ ] Sandbox eval only impurity behind `tryPromise`
-- [ ] No `@effect/schema`
-- [ ] Unit/lint/typecheck green
+- [x] Zod `registerTool` for all three tools (`src/index.ts` lines 28/55/78)
+- [x] No custom Effect MCP registrar (`src/register-tools.ts` absent since Task 1 revert)
+- [x] Tool programs decode via adapted `effect.Schema` (`src/zod-effect.ts` + `src/schemas.ts` `*EffectSchema` exports)
+- [x] Config native `effect.Schema` + Effect load (platform FS) (`src/config.ts` `Schema.Struct`; `@effect/platform-node@4.0.0-beta.101` present)
+- [x] `AppLive` + `ManagedRuntime` (`src/layers/AppLive.ts`, `src/runtime.ts` `ManagedRuntime.make(AppLive)`; runtime disposed in `src/index.ts` `shutdown`)
+- [x] Sandbox eval only impurity behind `tryPromise` (`src/layers/AppLive.ts:82` wraps `AsyncFunction(...)` invocation; setup stays sync per `sandbox/runtime.ts:262-290`)
+- [x] No `@effect/schema` (`grep -E '"(@effect/platform|@effect/schema)"' package.json` → empty)
+- [x] Unit/lint/typecheck green — verified 2026-07-24: `yarn test:unit` 17 files / 180 passed; `yarn tchk` exit 0; `yarn lint` 0 warnings / 0 errors (44 files, 111 rules)
 
 ---
 
