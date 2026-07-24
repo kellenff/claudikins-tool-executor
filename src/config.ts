@@ -1,31 +1,52 @@
-import { z } from "zod";
 import { existsSync, readFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import os from "node:os";
 
+import { Schema } from "effect";
+
 // Resolve plugin install dir relative to module location (not cwd) for plugin portability
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export const ServerConfigSchema = z.object({
-  name: z.string().min(1),
-  displayName: z.string().min(1),
-  command: z.string().min(1),
-  commandEnvKey: z.string().optional(),
-  trusted: z.boolean().optional(),
-  args: z.array(z.string()),
-  env: z.record(z.string(), z.string()).optional(),
+const STRICT = { onExcessProperty: "error" as const };
+
+export const ServerConfigSchema = Schema.Struct({
+  name: Schema.String.check(Schema.isNonEmpty()),
+  displayName: Schema.String.check(Schema.isNonEmpty()),
+  command: Schema.String.check(Schema.isNonEmpty()),
+  commandEnvKey: Schema.optional(Schema.String),
+  trusted: Schema.optional(Schema.Boolean),
+  args: Schema.Array(Schema.String),
+  env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
 });
 
-export const ToolExecutorConfigSchema = z
-  .object({
-    $schema: z.string().optional(),
-    servers: z.array(ServerConfigSchema).min(0),
-  })
-  .strict();
+export const ToolExecutorConfigSchema = Schema.Struct({
+  $schema: Schema.optional(Schema.String),
+  servers: Schema.Array(ServerConfigSchema),
+});
 
-export type ToolExecutorConfig = z.infer<typeof ToolExecutorConfigSchema>;
-export type ServerConfigFromFile = z.infer<typeof ServerConfigSchema>;
+export type ServerConfigFromFile = {
+  name: string;
+  displayName: string;
+  command: string;
+  commandEnvKey?: string;
+  trusted?: boolean;
+  args: string[];
+  env?: Record<string, string>;
+};
+
+export type ToolExecutorConfig = {
+  $schema?: string;
+  servers: ServerConfigFromFile[];
+};
+
+export function parseServerConfig(input: unknown): ServerConfigFromFile {
+  return Schema.decodeUnknownSync(ServerConfigSchema)(input) as ServerConfigFromFile;
+}
+
+export function parseToolExecutorConfig(input: unknown): ToolExecutorConfig {
+  return Schema.decodeUnknownSync(ToolExecutorConfigSchema, STRICT)(input) as ToolExecutorConfig;
+}
 
 /**
  * A server entry tagged with the absolute path of the config layer that supplied it. Used by
@@ -169,7 +190,7 @@ function parseLayer(path: string): ServerConfigFromFile[] | null {
     const content = readFileSync(path, "utf-8");
     const parsed = JSON.parse(content);
     const expanded = expandEnvVarsInObject(parsed);
-    const validated = ToolExecutorConfigSchema.parse(expanded);
+    const validated = parseToolExecutorConfig(expanded);
     return validated.servers;
   } catch (error) {
     console.error(`Failed to load config from ${path}:`, error);
