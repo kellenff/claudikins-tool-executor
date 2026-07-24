@@ -20,7 +20,7 @@ inputSchema:
       description: Type of data to extract
     customFields:
       type: string
-      description: 'For custom extraction: comma-separated fields to extract'
+      description: "For custom extraction: comma-separated fields to extract"
   required:
     - url
     - dataType

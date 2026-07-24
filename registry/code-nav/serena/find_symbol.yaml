@@ -42,7 +42,7 @@ inputSchema:
         for the case where the symbol is a class, this will return its methods).
         Ignored if `include_body=True`. Default 0.
     relative_path:
-      default: ''
+      default: ""
       title: Relative Path
       type: string
       description: |-

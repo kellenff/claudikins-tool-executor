@@ -17,7 +17,7 @@ inputSchema:
       description: Directory to search in, relative to project root. If not specified, searches in the entire project.
     fileMask:
       type: string
-      description: 'File mask to search for. If not specified, searches for all files. Example: `*.java`'
+      description: "File mask to search for. If not specified, searches for all files. Example: `*.java`"
     caseSensitive:
       type: boolean
       description: Whether to search for the text in a case-sensitive manner

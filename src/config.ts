@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { readFileSync, existsSync } from "fs";
-import { resolve, dirname } from "path";
+import { existsSync, readFileSync } from "fs";
+import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import os from "node:os";
 
@@ -28,8 +28,8 @@ export type ToolExecutorConfig = z.infer<typeof ToolExecutorConfigSchema>;
 export type ServerConfigFromFile = z.infer<typeof ServerConfigSchema>;
 
 /**
- * A server entry tagged with the absolute path of the config layer that supplied it.
- * Used by callers (clients.ts, cli.ts) to report provenance.
+ * A server entry tagged with the absolute path of the config layer that supplied it. Used by
+ * callers (clients.ts, cli.ts) to report provenance.
  */
 export interface LoadedServer extends ServerConfigFromFile {
   source: string;
@@ -43,8 +43,8 @@ export interface ConfigLoadResult {
 }
 
 /**
- * Overrides for the path resolution rules. Defaults read from process / os.
- * Tests inject overrides to avoid touching the real homedir or env.
+ * Overrides for the path resolution rules. Defaults read from process / os. Tests inject overrides
+ * to avoid touching the real homedir or env.
  */
 export interface FindConfigOptions {
   pluginDir?: string;
@@ -79,17 +79,52 @@ function expandEnvVarsInObject(obj: unknown): unknown {
   return obj;
 }
 
+interface ResolvedCandidate {
+  readonly path: string;
+  readonly isExplicit: boolean;
+  readonly exists: boolean;
+}
+
+/**
+ * Pure dedupe by absolute path. Returns the preserved-order existing paths plus the first
+ * explicit-but-missing path (if any) so the caller can surface a warning — keeping IO and effects
+ * out of the rule.
+ */
+export function dedupeByPath(resolved: readonly ResolvedCandidate[]): {
+  readonly paths: string[];
+  readonly missingExplicit: string | null;
+} {
+  const seen = new Set<string>();
+  const paths: string[] = [];
+  let missingExplicit: string | null = null;
+  for (const candidate of resolved) {
+    if (!candidate.exists) {
+      if (candidate.isExplicit && missingExplicit === null) {
+        missingExplicit = candidate.path;
+      }
+      continue;
+    }
+    if (seen.has(candidate.path)) {
+      continue;
+    }
+    seen.add(candidate.path);
+    paths.push(candidate.path);
+  }
+  return { paths, missingExplicit };
+}
+
 /**
  * Walk the 5 lookup rules in precedence order (lowest → highest):
- *   1. <pluginDir>/tool-executor.config.json
- *   2. <cwd>/tool-executor.config.json
- *   3. <homedir>/.claude/tool-executor/tool-executor.config.json
- *   4. <xdgConfigHome>/tool-executor/tool-executor.config.json (fallback <homedir>/.config/...)
- *   5. $TOOL_EXECUTOR_CONFIG (literal path — no ${VAR} expansion of the path itself)
  *
- * Returns existing files only, deduplicated by absolute path, preserving precedence order.
- * Logs a warning if `$TOOL_EXECUTOR_CONFIG` is set but points to a missing file.
- * All other absent layers are silent.
+ * 1. <pluginDir>/tool-executor.config.json
+ * 2. <cwd>/tool-executor.config.json
+ * 3. <homedir>/.claude/tool-executor/tool-executor.config.json
+ * 4. <xdgConfigHome>/tool-executor/tool-executor.config.json (fallback <homedir>/.config/...)
+ * 5. $TOOL_EXECUTOR_CONFIG (literal path — no ${VAR} expansion of the path itself)
+ *
+ * Returns existing files only, deduplicated by absolute path, preserving precedence order. Logs a
+ * warning if `$TOOL_EXECUTOR_CONFIG` is set but points to a missing file. All other absent layers
+ * are silent.
  */
 export function findConfigFiles(opts: FindConfigOptions = {}): string[] {
   const pluginDir = opts.pluginDir ?? resolve(__dirname, "..");
@@ -97,20 +132,12 @@ export function findConfigFiles(opts: FindConfigOptions = {}): string[] {
   const homedir = opts.homedir ?? os.homedir();
 
   const xdgRaw =
-    opts.xdgConfigHome !== undefined
-      ? opts.xdgConfigHome
-      : process.env.XDG_CONFIG_HOME;
-  const xdg =
-    xdgRaw && xdgRaw.trim().length > 0
-      ? xdgRaw.trim()
-      : resolve(homedir, ".config");
+    opts.xdgConfigHome !== undefined ? opts.xdgConfigHome : process.env.XDG_CONFIG_HOME;
+  const xdg = xdgRaw && xdgRaw.trim().length > 0 ? xdgRaw.trim() : resolve(homedir, ".config");
 
   const explicitRaw =
-    opts.explicitPath !== undefined
-      ? opts.explicitPath
-      : process.env.TOOL_EXECUTOR_CONFIG;
-  const explicit =
-    explicitRaw && explicitRaw.trim().length > 0 ? explicitRaw.trim() : null;
+    opts.explicitPath !== undefined ? opts.explicitPath : process.env.TOOL_EXECUTOR_CONFIG;
+  const explicit = explicitRaw && explicitRaw.trim().length > 0 ? explicitRaw.trim() : null;
 
   const candidates: Array<{ path: string; isExplicit: boolean }> = [
     { path: resolve(pluginDir, FILENAME), isExplicit: false },
@@ -125,22 +152,16 @@ export function findConfigFiles(opts: FindConfigOptions = {}): string[] {
     candidates.push({ path: resolve(explicit), isExplicit: true });
   }
 
-  const seen = new Set<string>();
-  const results: string[] = [];
-  for (const { path, isExplicit } of candidates) {
-    if (!existsSync(path)) {
-      if (isExplicit) {
-        console.error(`TOOL_EXECUTOR_CONFIG points to missing file: ${path}`);
-      }
-      continue;
-    }
-    if (seen.has(path)) {
-      continue;
-    }
-    seen.add(path);
-    results.push(path);
+  const resolved: ResolvedCandidate[] = candidates.map((candidate) => ({
+    path: candidate.path,
+    isExplicit: candidate.isExplicit,
+    exists: existsSync(candidate.path),
+  }));
+  const { paths, missingExplicit } = dedupeByPath(resolved);
+  if (missingExplicit !== null) {
+    console.error(`TOOL_EXECUTOR_CONFIG points to missing file: ${missingExplicit}`);
   }
-  return results;
+  return paths;
 }
 
 function parseLayer(path: string): ServerConfigFromFile[] | null {
@@ -157,21 +178,48 @@ function parseLayer(path: string): ServerConfigFromFile[] | null {
 }
 
 /**
+ * Merge a list of parsed config layers into a single {@link ConfigLoadResult}.
+ *
+ * Each layer is either a successful parse (with a `servers` array, possibly empty) or a parse
+ * failure (`servers: null`, already logged by the caller). Later layers override earlier ones by
+ * `name`. Each surviving server is tagged with the source path of the layer that supplied it. Empty
+ * input and all-failed layers both return null.
+ */
+export function mergeLoadedLayers(
+  layers: ReadonlyArray<{
+    readonly path: string;
+    readonly servers: readonly ServerConfigFromFile[] | null;
+  }>,
+): ConfigLoadResult | null {
+  const byName = new Map<string, LoadedServer>();
+  const sources: string[] = [];
+
+  for (const layer of layers) {
+    if (layer.servers === null) {
+      continue;
+    }
+    for (const server of layer.servers) {
+      byName.set(server.name, { ...server, source: layer.path });
+    }
+    sources.push(layer.path);
+  }
+
+  return sources.length > 0 ? { servers: [...byName.values()], sources } : null;
+}
+
+/**
  * Load and merge config from all lookup layers (or from a single explicit path).
  *
  * - With no arguments: walks {@link findConfigFiles} rules and merges all hits.
  * - With `configPath`: loads exactly that file; returns null if it doesn't exist.
  *
- * Merge semantics: later layers (higher precedence) override earlier ones by `name`.
- * Each returned server carries a `source` field pointing to the layer that supplied it.
+ * Merge semantics: later layers (higher precedence) override earlier ones by `name`. Each returned
+ * server carries a `source` field pointing to the layer that supplied it.
  *
- * Returns null when no layer contributed any servers (no files found, or every file
- * failed to parse).
+ * Returns null when no layer contributed any servers (no files found, or every file failed to
+ * parse).
  */
-export function loadConfig(
-  configPath?: string,
-  opts?: FindConfigOptions,
-): ConfigLoadResult | null {
+export function loadConfig(configPath?: string, opts?: FindConfigOptions): ConfigLoadResult | null {
   let paths: string[];
   if (configPath !== undefined) {
     const resolved = resolve(configPath);
@@ -179,19 +227,10 @@ export function loadConfig(
   } else {
     paths = findConfigFiles(opts);
   }
-  if (paths.length === 0) return null;
+  const layers = paths.map((path) => ({
+    path,
+    servers: parseLayer(path),
+  }));
 
-  const byName = new Map<string, LoadedServer>();
-  const sources: string[] = [];
-
-  for (const path of paths) {
-    const servers = parseLayer(path);
-    if (servers === null) continue; // malformed; already logged
-    for (const server of servers) {
-      byName.set(server.name, { ...server, source: path });
-    }
-    sources.push(path);
-  }
-
-  return sources.length > 0 ? { servers: [...byName.values()], sources } : null;
+  return mergeLoadedLayers(layers);
 }

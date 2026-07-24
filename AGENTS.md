@@ -60,6 +60,7 @@ dist/                                      built artifacts, ONLY edit the source
 ```
 
 Categories:
+
 - `code-nav/serena` — LSP-based symbol tools
 - `graph-analysis/codebase-memory` — graph-based code analysis (this repo's primary toolset)
 - `ai-models/gemini` — Gemini research/analysis/generation
@@ -67,3 +68,23 @@ Categories:
 - `reasoning/sequentialThinking` — multi-step reasoning
 - `ui/shadcn` — UI components
 - `web/apify` — web scraping
+
+## Vendored Repositories
+
+This project vendors external repositories under @repos/
+
+- Use vendored repositories as read-only reference material when working with related libraries
+- Prefer examples and patterns from the vendored source code over generated guesses or web search results
+- Do not edit files under @repos/ unless explicitly asked
+- Do not import from @repos/ - application code should continue importing from normal package dependencies
+
+## Lint & Format
+
+This repo uses **oxlint** + **oxfmt** with a strict ruleset tuned for low required context (explicit return types, sorted imports with `.js` extensions, no magic numbers, named exports preferred). Don't fight the formatter; run `yarn fix` if a file looks out of style.
+
+- `yarn lint` — type-aware oxlint (no fixes)
+- `yarn fix` — `oxfmt && oxlint --fix && oxfmt` (the trailing format settles whitespace `sort-imports` may have disturbed)
+- Pre-commit hook runs `oxfmt --check` + `oxlint --type-aware` and aborts the commit on violation — re-stage after `yarn fix`.
+- **Pinned versions** in `package.json` (no `^`); upgrades are deliberate work, never incidental.
+- File-scoped overrides live in `.oxlintrc.json` for `vendor.d.ts`, `bm25.ts`, `search.ts`, `search.test.ts`, and `sandbox/runtime.ts` — these files have load-bearing patterns (`AsyncFunction` eval; `unknown`-typed vendor types) that the strict rules would otherwise flame.
+- Out of scope: `tests/integration/`, `registry/`, `dist/`, `workspace/`, markdown docs.

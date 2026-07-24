@@ -33,7 +33,7 @@ inputSchema:
       type: integer
       description: Number of lines of context to include after each match.
     paths_include_glob:
-      default: ''
+      default: ""
       title: Paths Include Glob
       type: string
       description: |-
@@ -42,7 +42,7 @@ inputSchema:
         Supports standard glob patterns (*, ?, [seq], **, etc.) and brace expansion {a,b,c}.
         Only matches files, not directories. If left empty, all non-ignored files will be included.
     paths_exclude_glob:
-      default: ''
+      default: ""
       title: Paths Exclude Glob
       type: string
       description: >-
@@ -55,7 +55,7 @@ inputSchema:
         Takes precedence over paths_include_glob. Only matches files, not directories. If left empty, no files are
         excluded.
     relative_path:
-      default: ''
+      default: ""
       title: Relative Path
       type: string
       description: |-

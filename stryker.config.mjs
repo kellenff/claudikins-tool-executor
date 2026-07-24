@@ -1,9 +1,5 @@
 export default {
-  mutate: [
-    "src/**/*.ts",
-    "!src/**/*.test.ts",
-    "!src/**/*.d.ts",
-  ],
+  mutate: ["src/**/*.ts", "!src/**/*.test.ts", "!src/**/*.d.ts"],
   mutator: {
     name: "typescript",
   },
@@ -18,8 +14,5 @@ export default {
     high: 95,
     break: 90,
   },
-  plugins: [
-    "@stryker-mutator/vitest-runner",
-    "@stryker-mutator/typescript-checker",
-  ],
+  plugins: ["@stryker-mutator/vitest-runner", "@stryker-mutator/typescript-checker"],
 };

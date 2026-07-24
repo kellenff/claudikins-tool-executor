@@ -1,8 +1,8 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
 /**
- * MCP client connections - null means not connected (lazy loading)
- * NOTE: Extend this interface when adding new servers to DEFAULT_CONFIGS
+ * MCP client connections - null means not connected (lazy loading) NOTE: Extend this interface when
+ * adding new servers to DEFAULT_CONFIGS
  */
 interface MCPClients {
     serena: Client | null;
@@ -18,10 +18,9 @@ interface MCPClients {
 /**
  * Configuration for connecting to an MCP server.
  *
- * `source` is populated by the config loader to track provenance: the absolute
- * path of the config layer that supplied this entry, or the synthetic string
- * `"<default>"` for built-in defaults. Used by `cli status` to report
- * "N default + M user" counts.
+ * `source` is populated by the config loader to track provenance: the absolute path of the config
+ * layer that supplied this entry, or the synthetic string `"<default>"` for built-in defaults. Used
+ * by `cli status` to report "N default + M user" counts.
  */
 interface ServerConfig {
     name: string;
@@ -33,17 +32,13 @@ interface ServerConfig {
     commandEnvKey?: string;
     source?: string;
 }
-/**
- * Result of code execution in the sandbox
- */
+/** Result of code execution in the sandbox */
 interface ExecutionResult {
     logs: unknown[];
     error?: string;
     stack?: string;
 }
-/**
- * Tool definition loaded from YAML registry
- */
+/** Tool definition loaded from YAML registry */
 interface ToolDefinition {
     name: string;
     server: string;
@@ -53,9 +48,7 @@ interface ToolDefinition {
     example: string;
     notes?: string;
 }
-/**
- * Audit log entry for MCP calls
- */
+/** Audit log entry for MCP calls */
 interface AuditLogEntry {
     timestamp: number;
     client: string;
@@ -64,9 +57,7 @@ interface AuditLogEntry {
     duration?: number;
     error?: string;
 }
-/**
- * Client state for lifecycle management
- */
+/** Client state for lifecycle management */
 interface ClientState {
     client: Client | null;
     lastUsed: number;

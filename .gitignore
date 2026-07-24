@@ -276,3 +276,5 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+/.rag/lancedb/chunks.lance/
+.worktrees/

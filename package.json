@@ -2,35 +2,35 @@
   "name": "@claudikins/tool-executor",
   "version": "1.1.4",
   "description": "MCP server that wraps multiple MCP servers into a single context-efficient interface - part of the Claudikins framework",
-  "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "claudikins": "./dist/cli.js"
+  "keywords": [
+    "anthropic",
+    "claude",
+    "claudikins",
+    "context-efficient",
+    "mcp",
+    "model-context-protocol",
+    "tool-executor"
+  ],
+  "homepage": "https://github.com/elb-pr/claudikins-tool-executor#readme",
+  "bugs": {
+    "url": "https://github.com/elb-pr/claudikins-tool-executor/issues"
   },
+  "license": "MIT",
+  "author": "Ethan Lee",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/elb-pr/claudikins-tool-executor.git"
   },
-  "keywords": [
-    "mcp",
-    "claude",
-    "anthropic",
-    "claudikins",
-    "tool-executor",
-    "context-efficient",
-    "model-context-protocol"
-  ],
-  "author": "Ethan Lee",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/elb-pr/claudikins-tool-executor/issues"
+  "bin": {
+    "claudikins": "./dist/cli.js"
   },
-  "homepage": "https://github.com/elb-pr/claudikins-tool-executor#readme",
   "files": [
     "dist",
     "registry",
     "tool-executor.config.example.json"
   ],
+  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
     "build": "tsup",
@@ -41,17 +41,23 @@
     "test": "vitest",
     "test:unit": "vitest run src",
     "test:unit:mutation": "stryker run",
-    "test:integration": "vitest run tests/integration"
+    "test:integration": "vitest run tests/integration",
+    "lint": "oxlint --type-aware src scripts tsup.config.ts vitest.config.ts",
+    "lint:fix": "oxlint --type-aware --fix --fix-suggestions src scripts tsup.config.ts vitest.config.ts",
+    "format": "oxfmt src scripts tsup.config.ts vitest.config.ts",
+    "format:check": "oxfmt --check src scripts tsup.config.ts vitest.config.ts",
+    "fix": "yarn format && yarn lint:fix && yarn format"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",
     "commander": "^14.0.2",
     "dotenv": "^17.2.3",
+    "effect": "4.0.0-beta.101",
     "glob": "^10.3.0",
     "js-yaml": "^4.1.0",
     "wink-bm25-text-search": "^3.1.2",
     "wink-nlp-utils": "^2.1.0",
-    "zod": "^4.3.5"
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.6.1",
@@ -59,6 +65,9 @@
     "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
+    "oxfmt": "0.50.0",
+    "oxlint": "1.65.0",
+    "oxlint-tsgolint": "0.22.1",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",

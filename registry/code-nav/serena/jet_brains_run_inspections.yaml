@@ -18,7 +18,7 @@ inputSchema:
     min_severity:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Min Severity
       description: |-
@@ -29,7 +29,7 @@ inputSchema:
         - items:
             type: string
           type: array
-        - type: 'null'
+        - type: "null"
       default: null
       title: Inspection Names
       description: |-
@@ -38,14 +38,14 @@ inputSchema:
     start_line:
       anyOf:
         - type: integer
-        - type: 'null'
+        - type: "null"
       default: null
       title: Start Line
       description: Optional 1-based start line to restrict the inspection range.
     end_line:
       anyOf:
         - type: integer
-        - type: 'null'
+        - type: "null"
       default: null
       title: End Line
       description: Optional 1-based end line to restrict the inspection range.

@@ -21,7 +21,7 @@ inputSchema:
     containing_symbol_name_path:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Containing Symbol Name Path
       description: Optional name path of a containing symbol whose body shall be searched instead of the full file.

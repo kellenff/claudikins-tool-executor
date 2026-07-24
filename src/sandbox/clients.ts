@@ -2,24 +2,24 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { loadConfig } from "../config.js";
 import {
-  MCPClients,
-  ServerConfig,
-  AuditLogEntry,
-  ClientState,
-} from "../types.js";
+  AUDIT_LOG_DEFAULT_LIMIT,
+  AUDIT_LOG_MAX_ENTRIES,
+  CLIENT_CLEANUP_INTERVAL_MS,
+  CLIENT_IDLE_TIMEOUT_MS,
+  MCP_CLIENT_VERSION,
+} from "../constants.js";
+import type { AuditLogEntry, ClientState, ServerConfig } from "../types.js";
 
 type DefaultServerConfig = ServerConfig & {
   envKeys?: string[];
 };
 
-const IDLE_TIMEOUT = 3 * 60 * 1000; // 3 minutes
-
 /**
  * Default MCP server configurations.
  *
- * Always merged with user-supplied servers (later layers in the resolved config
- * win by `name`). NOTE: env vars are specified as keys, resolved at connect time
- * (not module load time) so dotenv has loaded before we read process.env.
+ * Always merged with user-supplied servers (later layers in the resolved config win by `name`).
+ * NOTE: env vars are specified as keys, resolved at connect time (not module load time) so dotenv
+ * has loaded before we read process.env.
  */
 const DEFAULT_CONFIGS: DefaultServerConfig[] = [
   // NPX servers (Node.js)
@@ -75,41 +75,30 @@ const DEFAULT_CONFIGS: DefaultServerConfig[] = [
     name: "serena",
     displayName: "Serena",
     command: "uvx",
-    args: [
-      "--from",
-      "git+https://github.com/oraios/serena",
-      "serena",
-      "start-mcp-server",
-    ],
+    args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
   },
 ];
 
-const SAFE_SERVER_COMMANDS = new Set([
-  "npx",
-  "uvx",
-  "node",
-  "python",
-  "codebase-memory-mcp",
-]);
+const SAFE_SERVER_COMMANDS = new Set(["npx", "uvx", "node", "python", "codebase-memory-mcp"]);
 
 const DEFAULT_SOURCE = "<default>";
 
-/**
- * Resolve optional command env override at runtime (after dotenv loads)
- */
+/** Resolve optional command env override at runtime (after dotenv loads) */
 function resolveCommand(config: ServerConfig): string {
-  if (!config.commandEnvKey) return config.command;
+  if (!config.commandEnvKey) {
+    return config.command;
+  }
   return process.env[config.commandEnvKey] || config.command;
 }
 
 /**
- * Resolve envKeys to actual env values at runtime (after dotenv loads).
- * Used only for built-in defaults; user-supplied entries use literal `env`.
+ * Resolve envKeys to actual env values at runtime (after dotenv loads). Used only for built-in
+ * defaults; user-supplied entries use literal `env`.
  */
-function resolveEnvKeys(
-  envKeys?: string[],
-): Record<string, string> | undefined {
-  if (!envKeys || envKeys.length === 0) return undefined;
+function resolveEnvKeys(envKeys?: string[]): Record<string, string> | undefined {
+  if (!envKeys || envKeys.length === 0) {
+    return undefined;
+  }
 
   return envKeys.reduce<Record<string, string>>((acc, key) => {
     acc[key] = process.env[key] || "";
@@ -117,13 +106,15 @@ function resolveEnvKeys(
   }, {});
 }
 
-/**
- * Validate server commands to avoid accidental command injection from config
- */
+/** Validate server commands to avoid accidental command injection from config */
 function isSafeCommand(config: ServerConfig): boolean {
   const command = config.command;
-  if (command === "") return false;
-  if (SAFE_SERVER_COMMANDS.has(command)) return true;
+  if (command === "") {
+    return false;
+  }
+  if (SAFE_SERVER_COMMANDS.has(command)) {
+    return true;
+  }
   return Boolean(config.trusted);
 }
 
@@ -135,47 +126,77 @@ function normalizeServerConfig<T extends ServerConfig>(config: T): T {
 }
 
 /**
- * Load server configs by always starting from DEFAULT_CONFIGS and overlaying any
- * user-supplied servers (resolved from layered config files) by `name`. User
- * entries replace defaults of the same name; defaults without a user override
- * remain. Unsafe entries are filtered post-merge with a warning that names the
- * provenance source.
+ * Pure: merge default + user ServerConfig entries into a final list, filtering out unsafe commands.
+ *
+ * Each input entry is `{ source, config }`. Defaults are stored first; users override by `name`.
+ * Each config is normalized (command resolved from commandEnvKey). Defaults' `envKeys` arrays are
+ * resolved to `env` objects. The `isSafe` predicate decides inclusion; unsafe entries are dropped
+ * and a warning string naming provenance + command is returned.
  */
-function loadServerConfigs(): ServerConfig[] {
-  const result = loadConfig();
+export function mergeSafeServers(
+  defaults: ReadonlyArray<{ readonly source: string; readonly config: DefaultServerConfig }>,
+  users: ReadonlyArray<{ readonly source: string; readonly config: ServerConfig }>,
+  isSafe: (config: ServerConfig) => boolean,
+): { kept: ServerConfig[]; warnings: string[] } {
   const byName = new Map<string, ServerConfig>();
 
-  // Layer A: defaults (with commandEnvKey + envKeys resolved at runtime)
-  for (const c of DEFAULT_CONFIGS) {
-    const normalized = normalizeServerConfig(c);
-    byName.set(c.name, {
+  for (const { source, config } of defaults) {
+    const normalized = normalizeServerConfig(config);
+    byName.set(normalized.name, {
       name: normalized.name,
       displayName: normalized.displayName,
       command: normalized.command,
       args: normalized.args,
-      env: resolveEnvKeys(c.envKeys),
+      env: resolveEnvKeys(config.envKeys),
       trusted: normalized.trusted,
       commandEnvKey: normalized.commandEnvKey,
-      source: DEFAULT_SOURCE,
+      source,
     });
   }
 
-  // Layer B: user entries (commandEnvKey honoured via normalizeServerConfig;
-  // env taken literally — ${VAR} was already expanded at parse time).
-  if (result) {
-    for (const s of result.servers) {
-      const normalized = normalizeServerConfig(s);
-      byName.set(s.name, {
-        name: normalized.name,
-        displayName: normalized.displayName,
-        command: normalized.command,
-        args: normalized.args,
-        env: normalized.env,
-        trusted: normalized.trusted,
-        commandEnvKey: normalized.commandEnvKey,
-        source: s.source,
-      });
+  for (const { source, config } of users) {
+    const normalized = normalizeServerConfig(config);
+    byName.set(normalized.name, {
+      name: normalized.name,
+      displayName: normalized.displayName,
+      command: normalized.command,
+      args: normalized.args,
+      env: normalized.env,
+      trusted: normalized.trusted,
+      commandEnvKey: normalized.commandEnvKey,
+      source,
+    });
+  }
+
+  const kept: ServerConfig[] = [];
+  const warnings: string[] = [];
+  for (const server of byName.values()) {
+    if (isSafe(server)) {
+      kept.push(server);
+    } else {
+      warnings.push(
+        `Ignoring server "${server.name}" (from ${server.source ?? "<unknown>"}) because command "${server.command}" is not in the safe command set. Set "trusted: true" to allow explicit command use.`,
+      );
     }
+  }
+
+  return { kept, warnings };
+}
+
+/**
+ * Load server configs by always starting from DEFAULT_CONFIGS and overlaying any user-supplied
+ * servers (resolved from layered config files) by `name`. User entries replace defaults of the same
+ * name; defaults without a user override remain. Unsafe entries are filtered post-merge with a
+ * warning that names the provenance source.
+ */
+function loadServerConfigs(): ServerConfig[] {
+  const result = loadConfig();
+  const defaults = DEFAULT_CONFIGS.map((config) => ({ source: DEFAULT_SOURCE, config }));
+  const users = result
+    ? result.servers.map((config) => ({ source: config.source ?? "<unknown>", config }))
+    : [];
+
+  if (result) {
     console.error(
       `Loaded config from ${result.sources.length} source(s): ${result.sources.join(", ")}`,
     );
@@ -183,18 +204,14 @@ function loadServerConfigs(): ServerConfig[] {
     console.error("No config file found, using default servers");
   }
 
-  return [...byName.values()].filter((server) => {
-    if (isSafeCommand(server)) return true;
-    console.error(
-      `Ignoring server "${server.name}" (from ${server.source ?? "<unknown>"}) because command "${server.command}" is not in the safe command set. Set "trusted: true" to allow explicit command use.`,
-    );
-    return false;
-  });
+  const { kept, warnings } = mergeSafeServers(defaults, users, isSafeCommand);
+  for (const warning of warnings) {
+    console.error(warning);
+  }
+  return kept;
 }
 
-/**
- * MCP server configurations - lazily loaded to ensure dotenv has run first
- */
+/** MCP server configurations - lazily loaded to ensure dotenv has run first */
 let _serverConfigs: ServerConfig[] | null = null;
 
 export function getServerConfigs(): ServerConfig[] {
@@ -208,33 +225,25 @@ export function getServerConfigs(): ServerConfig[] {
 export const SERVER_CONFIGS = new Proxy([] as ServerConfig[], {
   get(_, prop) {
     const configs = getServerConfigs();
-    const value = (configs as any)[prop];
+    const value = (configs as unknown as Record<string | symbol, unknown>)[prop];
     // Bind methods to the actual configs array
     if (typeof value === "function") {
-      return value.bind(configs);
+      return (value as (...args: unknown[]) => unknown).bind(configs);
     }
     return value;
   },
 });
 
-/**
- * Client state tracking for lazy loading and lifecycle management
- */
+/** Client state tracking for lazy loading and lifecycle management */
 const clientStates = new Map<string, ClientState>();
 
-/**
- * Track in-flight connection promises to avoid duplicate connections
- */
+/** Track in-flight connection promises to avoid duplicate connections */
 const connectionPromises = new Map<string, Promise<Client | null>>();
 
-/**
- * Audit log for all MCP calls
- */
+/** Audit log for all MCP calls */
 const auditLog: AuditLogEntry[] = [];
 
-/**
- * Initialize client states (all disconnected)
- */
+/** Initialize client states (all disconnected) */
 export function initClientStates(): void {
   for (const config of SERVER_CONFIGS) {
     clientStates.set(config.name, {
@@ -245,9 +254,7 @@ export function initClientStates(): void {
   }
 }
 
-/**
- * Get a client, connecting lazily if needed
- */
+/** Get a client, connecting lazily if needed */
 export async function getClient(name: string): Promise<Client | null> {
   const state = clientStates.get(name);
   if (!state) {
@@ -278,21 +285,16 @@ export async function getClient(name: string): Promise<Client | null> {
   }
 }
 
-/**
- * Internal connection logic
- */
-async function connectClientInternal(
-  name: string,
-  state: ClientState,
-): Promise<Client | null> {
-  const config = SERVER_CONFIGS.find((c) => c.name === name);
+/** Internal connection logic */
+async function connectClientInternal(name: string, state: ClientState): Promise<Client | null> {
+  const config = SERVER_CONFIGS.find((candidate) => candidate.name === name);
   if (!config) {
     return null;
   }
 
   try {
     const client = new Client(
-      { name: `claudikins-${name}`, version: "1.1.0" },
+      { name: `claudikins-${name}`, version: MCP_CLIENT_VERSION },
       { capabilities: {} },
     );
     const transport = new StdioClientTransport({
@@ -313,12 +315,12 @@ async function connectClientInternal(
   }
 }
 
-/**
- * Disconnect a specific client
- */
+/** Disconnect a specific client */
 export async function disconnectClient(name: string): Promise<void> {
   const state = clientStates.get(name);
-  if (!state?.client) return;
+  if (!state?.client) {
+    return;
+  }
 
   try {
     await state.client.close();
@@ -331,29 +333,23 @@ export async function disconnectClient(name: string): Promise<void> {
   state.lastUsed = 0;
 }
 
-/**
- * Disconnect all clients
- */
+/** Disconnect all clients */
 export async function disconnectAll(): Promise<void> {
   const names = Array.from(clientStates.keys());
   await Promise.all(names.map(disconnectClient));
 }
 
-/**
- * Clean up idle clients (run periodically)
- */
+/** Clean up idle clients (run periodically) */
 export async function cleanupIdleClients(): Promise<void> {
   const now = Date.now();
   for (const [name, state] of clientStates) {
-    if (state.client && now - state.lastUsed > IDLE_TIMEOUT) {
+    if (state.client && now - state.lastUsed > CLIENT_IDLE_TIMEOUT_MS) {
       await disconnectClient(name);
     }
   }
 }
 
-/**
- * Get list of currently connected clients
- */
+/** Get list of currently connected clients */
 export function getConnectedClients(): string[] {
   const connected: string[] = [];
   for (const [name, state] of clientStates) {
@@ -364,47 +360,45 @@ export function getConnectedClients(): string[] {
   return connected;
 }
 
-/**
- * Get list of all available clients (connected or not)
- */
+/** Get list of all available clients (connected or not) */
 export function getAvailableClients(): string[] {
-  return SERVER_CONFIGS.map((c) => c.name);
+  return SERVER_CONFIGS.map((config) => config.name);
 }
 
-/**
- * Log an MCP call for auditing
- */
+/** Log an MCP call for auditing */
 export function logMcpCall(entry: AuditLogEntry): void {
   auditLog.push(entry);
 
-  // Keep only last 1000 entries
-  if (auditLog.length > 1000) {
+  // Keep only the most recent AUDIT_LOG_MAX_ENTRIES entries
+  if (auditLog.length > AUDIT_LOG_MAX_ENTRIES) {
     auditLog.shift();
   }
 }
 
-/**
- * Get recent audit log entries
- */
-export function getAuditLog(limit = 100): AuditLogEntry[] {
+/** Get recent audit log entries */
+export function getAuditLog(limit = AUDIT_LOG_DEFAULT_LIMIT): AuditLogEntry[] {
   return auditLog.slice(-limit);
 }
 
-/**
- * Start the idle cleanup interval
- */
+/** Start the idle cleanup interval */
 let cleanupInterval: NodeJS.Timeout | null = null;
 
 export function startLifecycleManagement(): void {
-  if (cleanupInterval) return;
+  if (cleanupInterval) {
+    return;
+  }
 
   // Initialize client states (deferred to ensure dotenv has loaded)
   initClientStates();
 
-  // Check for idle clients every minute
-  cleanupInterval = setInterval(cleanupIdleClients, 60_000);
+  // Check for idle clients every CLIENT_CLEANUP_INTERVAL_MS
+  cleanupInterval = setInterval(() => {
+    void cleanupIdleClients();
+  }, CLIENT_CLEANUP_INTERVAL_MS);
 
-  // Clean shutdown handlers
+  // Clean shutdown handlers — returns a Promise so tests can await completion;
+  // wrapped with `.catch` at the registration site so the floating signal-handler
+  // promise can never go unhandled in production.
   const shutdown = async (): Promise<void> => {
     console.error("Shutting down...");
     if (cleanupInterval) {
@@ -415,13 +409,20 @@ export function startLifecycleManagement(): void {
     process.exit(0);
   };
 
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+  // The signal listener returns the shutdown promise so callers (notably the
+  // lifecycle test) can await it. Node's process.on typing expects a void-
+  // returning listener; the explicit `as` cast tells the linter this is a
+  // deliberate mismatch — the promise rejection is contained inside `shutdown`.
+  const onSignal = ((): Promise<void> =>
+    shutdown().catch((err: unknown) => {
+      console.error("Shutdown failed:", err);
+    })) as () => void;
+
+  process.on("SIGINT", onSignal);
+  process.on("SIGTERM", onSignal);
 }
 
-/**
- * Stop lifecycle management (for testing)
- */
+/** Stop lifecycle management (for testing) */
 export function stopLifecycleManagement(): void {
   if (cleanupInterval) {
     clearInterval(cleanupInterval);

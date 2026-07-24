@@ -28,9 +28,7 @@ vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
 }));
 
 vi.mock("@modelcontextprotocol/sdk/server/stdio.js", async () => {
-  const actual = await vi.importActual(
-    "@modelcontextprotocol/sdk/server/stdio.js",
-  );
+  const actual = await vi.importActual("@modelcontextprotocol/sdk/server/stdio.js");
   return {
     ...(actual as Record<string, unknown>),
     StdioServerTransport: class {
@@ -78,15 +76,9 @@ describe("index", () => {
   });
 
   it("registers tools and starts server bootstrap on module load", async () => {
-    const stdinOnSpy = vi
-      .spyOn(process.stdin, "on")
-      .mockImplementation(() => process.stdin);
-    const exitSpy = vi
-      .spyOn(process, "exit")
-      .mockImplementation(() => undefined as never);
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+    const stdinOnSpy = vi.spyOn(process.stdin, "on").mockImplementation(() => process.stdin);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await import("./index.js");
 
@@ -103,11 +95,7 @@ describe("index", () => {
     expect(registerTool).toHaveBeenCalledTimes(3);
 
     const toolNames = registerTool.mock.calls.map((call) => call[0]);
-    expect(toolNames).toEqual([
-      "search_tools",
-      "get_tool_schema",
-      "execute_code",
-    ]);
+    expect(toolNames).toEqual(["search_tools", "get_tool_schema", "execute_code"]);
     expect(registerTool.mock.calls[0]?.[1]).toMatchObject({
       title: "Search MCP Tools",
       annotations: {
@@ -152,26 +140,16 @@ describe("index", () => {
       (call) => (call[0] as string) === "close",
     )?.[1] as () => void;
     closeHandler();
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Client disconnected, shutting down",
-    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Client disconnected, shutting down");
     expect(exitSpy).toHaveBeenCalledWith(0);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Claudikins Tool Executor running",
-    );
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Available MCP clients: serena, gemini",
-    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Claudikins Tool Executor running");
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Available MCP clients: serena, gemini");
   });
 
   it("reports fatal bootstrap errors", async () => {
     vi.spyOn(process.stdin, "on").mockImplementation(() => process.stdin);
-    const exitSpy = vi
-      .spyOn(process, "exit")
-      .mockImplementation(() => undefined as never);
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const error = new Error("connect failed");
     connect.mockRejectedValueOnce(error);
 

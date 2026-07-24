@@ -9,7 +9,7 @@ inputSchema:
   properties:
     language:
       type: string
-      description: 'Target language: ''Java'' or ''Kotlin'''
+      description: "Target language: 'Java' or 'Kotlin'"
     wrapInTags:
       type: boolean
       description: If true, wraps the API content in <API> and <api.kt> tags

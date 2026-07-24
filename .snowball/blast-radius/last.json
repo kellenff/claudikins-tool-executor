@@ -1,0 +1,36 @@
+{
+  "status": "degraded",
+  "backend": "heuristic",
+  "output": {
+    "change_scope": {
+      "fileCount": 11,
+      "files": [
+        "package.json",
+        "yarn.lock",
+        "src/schemas.ts",
+        "src/schemas.test.ts",
+        "src/config.ts",
+        "src/config.test.ts",
+        "src/register-tools.ts",
+        "src/register-tools.test.ts",
+        "src/index.ts",
+        "docs/snowball/plans/2026-07-23-zod-to-effect-schema.md",
+        ".snowball/blast-radius/last.json"
+      ],
+      "sharedInfraFileCount": 1,
+      "crossModuleEditCount": 0,
+      "level": "medium"
+    },
+    "failure_impact": {
+      "estimatedFanOut": 0,
+      "sensitivePaths": [],
+      "level": "low"
+    },
+    "action_risk": {
+      "level": "low",
+      "tags": [],
+      "rationale": []
+    }
+  },
+  "reason": "graph-unavailable"
+}

@@ -54,10 +54,10 @@ inputSchema:
         display name, not an opaque numeric ID. If not specified, uses the current/active thread. Default: null.
     limit:
       type: integer
-      description: 'Max frames to return. Default: 200.'
+      description: "Max frames to return. Default: 200."
     offset:
       type: integer
-      description: 'Page offset. Default: 0.'
+      description: "Page offset. Default: 0."
     projectPath:
       type: string
       description: |2-

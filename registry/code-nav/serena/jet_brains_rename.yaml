@@ -21,7 +21,7 @@ inputSchema:
     name_path:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Name Path
       description: The name path of the symbol to rename or None if renaming a file or directory.

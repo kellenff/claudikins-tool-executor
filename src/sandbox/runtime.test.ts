@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  executeCode,
-  getAvailableClientNames,
-  getSandboxClientBindings,
-} from "./runtime.js";
+import { executeCode, getAvailableClientNames, getSandboxClientBindings } from "./runtime.js";
 
 describe("sandbox runtime", () => {
   it("executes sandboxed code and summarizes returned values", async () => {
@@ -26,13 +22,14 @@ describe("sandbox runtime", () => {
     const result = await executeCode(`console.log(${JSON.stringify("x".repeat(600))});`, 2000);
 
     expect(result.error).toBeUndefined();
-    expect(result.logs).toEqual([
-      expect.stringContaining("Output truncated"),
-    ]);
+    expect(result.logs).toEqual([expect.stringContaining("Output truncated")]);
   });
 
   it("captures console levels and timeout errors", async () => {
-    const logged = await executeCode("console.info('i'); console.warn('w'); console.error('e'); console.debug('d');", 2000);
+    const logged = await executeCode(
+      "console.info('i'); console.warn('w'); console.error('e'); console.debug('d');",
+      2000,
+    );
     expect(logged.logs).toEqual([
       { level: "info", data: ["i"] },
       { level: "warn", data: ["w"] },

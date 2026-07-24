@@ -17,7 +17,7 @@ inputSchema:
     cwd:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Cwd
       description: The working directory to execute the command in. If None, the project root will be used.

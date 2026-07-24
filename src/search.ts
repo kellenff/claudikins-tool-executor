@@ -1,25 +1,28 @@
 import { readFile } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { glob } from "glob";
 import yaml from "js-yaml";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { initBM25, searchBM25, isBM25Ready } from "./bm25.js";
-import { ToolDefinition } from "./types.js";
+import { initBM25, isBM25Ready, searchBM25 } from "./bm25.js";
+import {
+  BM25_RANK_DECAY,
+  DEFAULT_SEARCH_LIMIT,
+  DEFAULT_SEARCH_SCORE,
+  MATCH_CONTEXT_CHARS,
+  MCP_CLIENT_VERSION,
+} from "./constants.js";
+import type { ToolDefinition } from "./types.js";
 
-/**
- * Search result from tool search
- */
+/** Search result from tool search */
 export interface SearchResult {
   tool: ToolDefinition;
   score: number;
   matchContext?: string;
 }
 
-/**
- * Search response
- */
+/** Search response */
 export interface SearchResponse {
   results: SearchResult[];
   source: "serena" | "local";
@@ -37,22 +40,82 @@ type SerenaContentItem = {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REGISTRY_ROOT = resolve(__dirname, "..", "registry");
 
-/**
- * Dedicated Serena client for registry search (separate from sandbox)
- */
+/** Dedicated Serena client for registry search (separate from sandbox) */
 let registrySerena: Client | null = null;
 
-/**
- * Track in-flight connection promise to avoid duplicate connections
- */
+/** Track in-flight connection promise to avoid duplicate connections */
 let connectionPromise: Promise<Client | null> | null = null;
 
 /**
- * Get or create the registry Serena client
+ * Represents the configuration required to launch and communicate with a Serena transport process.
+ * Encapsulates the executable command, its arguments, and any environment variables needed to spawn
+ * the process.
+ */
+type SerenaTransportSpec = {
+  readonly command: string;
+  readonly args: string[];
+  readonly env: Record<string, string>;
+};
+
+/**
+ * Serena MCP server is launched via `uvx --from <pkg> <entrypoint> <command>`. The package pin
+ * lives in this single spec builder so transport details stay discoverable in one place and can be
+ * exercised without spawning a process.
+ */
+const SERENA_PACKAGE = "git+https://github.com/oraios/serena";
+const SERENA_ENTRYPOINT = "serena";
+const SERENA_MCP_SERVER_COMMAND = "start-mcp-server";
+
+/**
+ * Build the stdio transport spec for launching the Serena MCP server. Pure: no I/O, no globals read
+ * beyond `process.env` passed by reference.
+ */
+export const buildSerenaTransportSpec = (): SerenaTransportSpec => ({
+  command: "uvx",
+  args: ["--from", SERENA_PACKAGE, SERENA_ENTRYPOINT, SERENA_MCP_SERVER_COMMAND],
+  env: process.env as Record<string, string>,
+});
+
+/**
+ * Represents an error that can occur while connecting to or interacting with the Serena registry.
+ *
+ * This is a discriminated union of error variants, where each variant is identified by its `tag`
+ * property. The `cause` field holds the underlying error or reason that triggered the failure, and
+ * may be of any type.
+ */
+type RegistrySerenaConnectError =
+  | { readonly tag: "connect_failed"; readonly cause: unknown }
+  | { readonly tag: "activate_project_failed"; readonly cause: unknown };
+
+/**
+ * Represents the outcome of a registry Serena connection attempt.
+ *
+ * This is a discriminated union indicating either a successful connection, in which case the
+ * resulting {@link Client} is provided, or a failed connection, in which case the corresponding
+ * {@link RegistrySerenaConnectError} describing the failure is returned.
+ *
+ * Consumers should narrow on the `ok` field to safely access the type-specific payload.
+ */
+type RegistrySerenaConnectResult =
+  | { readonly ok: true; readonly client: Client }
+  | { readonly ok: false; readonly error: RegistrySerenaConnectError };
+
+/**
+ * Returns the singleton Serena registry client, establishing a connection on first call.
+ *
+ * If a client instance already exists, it is returned immediately. If a connection attempt is
+ * currently in progress, the returned promise resolves with the outcome of that ongoing attempt,
+ * preventing duplicate concurrent connections. Otherwise, a new connection is initiated and the
+ * resulting client (or `null` on failure) is cached for subsequent calls.
+ *
+ * @returns A promise that resolves to the connected `Client` instance, or `null` if the connection
+ *   attempt fails.
  */
 async function getRegistrySerena(): Promise<Client | null> {
   // Already connected
-  if (registrySerena) return registrySerena;
+  if (registrySerena) {
+    return registrySerena;
+  }
 
   // Connection already in progress - wait for it
   if (connectionPromise) {
@@ -60,7 +123,13 @@ async function getRegistrySerena(): Promise<Client | null> {
   }
 
   // Start new connection
-  connectionPromise = connectRegistrySerena();
+  connectionPromise = connectRegistrySerena().then((result) => {
+    if (result.ok) {
+      registrySerena = result.client;
+      return result.client;
+    }
+    return null;
+  });
   try {
     return await connectionPromise;
   } finally {
@@ -69,37 +138,101 @@ async function getRegistrySerena(): Promise<Client | null> {
 }
 
 /**
- * Internal connection logic for registry Serena
+ * Connect to the registry Serena MCP server and activate the registry project. Returns a tagged
+ * result; the caller (typically `getRegistrySerena`) decides whether to retain the client. Pure
+ * with respect to module state: does not assign to `registrySerena` itself.
  */
-async function connectRegistrySerena(): Promise<Client | null> {
+export async function connectRegistrySerena(): Promise<RegistrySerenaConnectResult> {
+  const client = new Client(
+    { name: "claudikins-registry-search", version: MCP_CLIENT_VERSION },
+    { capabilities: {} },
+  );
+
   try {
-    const client = new Client({ name: "claudikins-registry-search", version: "1.1.0" }, { capabilities: {} });
-    const transport = new StdioClientTransport({
-      command: "uvx",
-      args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
-      env: process.env as Record<string, string>,
-    });
+    await client.connect(new StdioClientTransport(buildSerenaTransportSpec()));
+  } catch (cause) {
+    console.error("Failed to connect registry Serena:", cause);
+    return { ok: false, error: { tag: "connect_failed", cause } };
+  }
 
-    await client.connect(transport);
-
-    // Activate the registry project
+  try {
     await client.callTool({
       name: "activate_project",
       arguments: { project: REGISTRY_ROOT },
     });
-
-    registrySerena = client;
-    console.error("Registry Serena connected and project activated");
-    return client;
-  } catch (error) {
-    console.error("Failed to connect registry Serena:", error);
-    return null;
+  } catch (cause) {
+    console.error("Failed to activate registry project:", cause);
+    return { ok: false, error: { tag: "activate_project_failed", cause } };
   }
+
+  console.error("Registry Serena connected and project activated");
+  return { ok: true, client };
 }
 
 /**
- * Load a tool definition from a YAML file
+ * Escapes regex metacharacters in a single search term so the term can be embedded into a lookahead
+ * pattern without altering its literal meaning.
+ *
+ * @param {string} term - Raw search term, may contain any character.
+ * @returns {string} The term with regex metacharacters (`.*+?^${}()|[]\`) escaped.
  */
+export const escapeRegexTerm = (term: string): string =>
+  term.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+
+/**
+ * Splits a free-text search query into individual terms on whitespace, discarding empty fragments.
+ * Whitespace-only input yields `[]`.
+ *
+ * @param {string} query - Free-text query string.
+ * @returns {string[]} Non-empty term fragments in original order.
+ */
+export const tokenizeQuery = (query: string): string[] => query.split(/\s+/).filter(Boolean);
+
+/**
+ * Builds a regex substring pattern for Serena's `search_for_pattern`.
+ *
+ * For a single term, returns the term as-is (already escaped by the caller). For multiple terms,
+ * wraps each in a lookahead `(?=.*term)` so all terms must appear in any order, terminating with
+ * `.*`. For an empty array, returns `.*` (matches anything — preserves the current implicit
+ * behavior).
+ *
+ * @param {string[]} terms - Pre-escaped search terms.
+ * @returns {string} The substring pattern to pass to `search_for_pattern`.
+ */
+export const buildLookaheadPattern = (terms: string[]): string => {
+  if (terms.length === 0) {
+    return ".*";
+  }
+  if (terms.length === 1) {
+    return terms[0];
+  }
+  return terms.map((term) => `(?=.*${term})`).join("") + ".*";
+};
+
+/**
+ * Extracts every registry-shaped YAML file path from a single text snippet.
+ *
+ * Matches substrings of the form `<category>/<server>/<file>.yaml` (or `.yml`), case-insensitive.
+ * Returns an empty array if no matches.
+ *
+ * @param {string} text - Free-text snippet (e.g., one item from a Serena response).
+ * @returns {string[]} Matched path substrings in source order, possibly empty.
+ */
+export const extractRegistryPaths = (text: string): string[] =>
+  text.match(/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/[^\s:]+\.ya?ml/gi) ?? [];
+
+/**
+ * Deduplicates a list of file paths while preserving first-occurrence order.
+ *
+ * @param {string[]} paths - Possibly duplicated file paths.
+ * @returns {string[]} The same paths with later duplicates removed.
+ */
+export const dedupePaths = (paths: string[]): string[] => {
+  const seen = new Set<string>();
+  return paths.filter((path) => (seen.has(path) ? false : seen.add(path)));
+};
+
+/** Load a tool definition from a YAML file */
 export async function loadToolDefinition(filePath: string): Promise<ToolDefinition | null> {
   try {
     const content = await readFile(filePath, "utf-8");
@@ -119,31 +252,89 @@ export async function loadToolDefinition(filePath: string): Promise<ToolDefiniti
 }
 
 /**
- * Search tools using Registry Serena (dedicated instance for tool search)
+ * Load YAML tool definitions from a list of file paths concurrently, dropping any that fail to load
+ * or fail validation. Surviving entries preserve the input order.
  */
-async function searchWithSerena(query: string, limit: number): Promise<SearchResult[] | null> {
+export const loadToolsFromFiles = async (
+  filePaths: readonly string[],
+): Promise<ToolDefinition[]> => {
+  const loaded = await Promise.all(filePaths.map((path) => loadToolDefinition(path)));
+  return loaded.filter((tool): tool is ToolDefinition => tool !== null);
+};
+
+/**
+ * Compute the raw scoring of a tool against a list of pre-lowercased query terms. Each term
+ * matching the combined searchText (name + description + category + server) contributes +1; an
+ * additional +2 if the term also appears in the tool's name, and +1 if it appears in the category.
+ * Terms that don't appear anywhere contribute 0. Returns the unnormalized total — callers divide by
+ * `queryTerms.length` to get an average per-term score.
+ */
+export function scoreByQueryTerms(tool: ToolDefinition, queryTerms: readonly string[]): number {
+  const searchText =
+    `${tool.name} ${tool.description} ${tool.category} ${tool.server}`.toLowerCase();
+  const nameLower = tool.name.toLowerCase();
+  const categoryLower = tool.category.toLowerCase();
+  let score = 0;
+  for (const term of queryTerms) {
+    if (searchText.includes(term)) {
+      score += 1;
+      if (nameLower.includes(term)) {
+        score += 2;
+      }
+      if (categoryLower.includes(term)) {
+        score += 1;
+      }
+    }
+  }
+  return score;
+}
+
+/**
+ * Resolves a registry-relative path against REGISTRY_ROOT, loads its ToolDefinition, and packages
+ * it as a SearchResult. Returns null if the file cannot be loaded.
+ *
+ * @param {string} match - Path relative to the registry root.
+ * @param {string} contextText - Source text from which the match was discovered; truncated to
+ *   MATCH_CONTEXT_CHARS for the SearchResult.matchContext field.
+ * @returns {Promise<SearchResult | null>} The result, or null if the file failed to load.
+ */
+const loadToolResult = async (match: string, contextText: string): Promise<SearchResult | null> => {
+  const fullPath = resolve(REGISTRY_ROOT, match);
+  const tool = await loadToolDefinition(fullPath);
+  if (!tool) {
+    return null;
+  }
+  return {
+    tool,
+    score: DEFAULT_SEARCH_SCORE,
+    matchContext: contextText.slice(0, MATCH_CONTEXT_CHARS),
+  };
+};
+
+/**
+ * Searches the registry using the Serena tool by tokenizing the query, building a lookahead regex
+ * pattern, and invoking the underlying search_for_pattern capability with surrounding context.
+ *
+ * Results are deduplicated by path and limited to the specified count. Each surviving match is
+ * enriched through {@link loadToolResult} before being returned. Any error encountered during the
+ * search is logged and results in a `null` return value.
+ *
+ * @param query - Raw search query to be tokenized and matched.
+ * @param limit - Maximum number of results to return.
+ * @returns A promise resolving to an array of search results, or `null` if the registry is
+ *   unavailable, the response is empty, or an error occurs during the search.
+ */
+const searchWithSerena = async (query: string, limit: number): Promise<SearchResult[] | null> => {
   try {
     const serena = await getRegistrySerena();
     if (!serena) {
       return null;
     }
 
-    // Convert query to flexible regex with lookaheads for ANY order matching
-    // "generate image banana" → "(?=.*generate)(?=.*image)(?=.*banana)"
-    // This matches files containing ALL terms regardless of order
-    const terms = query
-      .split(/\s+/)
-      .map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); // escape regex chars
+    const terms = tokenizeQuery(query).map(escapeRegexTerm);
+    const pattern = buildLookaheadPattern(terms);
 
-    // Use lookaheads so terms can appear in any order
-    // Single term: just use it directly. Multiple terms: use lookaheads
-    const pattern = terms.length === 1
-      ? terms[0]
-      : terms.map(t => `(?=.*${t})`).join('') + '.*';
-
-    // Use Serena's search_for_pattern to find matches in registry
-    // relative_path is "." since registry project is already activated
-    const result = await serena.callTool({
+    const result = (await serena.callTool({
       name: "search_for_pattern",
       arguments: {
         substring_pattern: pattern,
@@ -151,72 +342,51 @@ async function searchWithSerena(query: string, limit: number): Promise<SearchRes
         context_lines_before: 2,
         context_lines_after: 2,
       },
-    }) as { content?: SerenaContentItem[] };
+    })) as { content?: SerenaContentItem[] };
 
     if (!result.content || !Array.isArray(result.content)) {
       return null;
     }
 
-    // Parse Serena results and load corresponding tool definitions
-    const results: SearchResult[] = [];
-    const seenFiles = new Set<string>();
+    const texts = result.content
+      .filter((item): item is { type: "text"; text: string } => item.type === "text")
+      .map((item) => item.text);
 
-    for (const item of result.content) {
-      if (item.type !== "text") continue;
+    const matches = dedupePaths(texts.flatMap(extractRegistryPaths));
 
-      // Extract file paths from Serena output (relative to registry root)
-      const text = item.text;
+    const results = await Promise.all(
+      matches.slice(0, limit).map((match) => loadToolResult(match, texts[0] ?? "")),
+    );
 
-      // Match paths like "ui/mermaid/generate_diagram.yaml", "knowledge/context7/query-docs.yaml", or
-      // "reasoning/sequentialThinking/sequentialthinking.yaml"
-      const fileMatches = text.match(/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/[^\s:]+\.ya?ml/gi);
-
-      if (fileMatches) {
-        for (const match of fileMatches) {
-          if (seenFiles.has(match)) continue;
-          seenFiles.add(match);
-
-          const fullPath = resolve(REGISTRY_ROOT, match);
-          const tool = await loadToolDefinition(fullPath);
-          if (tool) {
-            results.push({
-              tool,
-              score: 1.0, // Serena doesn't provide scores
-              matchContext: text.slice(0, 200),
-            });
-          }
-
-          if (results.length >= limit) break;
-        }
-      }
-    }
-
-    return results;
+    return results.filter((entry) => entry !== null);
   } catch (error) {
     console.error("Serena search failed:", error);
     return null;
   }
-}
+};
 
 /**
- * Load all tools for BM25 indexing
+ * Loads all tool definitions from YAML files located in the registry root directory.
+ *
+ * @returns A promise that resolves to an array of tool definitions parsed from the discovered YAML
+ *   files.
  */
 async function loadAllTools(): Promise<ToolDefinition[]> {
   const files = await glob("**/*.{yaml,yml}", {
     cwd: REGISTRY_ROOT,
     absolute: true,
   });
-
-  const tools: ToolDefinition[] = [];
-  for (const file of files) {
-    const tool = await loadToolDefinition(file);
-    if (tool) tools.push(tool);
-  }
-  return tools;
+  return loadToolsFromFiles(files);
 }
 
 /**
- * Search tools using local glob + text matching (fallback)
+ * Performs a local search for tools matching the given query using BM25 ranking with a fallback to
+ * simple term matching across tool definitions.
+ *
+ * @param {string} query - The search query string to match against tool definitions.
+ * @param {number} limit - The maximum number of results to return.
+ * @returns {Promise<SearchResult[]>} A promise that resolves to an array of search results sorted
+ *   by relevance score.
  */
 async function searchLocally(query: string, limit: number): Promise<SearchResult[]> {
   // Try BM25 first (better ranking)
@@ -235,55 +405,48 @@ async function searchLocally(query: string, limit: number): Promise<SearchResult
     if (bm25Results.length > 0) {
       return bm25Results.map((tool, idx) => ({
         tool,
-        score: 1 - (idx * 0.01), // Decreasing score for ranking
+        score: 1 - idx * BM25_RANK_DECAY,
       }));
     }
   }
 
   // Fall back to simple text matching
-  const queryLower = query.toLowerCase();
-  const queryTerms = queryLower.split(/\s+/).filter(Boolean);
+  const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
   const files = await glob("**/*.{yaml,yml}", {
     cwd: REGISTRY_ROOT,
     absolute: true,
   });
 
-  const results: SearchResult[] = [];
+  const tools = await loadToolsFromFiles(files);
+  const termCount = queryTerms.length;
+  const scored = tools
+    .map((tool) => {
+      const raw = scoreByQueryTerms(tool, queryTerms);
+      return raw > 0 ? { tool, score: raw / termCount } : null;
+    })
+    .filter((entry): entry is SearchResult => entry !== null);
 
-  for (const file of files) {
-    const tool = await loadToolDefinition(file);
-    if (!tool) continue;
-
-    // Score based on term matches
-    const searchText = `${tool.name} ${tool.description} ${tool.category || ""} ${tool.server}`.toLowerCase();
-    let score = 0;
-
-    for (const term of queryTerms) {
-      if (searchText.includes(term)) {
-        score += 1;
-        // Bonus for name/category match
-        if (tool.name.toLowerCase().includes(term)) score += 2;
-        if (tool.category?.toLowerCase().includes(term)) score += 1;
-      }
-    }
-
-    if (score > 0) {
-      results.push({
-        tool,
-        score: score / queryTerms.length,
-      });
-    }
-  }
-
-  // Sort by score descending
-  results.sort((a, b) => b.score - a.score);
-  return results.slice(0, limit);
+  // Sort by score descending and return the top N
+  return scored.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 /**
- * Search for tools matching a query
+ * Searches for tools matching the given query, with pagination support.
+ *
+ * Attempts semantic search first and falls back to text-based search if unavailable or no matches
+ * are found.
+ *
+ * @param query - The search query string.
+ * @param limit - Maximum number of results to return. Defaults to DEFAULT_SEARCH_LIMIT.
+ * @param offset - Number of results to skip for pagination. Defaults to 0.
+ * @returns A promise that resolves to a SearchResponse containing the results, source, total count,
+ *   and optional fallback reason or suggestion.
  */
-export async function searchTools(query: string, limit = 10, offset = 0): Promise<SearchResponse> {
+export async function searchTools(
+  query: string,
+  limit = DEFAULT_SEARCH_LIMIT,
+  offset = 0,
+): Promise<SearchResponse> {
   // Request more results to support pagination
   const fetchLimit = offset + limit;
 
@@ -300,9 +463,10 @@ export async function searchTools(query: string, limit = 10, offset = 0): Promis
 
   // Fall back to local search
   const localResults = await searchLocally(query, fetchLimit);
-  const fallbackReason = serenaResults === null
-    ? "Serena unavailable - using text search"
-    : "No semantic matches - using text search";
+  const fallbackReason =
+    serenaResults === null
+      ? "Serena unavailable - using text search"
+      : "No semantic matches - using text search";
 
   if (localResults.length === 0) {
     return {
@@ -310,7 +474,8 @@ export async function searchTools(query: string, limit = 10, offset = 0): Promis
       source: "local",
       totalCount: 0,
       fallbackReason,
-      suggestion: "Try broader terms like 'image', 'code search', 'graph analysis', 'diagram', or browse categories: code-nav, graph-analysis, knowledge, ai-models, web, ui",
+      suggestion:
+        "Try broader terms like 'image', 'code search', 'graph analysis', 'diagram', or browse categories: code-nav, graph-analysis, knowledge, ai-models, web, ui",
     };
   }
 
@@ -323,59 +488,37 @@ export async function searchTools(query: string, limit = 10, offset = 0): Promis
   };
 }
 
-/**
- * Get all available categories in the registry
- */
+/** Get all available categories in the registry */
 export async function getCategories(): Promise<string[]> {
   const files = await glob("*/", {
     cwd: REGISTRY_ROOT,
   });
 
   // Remove trailing slashes
-  return files.map((f) => f.replace(/\/$/, ""));
+  return files.map((file) => file.replace(/\/$/, ""));
 }
 
-/**
- * List all tools in a category
- */
+/** List all tools in a category */
 export async function listToolsInCategory(category: string): Promise<ToolDefinition[]> {
   const categoryPath = resolve(REGISTRY_ROOT, category);
   const files = await glob("**/*.{yaml,yml}", {
     cwd: categoryPath,
     absolute: true,
   });
-
-  const tools: ToolDefinition[] = [];
-  for (const file of files) {
-    const tool = await loadToolDefinition(file);
-    if (tool) tools.push(tool);
-  }
-  return tools;
+  return loadToolsFromFiles(files);
 }
 
-/**
- * Get a specific tool by name (for full schema retrieval)
- */
+/** Get a specific tool by name (for full schema retrieval) */
 export async function getToolByName(toolName: string): Promise<ToolDefinition | null> {
-  // Search all YAML files in registry
   const files = await glob("**/*.{yaml,yml}", {
     cwd: REGISTRY_ROOT,
     absolute: true,
   });
-
-  for (const file of files) {
-    const tool = await loadToolDefinition(file);
-    if (tool && tool.name === toolName) {
-      return tool;
-    }
-  }
-
-  return null;
+  const tools = await loadToolsFromFiles(files);
+  return tools.find((tool) => tool.name === toolName) ?? null;
 }
 
-/**
- * Disconnect the registry Serena client (for cleanup)
- */
+/** Disconnect the registry Serena client (for cleanup) */
 export async function disconnectRegistrySerena(): Promise<void> {
   if (registrySerena) {
     try {

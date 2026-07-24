@@ -18,7 +18,7 @@ inputSchema:
         - medium
         - high
       default: medium
-      description: 'Resolution for processing: low (faster, less detail), medium (balanced), high (more detail, more tokens)'
+      description: "Resolution for processing: low (faster, less detail), medium (balanced), high (more detail, more tokens)"
   required:
     - filePath
     - question

@@ -17,7 +17,7 @@ inputSchema:
   properties:
     show_browser:
       type: boolean
-      description: 'Show the browser window. Default: true.'
+      description: "Show the browser window. Default: true."
     browser_options:
       type: object
       properties:

@@ -38,7 +38,7 @@ inputSchema:
         min).
     show_browser:
       type: boolean
-      description: 'Show the browser window for debugging. Default: false.'
+      description: "Show the browser window for debugging. Default: false."
     session_id:
       type: string
       description: >-

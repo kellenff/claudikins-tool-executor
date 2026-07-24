@@ -10,7 +10,7 @@ inputSchema:
   properties:
     globPattern:
       type: string
-      description: 'Glob pattern to search for. The pattern must be relative to the project root. Example: `src/**/ *.java`'
+      description: "Glob pattern to search for. The pattern must be relative to the project root. Example: `src/**/ *.java`"
     subDirectoryRelativePath:
       type: string
       description: Optional subdirectory relative to the project to search in.

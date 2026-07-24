@@ -4,10 +4,12 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import {
-  ServerConfigSchema,
-  ToolExecutorConfigSchema,
+  dedupeByPath,
   findConfigFiles,
   loadConfig,
+  mergeLoadedLayers,
+  ServerConfigSchema,
+  ToolExecutorConfigSchema,
 } from "./config.js";
 
 const SAVED_TEST_TOKEN_KEY = "TOOL_EXECUTOR_TEST_TOKEN";
@@ -17,6 +19,175 @@ function writeJson(path: string, body: unknown): void {
   writeFileSync(path, JSON.stringify(body, null, 2));
 }
 
+describe("dedupeByPath", () => {
+  it("returns empty results for an empty input list", () => {
+    expect(dedupeByPath([])).toEqual({ paths: [], missingExplicit: null });
+  });
+
+  it("returns existing paths in input order with no missing-explicit marker", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/b", isExplicit: false, exists: true },
+      { path: "/c", isExplicit: false, exists: true },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a", "/b", "/c"], missingExplicit: null });
+  });
+
+  it("dedupes duplicate existing paths, keeping first occurrence", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/b", isExplicit: false, exists: true },
+      { path: "/a", isExplicit: false, exists: true },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a", "/b"], missingExplicit: null });
+  });
+
+  it("drops missing non-explicit candidates silently", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/missing", isExplicit: false, exists: false },
+      { path: "/b", isExplicit: false, exists: true },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a", "/b"], missingExplicit: null });
+  });
+
+  it("records the first explicit-but-missing path in missingExplicit", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/explicit-missing", isExplicit: true, exists: false },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a"], missingExplicit: "/explicit-missing" });
+  });
+
+  it("records only the first explicit-but-missing path when multiple are missing", () => {
+    const resolved = [
+      { path: "/explicit-first", isExplicit: true, exists: false },
+      { path: "/explicit-second", isExplicit: true, exists: false },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: [], missingExplicit: "/explicit-first" });
+  });
+
+  it("does not include the missing-explicit path in paths", () => {
+    const resolved = [{ path: "/explicit", isExplicit: true, exists: false }];
+    expect(dedupeByPath(resolved)).toEqual({ paths: [], missingExplicit: "/explicit" });
+  });
+
+  it("does not let a missing entry block a later duplicate of an existing one", () => {
+    const resolved = [
+      { path: "/a", isExplicit: false, exists: true },
+      { path: "/missing", isExplicit: false, exists: false },
+      { path: "/a", isExplicit: false, exists: true },
+    ];
+    expect(dedupeByPath(resolved)).toEqual({ paths: ["/a"], missingExplicit: null });
+  });
+});
+
+describe("mergeLoadedLayers", () => {
+  it("returns null for an empty layer list", () => {
+    expect(mergeLoadedLayers([])).toBeNull();
+  });
+
+  it("returns null when every layer failed to parse", () => {
+    const layers = [
+      { path: "/a", servers: null },
+      { path: "/b", servers: null },
+    ];
+    expect(mergeLoadedLayers(layers)).toBeNull();
+  });
+
+  it("preserves layer order when servers are disjoint across layers", () => {
+    const a = ServerConfigSchema.parse({
+      name: "a",
+      displayName: "A",
+      command: "ca",
+      args: [],
+    });
+    const b = ServerConfigSchema.parse({
+      name: "b",
+      displayName: "B",
+      command: "cb",
+      args: [],
+    });
+    const layers = [
+      { path: "/x", servers: [a] },
+      { path: "/y", servers: [b] },
+    ];
+    expect(mergeLoadedLayers(layers)).toEqual({
+      servers: [
+        { ...a, source: "/x" },
+        { ...b, source: "/y" },
+      ],
+      sources: ["/x", "/y"],
+    });
+  });
+
+  it("later layers override earlier ones by name with preserved source", () => {
+    const oldVer = ServerConfigSchema.parse({
+      name: "shared",
+      displayName: "Old",
+      command: "co",
+      args: ["--old"],
+    });
+    const newVer = ServerConfigSchema.parse({
+      name: "shared",
+      displayName: "New",
+      command: "cn",
+      args: ["--new"],
+    });
+    const other = ServerConfigSchema.parse({
+      name: "only-b",
+      displayName: "B",
+      command: "cb",
+      args: [],
+    });
+    const layers = [
+      { path: "/low", servers: [oldVer, other] },
+      { path: "/high", servers: [newVer] },
+    ];
+    const result = mergeLoadedLayers(layers);
+
+    expect(result?.sources).toEqual(["/low", "/high"]);
+    expect(result?.servers).toEqual([
+      { ...newVer, source: "/high" },
+      { ...other, source: "/low" },
+    ]);
+  });
+
+  it("skips layers that failed to parse (servers: null)", () => {
+    const a = ServerConfigSchema.parse({
+      name: "a",
+      displayName: "A",
+      command: "ca",
+      args: [],
+    });
+    const layers = [
+      { path: "/bad", servers: null },
+      { path: "/good", servers: [a] },
+    ];
+    expect(mergeLoadedLayers(layers)).toEqual({
+      servers: [{ ...a, source: "/good" }],
+      sources: ["/good"],
+    });
+  });
+
+  it("treats an empty (but successful) layer as a source but adds no servers", () => {
+    const a = ServerConfigSchema.parse({
+      name: "a",
+      displayName: "A",
+      command: "ca",
+      args: [],
+    });
+    const layers = [
+      { path: "/empty", servers: [] },
+      { path: "/has-a", servers: [a] },
+    ];
+    expect(mergeLoadedLayers(layers)).toEqual({
+      servers: [{ ...a, source: "/has-a" }],
+      sources: ["/empty", "/has-a"],
+    });
+  });
+});
+
 describe("config", () => {
   let rootDir: string;
   const originalToken = process.env[SAVED_TEST_TOKEN_KEY];
@@ -24,9 +195,7 @@ describe("config", () => {
 
   beforeEach(() => {
     rootDir = mkdtempSync(join(tmpdir(), "tool-executor-config-"));
-    consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -83,12 +252,7 @@ describe("config", () => {
 
     it("finds a ~/.claude-layer config", () => {
       const homedir = join(rootDir, "home");
-      const claudePath = join(
-        homedir,
-        ".claude",
-        "tool-executor",
-        "tool-executor.config.json",
-      );
+      const claudePath = join(homedir, ".claude", "tool-executor", "tool-executor.config.json");
       writeJson(claudePath, { servers: [] });
 
       const result = findConfigFiles({
@@ -118,12 +282,7 @@ describe("config", () => {
 
     it("falls back to <homedir>/.config when XDG_CONFIG_HOME is unset", () => {
       const homedir = join(rootDir, "home");
-      const fallbackPath = join(
-        homedir,
-        ".config",
-        "tool-executor",
-        "tool-executor.config.json",
-      );
+      const fallbackPath = join(homedir, ".config", "tool-executor", "tool-executor.config.json");
       writeJson(fallbackPath, { servers: [] });
 
       const result = findConfigFiles({
@@ -138,12 +297,7 @@ describe("config", () => {
 
     it("treats empty/whitespace XDG_CONFIG_HOME as unset", () => {
       const homedir = join(rootDir, "home");
-      const fallbackPath = join(
-        homedir,
-        ".config",
-        "tool-executor",
-        "tool-executor.config.json",
-      );
+      const fallbackPath = join(homedir, ".config", "tool-executor", "tool-executor.config.json");
       writeJson(fallbackPath, { servers: [] });
 
       const result = findConfigFiles({
@@ -213,12 +367,7 @@ describe("config", () => {
 
       const pluginPath = join(pluginDir, "tool-executor.config.json");
       const cwdPath = join(cwd, "tool-executor.config.json");
-      const claudePath = join(
-        homedir,
-        ".claude",
-        "tool-executor",
-        "tool-executor.config.json",
-      );
+      const claudePath = join(homedir, ".claude", "tool-executor", "tool-executor.config.json");
       const xdgPath = join(xdg, "tool-executor", "tool-executor.config.json");
 
       writeJson(pluginPath, { servers: [] });
@@ -234,13 +383,7 @@ describe("config", () => {
         xdgConfigHome: xdg,
         explicitPath,
       });
-      expect(result).toEqual([
-        pluginPath,
-        cwdPath,
-        claudePath,
-        xdgPath,
-        explicitPath,
-      ]);
+      expect(result).toEqual([pluginPath, cwdPath, claudePath, xdgPath, explicitPath]);
     });
 
     it("deduplicates layers that resolve to the same absolute path", () => {
@@ -378,12 +521,7 @@ describe("config", () => {
         xdg,
         pluginPath: join(pluginDir, "tool-executor.config.json"),
         cwdPath: join(cwd, "tool-executor.config.json"),
-        claudePath: join(
-          homedir,
-          ".claude",
-          "tool-executor",
-          "tool-executor.config.json",
-        ),
+        claudePath: join(homedir, ".claude", "tool-executor", "tool-executor.config.json"),
         xdgPath: join(xdg, "tool-executor", "tool-executor.config.json"),
       };
     }
@@ -606,19 +744,11 @@ describe("config", () => {
 
       expect(ServerConfigSchema.parse(server)).toEqual(server);
       expect(() => ServerConfigSchema.parse({ ...server, name: "" })).toThrow();
-      expect(() =>
-        ServerConfigSchema.parse({ ...server, displayName: "" }),
-      ).toThrow();
-      expect(() =>
-        ServerConfigSchema.parse({ ...server, command: "" }),
-      ).toThrow();
-      expect(() =>
-        ServerConfigSchema.parse({ ...server, args: [1] }),
-      ).toThrow();
+      expect(() => ServerConfigSchema.parse({ ...server, displayName: "" })).toThrow();
+      expect(() => ServerConfigSchema.parse({ ...server, command: "" })).toThrow();
+      expect(() => ServerConfigSchema.parse({ ...server, args: [1] })).toThrow();
       // ServerConfigSchema is not strict — extra fields are stripped, not rejected.
-      expect(() =>
-        ServerConfigSchema.parse({ ...server, extra: true }),
-      ).not.toThrow();
+      expect(() => ServerConfigSchema.parse({ ...server, extra: true })).not.toThrow();
     });
 
     it("ToolExecutorConfigSchema is strict and accepts empty servers", () => {
@@ -641,13 +771,9 @@ describe("config", () => {
         servers: [server],
       });
       // Empty servers list is legal.
-      expect(() =>
-        ToolExecutorConfigSchema.parse({ servers: [] }),
-      ).not.toThrow();
+      expect(() => ToolExecutorConfigSchema.parse({ servers: [] })).not.toThrow();
       // Extra top-level keys still rejected.
-      expect(() =>
-        ToolExecutorConfigSchema.parse({ servers: [server], extra: true }),
-      ).toThrow();
+      expect(() => ToolExecutorConfigSchema.parse({ servers: [server], extra: true })).toThrow();
     });
   });
 });

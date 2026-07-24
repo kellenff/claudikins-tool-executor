@@ -9,7 +9,7 @@ inputSchema:
   properties:
     language:
       type: string
-      description: 'Target language for examples: ''Java'', ''Kotlin'', or ''Any'' (default)'
+      description: "Target language for examples: 'Java', 'Kotlin', or 'Any' (default)"
     includeAdditionalExamples:
       type: boolean
       description: If true, includes additional curated examples besides templates

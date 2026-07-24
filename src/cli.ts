@@ -2,28 +2,57 @@
 
 import { Command } from "commander";
 import { existsSync, readFileSync, statSync } from "fs";
-import { resolve, dirname, isAbsolute, delimiter, join, extname } from "path";
+import { delimiter, dirname, extname, isAbsolute, join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
-import { getServerConfigs, DEFAULT_SOURCE_TAG } from "./sandbox/clients.js";
+import { DEFAULT_SOURCE_TAG, getServerConfigs } from "./sandbox/clients.js";
 import { loadConfig } from "./config.js";
+import { MIN_NODE_MAJOR_VERSION } from "./constants.js";
 
 const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const packageJson = JSON.parse(
-  readFileSync(resolve(CLI_ROOT, "package.json"), "utf-8"),
-) as { version: string };
+const packageJson = JSON.parse(readFileSync(resolve(CLI_ROOT, "package.json"), "utf-8")) as {
+  version: string;
+};
 
 function hasExecutable(pathToCheck: string): boolean {
   try {
     return statSync(pathToCheck).isFile();
-  } catch (_a) {
+  } catch {
     return false;
   }
 }
 
+/**
+ * Pure: scan `pathDirs` (PATH-style directories) for an executable matching `command + ext`.
+ * Returns true on the first candidate that `exists` accepts. PATH entries are stripped of
+ * surrounding single/double quotes; empty entries (after stripping) are skipped.
+ *
+ * IO contract: delegates the existence check to the caller-supplied `exists` function — no
+ * filesystem, process, or env reads happen inside this function.
+ */
+export function findExecutable(
+  command: string,
+  pathDirs: readonly string[],
+  pathExtensions: readonly string[],
+  exists: (candidate: string) => boolean,
+): boolean {
+  for (const pathDir of pathDirs) {
+    const cleanDir = pathDir.replace(/^["']|["']$/g, "");
+    if (!cleanDir) {
+      continue;
+    }
+    for (const ext of pathExtensions) {
+      const candidate = join(cleanDir, `${command}${ext}`);
+      if (exists(candidate)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function isCommandAvailable(command: string): boolean {
-  const commandHasExtension =
-    process.platform === "win32" && Boolean(extname(command));
+  const commandHasExtension = process.platform === "win32" && Boolean(extname(command));
   const pathExtensions =
     process.platform === "win32" && !commandHasExtension
       ? (process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";")
@@ -34,20 +63,7 @@ function isCommandAvailable(command: string): boolean {
     return hasExecutable(command);
   }
 
-  for (const pathDir of pathDirs) {
-    const cleanDir = pathDir.replace(/^["']|["']$/g, "");
-    for (const ext of pathExtensions) {
-      if (!cleanDir) {
-        continue;
-      }
-
-      if (hasExecutable(join(cleanDir, `${command}${ext}`))) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  return findExecutable(command, pathDirs, pathExtensions, hasExecutable);
 }
 
 function checkCommand(command: string, label: string, hint?: string): void {
@@ -75,7 +91,7 @@ function checkConfig(): void {
   const result = loadConfig(undefined, { pluginDir: CLI_ROOT });
   const configs = getServerConfigs();
   const userCount = configs.filter(
-    (c) => c.source && c.source !== DEFAULT_SOURCE_TAG,
+    (config) => config.source && config.source !== DEFAULT_SOURCE_TAG,
   ).length;
   const defaultCount = configs.length - userCount;
 
@@ -87,9 +103,7 @@ function checkConfig(): void {
   } else {
     console.log("Config sources: (none, using defaults)");
   }
-  console.log(
-    `Resolved ${configs.length} server(s) (${defaultCount} default + ${userCount} user)`,
-  );
+  console.log(`Resolved ${configs.length} server(s) (${defaultCount} default + ${userCount} user)`);
 }
 
 function checkRegistry(): boolean {
@@ -113,7 +127,7 @@ program
     const nodeVersion = process.version;
     const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0]);
     console.log(
-      `Node.js: ${nodeVersion} ${nodeMajor >= 18 ? "✅" : "❌ (need 18+)"}`,
+      `Node.js: ${nodeVersion} ${nodeMajor >= MIN_NODE_MAJOR_VERSION ? "✅" : `❌ (need ${MIN_NODE_MAJOR_VERSION}+)`}`,
     );
 
     // Check for Python/uv (for uvx servers)
@@ -156,9 +170,7 @@ program
 
     writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
     console.log("✅ Created tool-executor.config.json");
-    console.log(
-      "   Edit this file to add your MCP servers, then run: claudikins extract",
-    );
+    console.log("   Edit this file to add your MCP servers, then run: claudikins extract");
   });
 
 program
@@ -178,19 +190,15 @@ program
     // Run the extract script via tsx
     const scriptPath = resolve(process.cwd(), "scripts/extract-schemas.ts");
     if (!existsSync(scriptPath)) {
-      console.error(
-        "❌ Extract script not found at scripts/extract-schemas.ts",
-      );
-      console.error(
-        "   Make sure you're in the claudikins-tool-executor directory",
-      );
+      console.error("❌ Extract script not found at scripts/extract-schemas.ts");
+      console.error("   Make sure you're in the claudikins-tool-executor directory");
       process.exit(1);
     }
 
     try {
       execSync(`npx tsx ${scriptPath}`, { stdio: "inherit" });
       console.log("\n✨ Extraction complete");
-    } catch (error) {
+    } catch {
       console.error("\n❌ Extraction failed");
       process.exit(1);
     }

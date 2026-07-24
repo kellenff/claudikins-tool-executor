@@ -30,9 +30,17 @@ fi
 
 # On failure only: pop the stash so the user's working tree isn't left empty.
 # On success: leave the stash for post-commit to restore.
+#
+# Before popping, reset dist/ to HEAD. The stash captured dist/ as it was
+# pre-hook; if `yarn build` ran (or partially ran) since then, the current
+# dist/ has diverged and `git stash pop` would produce merge conflicts.
+# Lint/format failures happen BEFORE yarn build, so this is mostly defensive
+# for the rare case where build itself fails after touching dist/.
 rollback_on_failure() {
   local ec=$?
   if [ "$ec" -ne 0 ] && [ "$NEEDS_STASH" -eq 1 ]; then
+    git checkout -- dist/ 2>/dev/null || true
+    git clean -fd dist/ --quiet 2>/dev/null || true
     git stash pop --quiet 2>/dev/null || \
       echo "[pre-commit] WARNING: rollback pop failed — unstaged work is in stash@{0}" >&2
     rm -f "$MARKER"
@@ -45,6 +53,26 @@ if [ "$NEEDS_STASH" -eq 1 ]; then
   echo "[pre-commit] stashing unstaged changes" >&2
   git stash push --keep-index --include-untracked --quiet --message "pre-commit-build"
   : > "$MARKER"
+fi
+
+# Lint + format gate: runs against the in-scope tree (src/, scripts/,
+# tsup.config.ts, vitest.config.ts) as defined by the yarn scripts. The
+# trap above pops the stash on any failure here, so the working tree is
+# restored to its pre-commit state if either check fails.
+echo "[pre-commit] checking format (oxfmt --check)" >&2
+if ! yarn format:check >&2; then
+  echo "" >&2
+  echo "[pre-commit] FORMAT VIOLATIONS — run 'yarn fix' to repair, re-stage, retry commit." >&2
+  echo "[pre-commit] To bypass in an emergency: git commit --no-verify (no CI gate today, so use sparingly)." >&2
+  exit 1
+fi
+
+echo "[pre-commit] running lint (oxlint --type-aware)" >&2
+if ! yarn lint >&2; then
+  echo "" >&2
+  echo "[pre-commit] LINT VIOLATIONS — run 'yarn fix' for auto-fixable issues, address remainder manually, re-stage, retry commit." >&2
+  echo "[pre-commit] To bypass in an emergency: git commit --no-verify (no CI gate today, so use sparingly)." >&2
+  exit 1
 fi
 
 echo "[pre-commit] source files staged — running yarn build" >&2

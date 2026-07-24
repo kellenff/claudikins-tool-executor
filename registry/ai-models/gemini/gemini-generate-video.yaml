@@ -11,9 +11,9 @@ inputSchema:
     aspectRatio:
       type: string
       enum:
-        - '16:9'
-        - '9:16'
-      default: '16:9'
+        - "16:9"
+        - "9:16"
+      default: "16:9"
       description: Aspect ratio (16:9 for landscape, 9:16 for portrait/mobile)
     negativePrompt:
       type: string

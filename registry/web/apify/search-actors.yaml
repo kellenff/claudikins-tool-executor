@@ -81,7 +81,7 @@ inputSchema:
   type: object
   properties:
     keywords:
-      default: ''
+      default: ""
       description: >-
         Space-separated keywords used to search pre-built solutions (Actors) in the Apify Store.
 

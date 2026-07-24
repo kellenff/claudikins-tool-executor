@@ -12,14 +12,14 @@ inputSchema:
     language:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Language
       description: Optional language to filter by (e.g. "Java", "Python", "Kotlin").
     group_path_contains:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Group Path Contains
       description: |-

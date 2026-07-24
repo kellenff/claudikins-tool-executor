@@ -33,10 +33,10 @@ inputSchema:
         automatically. If multiple sessions are active and sessionId is omitted, the call fails. Default: null.
     limit:
       type: integer
-      description: 'Page size. Default: 50, max: 200.'
+      description: "Page size. Default: 50, max: 200."
     offset:
       type: integer
-      description: 'Page offset. Default: 0.'
+      description: "Page offset. Default: 0."
     projectPath:
       type: string
       description: |2-

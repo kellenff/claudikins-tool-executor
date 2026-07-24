@@ -42,7 +42,7 @@ inputSchema:
         - Sadaltager
         - Sulafat
       default: Kore
-      description: 'Voice to use. Popular: Kore (firm), Puck (upbeat), Zephyr (bright), Charon (informative), Aoede (breezy)'
+      description: "Voice to use. Popular: Kore (firm), Puck (upbeat), Zephyr (bright), Charon (informative), Aoede (breezy)"
     style:
       type: string
       description: Style instructions (e.g., "cheerfully", "in a spooky whisper", "with excitement")

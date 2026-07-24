@@ -37,21 +37,21 @@ inputSchema:
     name_path:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Name Path
       description: The name path of the symbol to move (empty for moving file or dir).
     target_relative_path:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Target Relative Path
       description: The relative path of the target directory or file.
     target_parent_name_path:
       anyOf:
         - type: string
-        - type: 'null'
+        - type: "null"
       default: null
       title: Target Parent Name Path
       description: The name path of the target parent symbol.

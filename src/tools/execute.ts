@@ -1,9 +1,7 @@
 import { executeCode } from "../sandbox/runtime.js";
 import type { ExecuteCodeInput } from "../schemas.js";
 
-/**
- * Execute TypeScript/JavaScript code in sandbox
- */
+/** Execute TypeScript/JavaScript code in sandbox */
 export async function handleExecuteCode(params: ExecuteCodeInput): Promise<{
   content: { type: "text"; text: string }[];
   structuredContent: {

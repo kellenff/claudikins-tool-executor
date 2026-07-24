@@ -24,7 +24,7 @@ inputSchema:
       enum:
         - url
         - text
-      description: '`url` crawls the supplied website; `text` ingests `content` verbatim as a copied document.'
+      description: "`url` crawls the supplied website; `text` ingests `content` verbatim as a copied document."
     content:
       type: string
       description: >-
@@ -37,7 +37,7 @@ inputSchema:
         first line for text). For text sources, supplying a title is recommended for later identification.
     show_browser:
       type: boolean
-      description: 'Show the browser window for debugging. Default: false.'
+      description: "Show the browser window for debugging. Default: false."
     session_id:
       type: string
       description: >-

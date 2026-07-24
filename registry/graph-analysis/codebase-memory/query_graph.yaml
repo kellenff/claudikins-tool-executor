@@ -14,7 +14,7 @@ inputSchema:
       type: string
     max_rows:
       type: integer
-      description: 'Optional row limit. Default: unlimited (100k ceiling)'
+      description: "Optional row limit. Default: unlimited (100k ceiling)"
   required:
     - query
     - project

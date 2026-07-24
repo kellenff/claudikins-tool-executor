@@ -1,49 +1,50 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { ServerConfig, AuditLogEntry } from '../types.js';
 
+type DefaultServerConfig = ServerConfig & {
+    envKeys?: string[];
+};
+/**
+ * Pure: merge default + user ServerConfig entries into a final list, filtering out unsafe commands.
+ *
+ * Each input entry is `{ source, config }`. Defaults are stored first; users override by `name`.
+ * Each config is normalized (command resolved from commandEnvKey). Defaults' `envKeys` arrays are
+ * resolved to `env` objects. The `isSafe` predicate decides inclusion; unsafe entries are dropped
+ * and a warning string naming provenance + command is returned.
+ */
+declare function mergeSafeServers(defaults: ReadonlyArray<{
+    readonly source: string;
+    readonly config: DefaultServerConfig;
+}>, users: ReadonlyArray<{
+    readonly source: string;
+    readonly config: ServerConfig;
+}>, isSafe: (config: ServerConfig) => boolean): {
+    kept: ServerConfig[];
+    warnings: string[];
+};
 declare function getServerConfigs(): ServerConfig[];
 declare const SERVER_CONFIGS: ServerConfig[];
-/**
- * Initialize client states (all disconnected)
- */
+/** Initialize client states (all disconnected) */
 declare function initClientStates(): void;
-/**
- * Get a client, connecting lazily if needed
- */
+/** Get a client, connecting lazily if needed */
 declare function getClient(name: string): Promise<Client | null>;
-/**
- * Disconnect a specific client
- */
+/** Disconnect a specific client */
 declare function disconnectClient(name: string): Promise<void>;
-/**
- * Disconnect all clients
- */
+/** Disconnect all clients */
 declare function disconnectAll(): Promise<void>;
-/**
- * Clean up idle clients (run periodically)
- */
+/** Clean up idle clients (run periodically) */
 declare function cleanupIdleClients(): Promise<void>;
-/**
- * Get list of currently connected clients
- */
+/** Get list of currently connected clients */
 declare function getConnectedClients(): string[];
-/**
- * Get list of all available clients (connected or not)
- */
+/** Get list of all available clients (connected or not) */
 declare function getAvailableClients(): string[];
-/**
- * Log an MCP call for auditing
- */
+/** Log an MCP call for auditing */
 declare function logMcpCall(entry: AuditLogEntry): void;
-/**
- * Get recent audit log entries
- */
+/** Get recent audit log entries */
 declare function getAuditLog(limit?: number): AuditLogEntry[];
 declare function startLifecycleManagement(): void;
-/**
- * Stop lifecycle management (for testing)
- */
+/** Stop lifecycle management (for testing) */
 declare function stopLifecycleManagement(): void;
 declare const DEFAULT_SOURCE_TAG = "<default>";
 
-export { DEFAULT_SOURCE_TAG, SERVER_CONFIGS, cleanupIdleClients, disconnectAll, disconnectClient, getAuditLog, getAvailableClients, getClient, getConnectedClients, getServerConfigs, initClientStates, logMcpCall, startLifecycleManagement, stopLifecycleManagement };
+export { DEFAULT_SOURCE_TAG, SERVER_CONFIGS, cleanupIdleClients, disconnectAll, disconnectClient, getAuditLog, getAvailableClients, getClient, getConnectedClients, getServerConfigs, initClientStates, logMcpCall, mergeSafeServers, startLifecycleManagement, stopLifecycleManagement };

@@ -6,7 +6,7 @@ inputSchema:
   type: object
   properties:
     topic:
-      default: ''
+      default: ""
       title: Topic
       type: string
   title: applyArguments

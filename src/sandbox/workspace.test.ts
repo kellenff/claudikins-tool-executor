@@ -1,15 +1,43 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  existsSync,
-  mkdirSync,
-  rmSync,
-  utimesSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { MCP_RESULTS_DIR } from "../constants.js";
-import { workspace } from "./workspace.js";
+import { selectStaleFiles, workspace } from "./workspace.js";
+
+describe("selectStaleFiles", () => {
+  it("returns paths older than the cutoff", () => {
+    const now = 1_000_000;
+    const entries = [
+      { filepath: "/a", mtimeMs: now - 100 },
+      { filepath: "/b", mtimeMs: now - 5_000 },
+      { filepath: "/c", mtimeMs: now - 9_999 },
+    ];
+    expect(selectStaleFiles(entries, now, 1_000)).toEqual(["/b", "/c"]);
+  });
+
+  it("returns empty when nothing is stale", () => {
+    const now = 1_000_000;
+    const entries = [{ filepath: "/a", mtimeMs: now - 500 }];
+    expect(selectStaleFiles(entries, now, 1_000)).toEqual([]);
+  });
+
+  it("uses strict greater-than so exactly-at-cutoff is fresh", () => {
+    const now = 1_000_000;
+    const entries = [{ filepath: "/a", mtimeMs: now - 1_000 }];
+    expect(selectStaleFiles(entries, now, 1_000)).toEqual([]);
+  });
+
+  it("preserves input order", () => {
+    const now = 1_000_000;
+    const entries = [
+      { filepath: "/c", mtimeMs: now - 9_000 },
+      { filepath: "/a", mtimeMs: now - 9_000 },
+      { filepath: "/b", mtimeMs: now - 100 },
+    ];
+    expect(selectStaleFiles(entries, now, 1_000)).toEqual(["/c", "/a"]);
+  });
+});
 
 describe("workspace", () => {
   const prefix = "__tool_executor_unit__";
@@ -28,9 +56,7 @@ describe("workspace", () => {
     await workspace.write(`${fixtureRoot}/notes.txt`, "start");
     expect(await workspace.read(`${fixtureRoot}/notes.txt`)).toBe("start");
     await workspace.append(`${fixtureRoot}/notes.txt`, "\nextra");
-    expect(await workspace.read(`${fixtureRoot}/notes.txt`)).toBe(
-      "start\nextra",
-    );
+    expect(await workspace.read(`${fixtureRoot}/notes.txt`)).toBe("start\nextra");
   });
 
   it("supports JSON and binary helpers", async () => {
@@ -59,21 +85,13 @@ describe("workspace", () => {
     expect(stat.size).toBeGreaterThan(0);
 
     await workspace.delete(`${fixtureRoot}/nested/file.txt`);
-    expect(await workspace.exists(`${fixtureRoot}/nested/file.txt`)).toBe(
-      false,
-    );
+    expect(await workspace.exists(`${fixtureRoot}/nested/file.txt`)).toBe(false);
   });
 
   it("guards path traversal attempts", async () => {
-    await expect(workspace.read("../package.json")).rejects.toThrow(
-      "Path traversal blocked",
-    );
-    await expect(workspace.write("/etc/hosts", "x")).rejects.toThrow(
-      "Path traversal blocked",
-    );
-    await expect(workspace.glob("../**/*.txt")).rejects.toThrow(
-      "Glob traversal blocked",
-    );
+    await expect(workspace.read("../package.json")).rejects.toThrow("Path traversal blocked");
+    await expect(workspace.write("/etc/hosts", "x")).rejects.toThrow("Path traversal blocked");
+    await expect(workspace.glob("../**/*.txt")).rejects.toThrow("Glob traversal blocked");
   });
 
   it("runs glob on safe patterns", async () => {

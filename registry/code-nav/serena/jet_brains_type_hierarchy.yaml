@@ -29,7 +29,7 @@ inputSchema:
     depth:
       anyOf:
         - type: integer
-        - type: 'null'
+        - type: "null"
       default: 1
       title: Depth
       description: Depth limit for hierarchy traversal (None or 0 for unlimited). Default is 1.

@@ -26,7 +26,7 @@ inputSchema:
         `browser_options`.
     browser_options:
       type: object
-      description: 'Advanced browser settings. Override visibility, timeout, or headless mode (default: visible, 30 s).'
+      description: "Advanced browser settings. Override visibility, timeout, or headless mode (default: visible, 30 s)."
       properties:
         show:
           type: boolean

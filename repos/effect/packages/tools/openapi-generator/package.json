@@ -1,0 +1,77 @@
+{
+  "name": "@effect/openapi-generator",
+  "version": "4.0.0-beta.100",
+  "description": "Generate Effect Schema types, HTTP clients, and HttpApi modules from OpenAPI specifications",
+  "keywords": [
+    "codegen",
+    "openapi",
+    "typescript"
+  ],
+  "homepage": "https://effect.website",
+  "bugs": {
+    "url": "https://github.com/Effect-TS/effect/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Effect-TS/effect.git",
+    "directory": "packages/tools/openapi-generator"
+  },
+  "bin": {
+    "openapigen": "./src/bin.ts"
+  },
+  "files": [
+    "src/**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
+  ],
+  "type": "module",
+  "sideEffects": [],
+  "exports": {
+    "./package.json": "./package.json",
+    "./*": "./src/*.ts",
+    "./bin": null,
+    "./main": null
+  },
+  "publishConfig": {
+    "bin": {
+      "openapigen": "./dist/bin.js"
+    },
+    "exports": {
+      "./package.json": "./package.json",
+      "./*": "./dist/*.js",
+      "./bin": null,
+      "./main": null
+    },
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json && pnpm babel",
+    "babel": "babel dist --plugins annotate-pure-calls --out-dir dist --source-maps",
+    "check": "tsc -b tsconfig.json",
+    "test": "vitest",
+    "coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "swagger2openapi": "^7.0.8"
+  },
+  "devDependencies": {
+    "@types/swagger2openapi": "^7.0.4",
+    "effect": "workspace:^",
+    "json-schema-typed": "^8.0.2",
+    "openapi-typescript": "^7.13.0",
+    "yaml": "^2.9.0"
+  },
+  "peerDependencies": {
+    "@effect/platform-node": "workspace:^",
+    "effect": "workspace:^"
+  },
+  "tags": [
+    "typescript",
+    "openapi",
+    "codegen"
+  ]
+}

@@ -1,7 +1,12 @@
 import { getClient, logMcpCall, SERVER_CONFIGS } from "./clients.js";
 import { workspace } from "./workspace.js";
-import { MAX_LOG_CHARS, MAX_LOG_ENTRY_CHARS, MCP_RESULTS_DIR } from "../constants.js";
-import { ExecutionResult } from "../types.js";
+import {
+  MAX_LOG_CHARS,
+  MAX_LOG_ENTRY_CHARS,
+  MAX_PREVIEW_FALLBACK_CHARS,
+  MCP_RESULTS_DIR,
+} from "../constants.js";
+import type { ExecutionResult } from "../types.js";
 
 const DEFAULT_TIMEOUT = 30_000; // 30 seconds
 
@@ -19,11 +24,11 @@ type SandboxGlobals = Record<string, unknown> & {
   clients: Record<string, ClientProxy>;
 };
 
-/**
- * Summarise logs aggressively to minimize context usage
- */
+/** Summarise logs aggressively to minimize context usage */
 function summariseLogs(logs: unknown[]): unknown[] {
-  if (logs.length === 0) return [];
+  if (logs.length === 0) {
+    return [];
+  }
 
   const serialised = JSON.stringify(logs);
   if (serialised.length <= MAX_LOG_CHARS) {
@@ -35,8 +40,8 @@ function summariseLogs(logs: unknown[]): unknown[] {
 }
 
 /**
- * Create a proxy that wraps an MCP client's tool calls
- * Large responses are auto-saved to workspace, returning references
+ * Create a proxy that wraps an MCP client's tool calls Large responses are auto-saved to workspace,
+ * returning references
  */
 function createClientProxy(name: string): ClientProxy {
   return new Proxy({} as ClientProxy, {
@@ -57,7 +62,10 @@ function createClientProxy(name: string): ClientProxy {
 
         const startTime = Date.now();
         try {
-          const result = await client.callTool({ name: toolName, arguments: args });
+          const result = await client.callTool({
+            name: toolName,
+            arguments: args,
+          });
 
           logMcpCall({
             timestamp: startTime,
@@ -81,16 +89,17 @@ function createClientProxy(name: string): ClientProxy {
               return {
                 _savedTo: filepath,
                 _size: serialised.length,
-                _preview: serialised.slice(0, 200) + "...",
+                _preview: serialised.slice(0, MAX_LOG_ENTRY_CHARS) + "...",
                 _hint: `Full result saved to workspace. Use workspace.readJSON("${filepath}") to access.`,
               };
             } catch (saveErr) {
               // If save fails, return truncated result with warning
-              console.error(`Failed to auto-save large result: ${saveErr}`);
+              const saveErrMessage = saveErr instanceof Error ? saveErr.message : String(saveErr);
+              console.error(`Failed to auto-save large result: ${saveErrMessage}`);
               return {
                 _warning: "Result too large to auto-save, returning truncated",
                 _size: serialised.length,
-                _preview: serialised.slice(0, 1000),
+                _preview: serialised.slice(0, MAX_PREVIEW_FALLBACK_CHARS),
               };
             }
           }
@@ -113,9 +122,7 @@ function createClientProxy(name: string): ClientProxy {
   });
 }
 
-/**
- * Convert arbitrary MCP server names into JavaScript-safe sandbox bindings.
- */
+/** Convert arbitrary MCP server names into JavaScript-safe sandbox bindings. */
 function toSandboxIdentifier(name: string): string {
   const identifier = name.replace(/[^a-zA-Z0-9_$]/g, "_") || "_";
   return /^[0-9]/.test(identifier) ? `_${identifier}` : identifier;
@@ -191,9 +198,7 @@ function toGlobalIdentifier(name: string, usedIdentifiers: Set<string>): string 
   return candidate;
 }
 
-/**
- * Map server names to guaranteed-usable sandbox bindings.
- */
+/** Map server names to guaranteed-usable sandbox bindings. */
 function buildServerBindingMap(): Map<string, string> {
   const bindings = new Map<string, string>();
   const used = new Set(["console", "workspace", "clients", "globalThis"]);
@@ -207,24 +212,30 @@ function buildServerBindingMap(): Map<string, string> {
   return bindings;
 }
 
-/**
- * Create a mock console that captures output
- */
+/** Create a mock console that captures output */
 function createMockConsole(): { console: MockConsole; logs: unknown[] } {
   const logs: unknown[] = [];
   const mockConsole = {
-    log: (...args: unknown[]) => { logs.push(args.length === 1 ? args[0] : args); },
-    info: (...args: unknown[]) => { logs.push({ level: "info", data: args }); },
-    warn: (...args: unknown[]) => { logs.push({ level: "warn", data: args }); },
-    error: (...args: unknown[]) => { logs.push({ level: "error", data: args }); },
-    debug: (...args: unknown[]) => { logs.push({ level: "debug", data: args }); },
+    log: (...args: unknown[]) => {
+      logs.push(args.length === 1 ? args[0] : args);
+    },
+    info: (...args: unknown[]) => {
+      logs.push({ level: "info", data: args });
+    },
+    warn: (...args: unknown[]) => {
+      logs.push({ level: "warn", data: args });
+    },
+    error: (...args: unknown[]) => {
+      logs.push({ level: "error", data: args });
+    },
+    debug: (...args: unknown[]) => {
+      logs.push({ level: "debug", data: args });
+    },
   };
   return { console: mockConsole, logs };
 }
 
-/**
- * Build the sandbox globals object with all MCP clients and workspace
- */
+/** Build the sandbox globals object with all MCP clients and workspace */
 function buildSandboxGlobals(mockConsole: MockConsole): SandboxGlobals {
   const bindingMap = buildServerBindingMap();
   const clients: Record<string, ClientProxy> = {};
@@ -247,10 +258,11 @@ function buildSandboxGlobals(mockConsole: MockConsole): SandboxGlobals {
   return globals;
 }
 
-/**
- * Execute TypeScript/JavaScript code in a sandboxed environment
- */
-export async function executeCode(code: string, timeout = DEFAULT_TIMEOUT): Promise<ExecutionResult> {
+/** Execute TypeScript/JavaScript code in a sandboxed environment */
+export async function executeCode(
+  code: string,
+  timeout = DEFAULT_TIMEOUT,
+): Promise<ExecutionResult> {
   const { console: mockConsole, logs } = createMockConsole();
   const globals = buildSandboxGlobals(mockConsole);
 
@@ -260,14 +272,17 @@ export async function executeCode(code: string, timeout = DEFAULT_TIMEOUT): Prom
 
   try {
     // Create async function with globals as parameters
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor as new (...args: string[]) => (...args: unknown[]) => Promise<unknown>;
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
+      ...args: string[]
+    ) => (...args: unknown[]) => Promise<unknown>;
     const fn = new AsyncFunction(...globalNames, code);
 
     // Execute with timeout
     const result = await Promise.race([
       fn(...globalValues),
-      new Promise((_, reject) => setTimeout(() => reject(new Error(`Execution timed out after ${timeout}ms`)), timeout)),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Execution timed out after ${timeout}ms`)), timeout),
+      ),
     ]);
 
     // If the code returned something, add it to logs
@@ -288,19 +303,15 @@ export async function executeCode(code: string, timeout = DEFAULT_TIMEOUT): Prom
   }
 }
 
-/**
- * Get a list of available MCP clients (for error messages)
- */
+/** Get a list of available MCP clients (for error messages) */
 export function getAvailableClientNames(): string[] {
-  return SERVER_CONFIGS.map((c) => c.name);
+  return SERVER_CONFIGS.map((config) => config.name);
 }
 
-/**
- * Get available MCP client bindings as exposed inside execute_code.
- */
+/** Get available MCP client bindings as exposed inside execute_code. */
 export function getSandboxClientBindings(): string[] {
-  return SERVER_CONFIGS.map((c) => {
-    const identifier = buildServerBindingMap().get(c.name) || toSandboxIdentifier(c.name);
-    return identifier === c.name ? c.name : `${identifier} (server: ${c.name})`;
+  return SERVER_CONFIGS.map((config) => {
+    const identifier = buildServerBindingMap().get(config.name) || toSandboxIdentifier(config.name);
+    return identifier === config.name ? config.name : `${identifier} (server: ${config.name})`;
   });
 }

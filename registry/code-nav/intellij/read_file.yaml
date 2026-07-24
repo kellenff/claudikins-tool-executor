@@ -21,7 +21,7 @@ inputSchema:
         other tools can be passed as is (e.g. paths from 'search_*' tools).
     mode:
       type: string
-      description: 'Read mode: ''slice'', ''lines'', ''line_columns'', ''offsets'', or ''indentation'''
+      description: "Read mode: 'slice', 'lines', 'line_columns', 'offsets', or 'indentation'"
     start_line:
       type: integer
       description: 1-based line number to start reading from
@@ -48,13 +48,13 @@ inputSchema:
       description: Number of context lines to include around the range (per side)
     max_levels:
       type: integer
-      description: 'Indentation mode: maximum indentation levels to include (0 = only anchor block)'
+      description: "Indentation mode: maximum indentation levels to include (0 = only anchor block)"
     include_siblings:
       type: boolean
-      description: 'Indentation mode: include sibling blocks at the same indentation level'
+      description: "Indentation mode: include sibling blocks at the same indentation level"
     include_header:
       type: boolean
-      description: 'Indentation mode: include header comments/annotations directly above anchor'
+      description: "Indentation mode: include header comments/annotations directly above anchor"
     projectPath:
       type: string
       description: |2-

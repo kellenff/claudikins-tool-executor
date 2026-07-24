@@ -9,7 +9,7 @@ inputSchema:
   properties:
     stackDepth:
       type: integer
-      description: 'Stack depth to inspect (default: 0 = current frame)'
+      description: "Stack depth to inspect (default: 0 = current frame)"
     projectPath:
       type: string
       description: |2-

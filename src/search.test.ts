@@ -38,15 +38,24 @@ import yaml from "js-yaml";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 import {
+  buildSerenaTransportSpec,
+  connectRegistrySerena,
   disconnectRegistrySerena,
+  escapeRegexTerm,
+  buildLookaheadPattern,
   getCategories,
   getToolByName,
   listToolsInCategory,
   loadToolDefinition,
+  loadToolsFromFiles,
+  scoreByQueryTerms,
   searchTools,
+  tokenizeQuery,
 } from "./search.js";
 
 import { initBM25, isBM25Ready, searchBM25 } from "./bm25.js";
+
+import type { ToolDefinition } from "./types.js";
 
 type ToolFixture = {
   name: string;
@@ -98,10 +107,7 @@ describe("loadToolDefinition", () => {
     const tool = await loadToolDefinition("/registry/ui/diagram.yaml");
 
     expect(tool).toEqual(toolFixtures["/registry/ui/diagram.yaml"]);
-    expect(mockReadFile).toHaveBeenCalledWith(
-      "/registry/ui/diagram.yaml",
-      "utf-8",
-    );
+    expect(mockReadFile).toHaveBeenCalledWith("/registry/ui/diagram.yaml", "utf-8");
   });
 
   it("returns null for invalid definitions", async () => {
@@ -111,17 +117,105 @@ describe("loadToolDefinition", () => {
       server: "gemini",
     });
 
-    await expect(
-      loadToolDefinition("/registry/ui/invalid.yaml"),
-    ).resolves.toBeNull();
+    await expect(loadToolDefinition("/registry/ui/invalid.yaml")).resolves.toBeNull();
   });
 
   it("returns null when file read fails", async () => {
     mockReadFile.mockRejectedValue(new Error("missing"));
 
-    await expect(
-      loadToolDefinition("/registry/ui/missing.yaml"),
-    ).resolves.toBeNull();
+    await expect(loadToolDefinition("/registry/ui/missing.yaml")).resolves.toBeNull();
+  });
+});
+
+describe("loadToolsFromFiles", () => {
+  it("returns an empty array when given no paths", async () => {
+    expect(await loadToolsFromFiles([])).toEqual([]);
+  });
+
+  it("loads multiple valid tools and preserves input order", async () => {
+    mockReadFile.mockImplementation(async (path) => {
+      const p = path as string;
+      if (p === "/a.yaml") {
+        return "a-content";
+      }
+      if (p === "/b.yaml") {
+        return "b-content";
+      }
+      throw new Error(`unexpected path: ${p}`);
+    });
+    mockYamlLoad.mockImplementation((content) => {
+      const c = content as string;
+      if (c === "a-content") {
+        return toolFixtures["/registry/ui/diagram.yaml"];
+      }
+      if (c === "b-content") {
+        return toolFixtures["/registry/code-nav/search.yaml"];
+      }
+      throw new Error(`unexpected content: ${c}`);
+    });
+
+    const tools = await loadToolsFromFiles(["/a.yaml", "/b.yaml"]);
+
+    expect(tools).toHaveLength(2);
+    expect(tools[0]?.name).toBe("diagram-generator");
+    expect(tools[1]?.name).toBe("code-search");
+  });
+
+  it("drops files that fail to read", async () => {
+    mockReadFile.mockImplementation(async (path) => {
+      const p = path as string;
+      if (p === "/ok.yaml") {
+        return "ok-content";
+      }
+      if (p === "/also-ok.yaml") {
+        return "also-ok-content";
+      }
+      throw new Error("missing");
+    });
+    mockYamlLoad.mockImplementation((content) => {
+      const c = content as string;
+      if (c === "ok-content") {
+        return toolFixtures["/registry/ui/diagram.yaml"];
+      }
+      if (c === "also-ok-content") {
+        return toolFixtures["/registry/code-nav/search.yaml"];
+      }
+      throw new Error("invalid");
+    });
+
+    const tools = await loadToolsFromFiles(["/ok.yaml", "/missing.yaml", "/also-ok.yaml"]);
+
+    expect(tools).toHaveLength(2);
+    expect(tools[0]?.name).toBe("diagram-generator");
+    expect(tools[1]?.name).toBe("code-search");
+  });
+
+  it("drops files that fail validation (loadToolDefinition returns null)", async () => {
+    mockReadFile.mockImplementation(async (path) => {
+      const p = path as string;
+      if (p === "/valid.yaml") {
+        return "valid-content";
+      }
+      if (p === "/invalid.yaml") {
+        return "invalid-content";
+      }
+      throw new Error("unexpected path");
+    });
+    mockYamlLoad.mockImplementation((content) => {
+      const c = content as string;
+      if (c === "valid-content") {
+        return toolFixtures["/registry/ui/diagram.yaml"];
+      }
+      if (c === "invalid-content") {
+        return { name: "partial" };
+      }
+      throw new Error("unexpected content");
+    });
+
+    const tools = await loadToolsFromFiles(["/valid.yaml", "/invalid.yaml"]);
+
+    expect(tools).toHaveLength(1);
+    expect(tools[0]?.name).toBe("diagram-generator");
   });
 });
 
@@ -148,9 +242,7 @@ describe("searchTools", () => {
     }) as typeof glob);
 
     mockReadFile.mockImplementation(async (path) => {
-      return JSON.stringify(
-        toolFixtures[path as keyof typeof toolFixtures] || {},
-      );
+      return JSON.stringify(toolFixtures[path as keyof typeof toolFixtures] || {});
     });
 
     mockYamlLoad.mockImplementation((content: string) => {
@@ -163,9 +255,7 @@ describe("searchTools", () => {
     const response = await searchTools("diagram");
 
     expect(response.source).toBe("local");
-    expect(response.fallbackReason).toBe(
-      "Serena unavailable - using text search",
-    );
+    expect(response.fallbackReason).toBe("Serena unavailable - using text search");
     expect(response.results).toHaveLength(1);
     expect(response.results[0].tool.name).toBe("diagram-generator");
     expect(response.totalCount).toBe(1);
@@ -199,9 +289,7 @@ describe("searchTools", () => {
         close,
       } as unknown as Client;
     });
-    mockReadFile.mockResolvedValue(
-      JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]),
-    );
+    mockReadFile.mockResolvedValue(JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]));
     mockYamlLoad.mockReturnValue(toolFixtures["/registry/ui/diagram.yaml"]);
 
     const response = await searchTools("generate diagram", 1, 0);
@@ -253,14 +341,12 @@ describe("searchTools", () => {
       } as unknown as Client;
     });
     mockReadFile.mockImplementation(async (path) => {
-      if (String(path).includes("generate-diagram")) {
+      if ((path as string).includes("generate-diagram")) {
         return JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]);
       }
       return JSON.stringify(toolFixtures["/registry/code-nav/search.yaml"]);
     });
-    mockYamlLoad.mockImplementation(
-      (content: string) => JSON.parse(content) as ToolFixture,
-    );
+    mockYamlLoad.mockImplementation((content: string) => JSON.parse(content) as ToolFixture);
 
     const response = await searchTools("tool", 1, 0);
 
@@ -286,17 +372,13 @@ describe("searchTools", () => {
     mockIsBM25Ready.mockReturnValue(false);
     mockSearchBM25.mockReturnValue([]);
     mockGlob.mockResolvedValue(["/registry/ui/diagram.yaml"] as string[]);
-    mockReadFile.mockResolvedValue(
-      JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]),
-    );
+    mockReadFile.mockResolvedValue(JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]));
     mockYamlLoad.mockReturnValue(toolFixtures["/registry/ui/diagram.yaml"]);
 
     const response = await searchTools("diagram", 5, 0);
 
     expect(response.source).toBe("local");
-    expect(response.fallbackReason).toBe(
-      "No semantic matches - using text search",
-    );
+    expect(response.fallbackReason).toBe("No semantic matches - using text search");
     expect(response.results[0].tool.name).toBe("diagram-generator");
   });
 
@@ -319,9 +401,7 @@ describe("searchTools", () => {
         close: vi.fn().mockResolvedValue(undefined),
       } as unknown as Client;
     });
-    mockReadFile.mockResolvedValue(
-      JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]),
-    );
+    mockReadFile.mockResolvedValue(JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]));
     mockYamlLoad.mockReturnValue(toolFixtures["/registry/ui/diagram.yaml"]);
 
     const response = await searchTools("a+b", 1, 0);
@@ -370,9 +450,7 @@ describe("searchTools", () => {
     mockReadFile.mockImplementation(async (path) => {
       return JSON.stringify(toolFixtures[path as keyof typeof toolFixtures]);
     });
-    mockYamlLoad.mockImplementation(
-      (content: string) => JSON.parse(content) as ToolFixture,
-    );
+    mockYamlLoad.mockImplementation((content: string) => JSON.parse(content) as ToolFixture);
 
     const response = await searchTools("diagram code", 2, 0);
 
@@ -400,9 +478,7 @@ describe("searchTools", () => {
     mockReadFile.mockImplementation(async (path) => {
       return JSON.stringify(toolFixtures[path as keyof typeof toolFixtures]);
     });
-    mockYamlLoad.mockImplementation(
-      (content: string) => JSON.parse(content) as ToolFixture,
-    );
+    mockYamlLoad.mockImplementation((content: string) => JSON.parse(content) as ToolFixture);
 
     const response = await searchTools("diagram code", 1, 1);
 
@@ -430,9 +506,7 @@ describe("searchTools", () => {
 
     expect(response.source).toBe("local");
     expect(response.results).toEqual([]);
-    expect(response.fallbackReason).toBe(
-      "Serena unavailable - using text search",
-    );
+    expect(response.fallbackReason).toBe("Serena unavailable - using text search");
     expect(response.suggestion).toContain("Try broader terms");
     expect(response.totalCount).toBe(0);
   });
@@ -452,9 +526,7 @@ describe("search module helpers", () => {
 
   it("lists tools in a category", async () => {
     mockGlob.mockResolvedValue(["/registry/ui/diagram.yaml"] as string[]);
-    mockReadFile.mockResolvedValue(
-      JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]),
-    );
+    mockReadFile.mockResolvedValue(JSON.stringify(toolFixtures["/registry/ui/diagram.yaml"]));
     mockYamlLoad.mockReturnValue(toolFixtures["/registry/ui/diagram.yaml"]);
 
     const tools = await listToolsInCategory("ui");
@@ -475,9 +547,7 @@ describe("search module helpers", () => {
     mockReadFile.mockImplementation(async (path) => {
       return JSON.stringify(toolFixtures[path as keyof typeof toolFixtures]);
     });
-    mockYamlLoad.mockImplementation(
-      (content: string) => JSON.parse(content) as ToolFixture,
-    );
+    mockYamlLoad.mockImplementation((content: string) => JSON.parse(content) as ToolFixture);
 
     const tool = await getToolByName("code-search");
 
@@ -503,5 +573,169 @@ describe("search module helpers", () => {
 
   it("disconnects the registry Serena client without error", async () => {
     await expect(disconnectRegistrySerena()).resolves.toBeUndefined();
+  });
+});
+
+describe("search pure helpers", () => {
+  describe("escapeRegexTerm", () => {
+    it("escapes regex metacharacters", () => {
+      expect(escapeRegexTerm("a+b")).toBe("a\\+b");
+      expect(escapeRegexTerm("foo.bar")).toBe("foo\\.bar");
+      expect(escapeRegexTerm("(x|y)")).toBe("\\(x\\|y\\)");
+    });
+
+    it("leaves alphanumeric terms unchanged", () => {
+      expect(escapeRegexTerm("generate")).toBe("generate");
+    });
+  });
+
+  describe("tokenizeQuery", () => {
+    it("splits on whitespace and drops empties", () => {
+      expect(tokenizeQuery("generate image")).toStrictEqual(["generate", "image"]);
+      expect(tokenizeQuery("  a   b   c  ")).toStrictEqual(["a", "b", "c"]);
+    });
+
+    it("returns empty array for whitespace-only input", () => {
+      expect(tokenizeQuery("")).toStrictEqual([]);
+      expect(tokenizeQuery("   ")).toStrictEqual([]);
+    });
+  });
+
+  describe("buildLookaheadPattern", () => {
+    it("uses a single term directly", () => {
+      expect(buildLookaheadPattern(["generate"])).toBe("generate");
+    });
+
+    it("joins multiple terms with lookaheads", () => {
+      expect(buildLookaheadPattern(["generate", "diagram"])).toBe("(?=.*generate)(?=.*diagram).*");
+    });
+
+    it("returns .* for empty terms", () => {
+      expect(buildLookaheadPattern([])).toBe(".*");
+    });
+  });
+
+  describe("buildSerenaTransportSpec", () => {
+    it("returns the uvx command with serena package and start-mcp-server entrypoint", () => {
+      const spec = buildSerenaTransportSpec();
+
+      expect(spec.command).toBe("uvx");
+      expect(spec.args).toEqual([
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+      ]);
+    });
+
+    it("passes process.env through as the transport env", () => {
+      const spec = buildSerenaTransportSpec();
+
+      expect(spec.env).toBe(process.env);
+    });
+  });
+
+  describe("scoreByQueryTerms", () => {
+    const makeTool = (overrides: Partial<ToolDefinition> = {}): ToolDefinition => ({
+      name: "code-search",
+      server: "serena",
+      category: "code-nav",
+      description: "Search code quickly",
+      inputSchema: {},
+      example: "",
+      ...overrides,
+    });
+
+    it("returns 0 when the query terms list is empty", () => {
+      expect(scoreByQueryTerms(makeTool(), [])).toBe(0);
+    });
+
+    it("returns 0 when no term matches anywhere", () => {
+      expect(scoreByQueryTerms(makeTool(), ["xyz", "abc"])).toBe(0);
+    });
+
+    it("returns 1 for a term matching the description but not name or category", () => {
+      expect(scoreByQueryTerms(makeTool(), ["quickly"])).toBe(1);
+    });
+
+    it("returns 3 for a term matching only the name (searchText +1, name +2)", () => {
+      expect(scoreByQueryTerms(makeTool(), ["search"])).toBe(3);
+    });
+
+    it("returns 2 for a term matching only the category (searchText +1, category +1)", () => {
+      expect(scoreByQueryTerms(makeTool(), ["nav"])).toBe(2);
+    });
+
+    it("returns 4 for a term matching both name and category (+1 +2 +1)", () => {
+      expect(scoreByQueryTerms(makeTool(), ["code"])).toBe(4);
+    });
+
+    it("sums scores across multiple terms", () => {
+      expect(scoreByQueryTerms(makeTool(), ["code", "search"])).toBe(7);
+    });
+
+    it("handles a tool with empty category without throwing", () => {
+      expect(scoreByQueryTerms(makeTool({ category: "" }), ["search"])).toBe(3);
+    });
+  });
+});
+
+describe("connectRegistrySerena", () => {
+  it("returns ok=true with the client when connect and activate_project both succeed", async () => {
+    const connect = vi.fn().mockResolvedValue(undefined);
+    const callTool = vi.fn().mockResolvedValue({ content: [] });
+    const close = vi.fn().mockResolvedValue(undefined);
+    mockClient.mockImplementationOnce(function () {
+      return { connect, callTool, close } as unknown as Client;
+    });
+
+    const result = await connectRegistrySerena();
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.client).toEqual({ connect, callTool, close });
+    }
+    expect(connect).toHaveBeenCalledTimes(1);
+    expect(callTool).toHaveBeenCalledWith({
+      name: "activate_project",
+      arguments: { project: expect.stringContaining("registry") },
+    });
+  });
+
+  it("returns ok=false with connect_failed when client.connect throws", async () => {
+    const cause = new Error("spawn failed");
+    const connect = vi.fn().mockRejectedValue(cause);
+    const callTool = vi.fn();
+    const close = vi.fn().mockResolvedValue(undefined);
+    mockClient.mockImplementationOnce(function () {
+      return { connect, callTool, close } as unknown as Client;
+    });
+
+    const result = await connectRegistrySerena();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.tag).toBe("connect_failed");
+      expect(result.error.cause).toBe(cause);
+    }
+    expect(callTool).not.toHaveBeenCalled();
+  });
+
+  it("returns ok=false with activate_project_failed when callTool throws", async () => {
+    const cause = new Error("activate_project rejected");
+    const connect = vi.fn().mockResolvedValue(undefined);
+    const callTool = vi.fn().mockRejectedValue(cause);
+    const close = vi.fn().mockResolvedValue(undefined);
+    mockClient.mockImplementationOnce(function () {
+      return { connect, callTool, close } as unknown as Client;
+    });
+
+    const result = await connectRegistrySerena();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.tag).toBe("activate_project_failed");
+      expect(result.error.cause).toBe(cause);
+    }
   });
 });

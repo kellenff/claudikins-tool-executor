@@ -74,51 +74,51 @@ inputSchema:
       properties:
         show:
           type: boolean
-          description: 'Show browser window (default: from ENV or false)'
+          description: "Show browser window (default: from ENV or false)"
         headless:
           type: boolean
-          description: 'Run browser in headless mode (default: true)'
+          description: "Run browser in headless mode (default: true)"
         timeout_ms:
           type: number
-          description: 'Browser operation timeout in milliseconds (default: 30000)'
+          description: "Browser operation timeout in milliseconds (default: 30000)"
         stealth:
           type: object
           description: Human-like behavior settings to avoid detection
           properties:
             enabled:
               type: boolean
-              description: 'Master switch for all stealth features (default: true)'
+              description: "Master switch for all stealth features (default: true)"
             random_delays:
               type: boolean
-              description: 'Random delays between actions (default: true)'
+              description: "Random delays between actions (default: true)"
             human_typing:
               type: boolean
-              description: 'Human-like typing patterns (default: true)'
+              description: "Human-like typing patterns (default: true)"
             mouse_movements:
               type: boolean
-              description: 'Realistic mouse movements (default: true)'
+              description: "Realistic mouse movements (default: true)"
             typing_wpm_min:
               type: number
-              description: 'Minimum typing speed in WPM (default: 160)'
+              description: "Minimum typing speed in WPM (default: 160)"
             typing_wpm_max:
               type: number
-              description: 'Maximum typing speed in WPM (default: 240)'
+              description: "Maximum typing speed in WPM (default: 240)"
             delay_min_ms:
               type: number
-              description: 'Minimum delay between actions in ms (default: 100)'
+              description: "Minimum delay between actions in ms (default: 100)"
             delay_max_ms:
               type: number
-              description: 'Maximum delay between actions in ms (default: 400)'
+              description: "Maximum delay between actions in ms (default: 400)"
         viewport:
           type: object
           description: Browser viewport size
           properties:
             width:
               type: number
-              description: 'Viewport width in pixels (default: 1920)'
+              description: "Viewport width in pixels (default: 1920)"
             height:
               type: number
-              description: 'Viewport height in pixels (default: 1080)'
+              description: "Viewport height in pixels (default: 1080)"
   required:
     - question
 example: |-

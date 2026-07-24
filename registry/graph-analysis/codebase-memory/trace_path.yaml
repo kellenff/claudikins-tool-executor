@@ -34,7 +34,7 @@ inputSchema:
         HTTP_CALLS+ASYNC_CALLS+DATA_FLOWS through Routes.
     parameter_name:
       type: string
-      description: 'For data_flow mode: scope trace to a specific parameter name'
+      description: "For data_flow mode: scope trace to a specific parameter name"
     edge_types:
       type: array
       items:
