@@ -1,6 +1,27 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { ServerConfig, AuditLogEntry } from '../types.js';
 
+type DefaultServerConfig = ServerConfig & {
+    envKeys?: string[];
+};
+/**
+ * Pure: merge default + user ServerConfig entries into a final list, filtering out unsafe commands.
+ *
+ * Each input entry is `{ source, config }`. Defaults are stored first; users override by `name`.
+ * Each config is normalized (command resolved from commandEnvKey). Defaults' `envKeys` arrays are
+ * resolved to `env` objects. The `isSafe` predicate decides inclusion; unsafe entries are dropped
+ * and a warning string naming provenance + command is returned.
+ */
+declare function mergeSafeServers(defaults: ReadonlyArray<{
+    readonly source: string;
+    readonly config: DefaultServerConfig;
+}>, users: ReadonlyArray<{
+    readonly source: string;
+    readonly config: ServerConfig;
+}>, isSafe: (config: ServerConfig) => boolean): {
+    kept: ServerConfig[];
+    warnings: string[];
+};
 declare function getServerConfigs(): ServerConfig[];
 declare const SERVER_CONFIGS: ServerConfig[];
 /** Initialize client states (all disconnected) */
@@ -26,4 +47,4 @@ declare function startLifecycleManagement(): void;
 declare function stopLifecycleManagement(): void;
 declare const DEFAULT_SOURCE_TAG = "<default>";
 
-export { DEFAULT_SOURCE_TAG, SERVER_CONFIGS, cleanupIdleClients, disconnectAll, disconnectClient, getAuditLog, getAvailableClients, getClient, getConnectedClients, getServerConfigs, initClientStates, logMcpCall, startLifecycleManagement, stopLifecycleManagement };
+export { DEFAULT_SOURCE_TAG, SERVER_CONFIGS, cleanupIdleClients, disconnectAll, disconnectClient, getAuditLog, getAvailableClients, getClient, getConnectedClients, getServerConfigs, initClientStates, logMcpCall, mergeSafeServers, startLifecycleManagement, stopLifecycleManagement };

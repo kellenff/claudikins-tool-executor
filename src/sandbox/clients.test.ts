@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { mergeSafeServers } from "./clients.js";
+import type { ServerConfig } from "../types.js";
+
 const mocks = vi.hoisted(() => {
   const state = {
     loadConfig: vi.fn(),
@@ -458,5 +461,141 @@ describe("sandbox clients", () => {
     expect(console.error).toHaveBeenCalledWith("Shutting down...");
     expect(exitSpy).toHaveBeenCalledWith(0);
     clients.stopLifecycleManagement();
+  });
+});
+
+describe("mergeSafeServers", () => {
+  it("returns empty kept and no warnings for empty inputs", () => {
+    const result = mergeSafeServers([], [], () => true);
+
+    expect(result.kept).toEqual([]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("keeps a default server with the supplied source", () => {
+    const defaults = [
+      {
+        source: "<default>",
+        config: {
+          name: "a",
+          displayName: "A",
+          command: "npx",
+          args: [],
+        },
+      },
+    ];
+    const result = mergeSafeServers(defaults, [], () => true);
+
+    expect(result.kept).toHaveLength(1);
+    expect(result.kept[0]?.name).toBe("a");
+    expect(result.kept[0]?.source).toBe("<default>");
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("user entry overrides a default with the same name and uses the user source", () => {
+    const defaults = [
+      {
+        source: "<default>",
+        config: {
+          name: "shared",
+          displayName: "Default display",
+          command: "npx",
+          args: ["--default"],
+        },
+      },
+    ];
+    const users = [
+      {
+        source: "/user.json",
+        config: {
+          name: "shared",
+          displayName: "User display",
+          command: "npx",
+          args: ["--user"],
+          source: "/user.json",
+        },
+      },
+    ];
+    const result = mergeSafeServers(defaults, users, () => true);
+
+    expect(result.kept).toHaveLength(1);
+    expect(result.kept[0]?.displayName).toBe("User display");
+    expect(result.kept[0]?.source).toBe("/user.json");
+  });
+
+  it("removes unsafe entries (not whitelisted, not trusted) and emits a warning", () => {
+    const defaults = [
+      {
+        source: "<default>",
+        config: {
+          name: "unsafe",
+          displayName: "Unsafe",
+          command: "rm",
+          args: ["-rf"],
+        },
+      },
+    ];
+    const result = mergeSafeServers(defaults, [], () => false);
+
+    expect(result.kept).toEqual([]);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toBe(
+      'Ignoring server "unsafe" (from <default>) because command "rm" is not in the safe command set. Set "trusted: true" to allow explicit command use.',
+    );
+  });
+
+  it("honours an isSafe predicate that exempts trusted entries (matching isSafeCommand)", () => {
+    const defaults = [
+      {
+        source: "<default>",
+        config: {
+          name: "custom",
+          displayName: "Custom",
+          command: "my-custom-bin",
+          args: [],
+          trusted: true,
+        },
+      },
+    ];
+    // Mimic production isSafeCommand: whitelisted OR trusted: true passes.
+    const isSafe = (cfg: ServerConfig): boolean => cfg.trusted === true;
+    const result = mergeSafeServers(defaults, [], isSafe);
+
+    expect(result.kept).toHaveLength(1);
+    expect(result.kept[0]?.name).toBe("custom");
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("invokes isSafe on every merged config and only returns safe ones", () => {
+    const checked: string[] = [];
+    const defaults = [
+      {
+        source: "<default>",
+        config: {
+          name: "a",
+          displayName: "A",
+          command: "npx",
+          args: [],
+        },
+      },
+    ];
+    const users = [
+      {
+        source: "/user.json",
+        config: {
+          name: "b",
+          displayName: "B",
+          command: "npx",
+          args: [],
+          source: "/user.json",
+        },
+      },
+    ];
+    mergeSafeServers(defaults, users, (cfg) => {
+      checked.push(cfg.name);
+      return cfg.name === "a";
+    });
+
+    expect(checked.sort()).toEqual(["a", "b"]);
   });
 });

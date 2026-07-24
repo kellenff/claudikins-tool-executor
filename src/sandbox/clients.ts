@@ -126,6 +126,64 @@ function normalizeServerConfig<T extends ServerConfig>(config: T): T {
 }
 
 /**
+ * Pure: merge default + user ServerConfig entries into a final list, filtering out unsafe commands.
+ *
+ * Each input entry is `{ source, config }`. Defaults are stored first; users override by `name`.
+ * Each config is normalized (command resolved from commandEnvKey). Defaults' `envKeys` arrays are
+ * resolved to `env` objects. The `isSafe` predicate decides inclusion; unsafe entries are dropped
+ * and a warning string naming provenance + command is returned.
+ */
+export function mergeSafeServers(
+  defaults: ReadonlyArray<{ readonly source: string; readonly config: DefaultServerConfig }>,
+  users: ReadonlyArray<{ readonly source: string; readonly config: ServerConfig }>,
+  isSafe: (config: ServerConfig) => boolean,
+): { kept: ServerConfig[]; warnings: string[] } {
+  const byName = new Map<string, ServerConfig>();
+
+  for (const { source, config } of defaults) {
+    const normalized = normalizeServerConfig(config);
+    byName.set(normalized.name, {
+      name: normalized.name,
+      displayName: normalized.displayName,
+      command: normalized.command,
+      args: normalized.args,
+      env: resolveEnvKeys(config.envKeys),
+      trusted: normalized.trusted,
+      commandEnvKey: normalized.commandEnvKey,
+      source,
+    });
+  }
+
+  for (const { source, config } of users) {
+    const normalized = normalizeServerConfig(config);
+    byName.set(normalized.name, {
+      name: normalized.name,
+      displayName: normalized.displayName,
+      command: normalized.command,
+      args: normalized.args,
+      env: normalized.env,
+      trusted: normalized.trusted,
+      commandEnvKey: normalized.commandEnvKey,
+      source,
+    });
+  }
+
+  const kept: ServerConfig[] = [];
+  const warnings: string[] = [];
+  for (const server of byName.values()) {
+    if (isSafe(server)) {
+      kept.push(server);
+    } else {
+      warnings.push(
+        `Ignoring server "${server.name}" (from ${server.source ?? "<unknown>"}) because command "${server.command}" is not in the safe command set. Set "trusted: true" to allow explicit command use.`,
+      );
+    }
+  }
+
+  return { kept, warnings };
+}
+
+/**
  * Load server configs by always starting from DEFAULT_CONFIGS and overlaying any user-supplied
  * servers (resolved from layered config files) by `name`. User entries replace defaults of the same
  * name; defaults without a user override remain. Unsafe entries are filtered post-merge with a
@@ -133,39 +191,12 @@ function normalizeServerConfig<T extends ServerConfig>(config: T): T {
  */
 function loadServerConfigs(): ServerConfig[] {
   const result = loadConfig();
-  const byName = new Map<string, ServerConfig>();
+  const defaults = DEFAULT_CONFIGS.map((config) => ({ source: DEFAULT_SOURCE, config }));
+  const users = result
+    ? result.servers.map((config) => ({ source: config.source ?? "<unknown>", config }))
+    : [];
 
-  // Layer A: defaults (with commandEnvKey + envKeys resolved at runtime)
-  for (const defaultConfig of DEFAULT_CONFIGS) {
-    const normalized = normalizeServerConfig(defaultConfig);
-    byName.set(defaultConfig.name, {
-      name: normalized.name,
-      displayName: normalized.displayName,
-      command: normalized.command,
-      args: normalized.args,
-      env: resolveEnvKeys(defaultConfig.envKeys),
-      trusted: normalized.trusted,
-      commandEnvKey: normalized.commandEnvKey,
-      source: DEFAULT_SOURCE,
-    });
-  }
-
-  // Layer B: user entries (commandEnvKey honoured via normalizeServerConfig;
-  // env taken literally — ${VAR} was already expanded at parse time).
   if (result) {
-    for (const userServer of result.servers) {
-      const normalized = normalizeServerConfig(userServer);
-      byName.set(userServer.name, {
-        name: normalized.name,
-        displayName: normalized.displayName,
-        command: normalized.command,
-        args: normalized.args,
-        env: normalized.env,
-        trusted: normalized.trusted,
-        commandEnvKey: normalized.commandEnvKey,
-        source: userServer.source,
-      });
-    }
     console.error(
       `Loaded config from ${result.sources.length} source(s): ${result.sources.join(", ")}`,
     );
@@ -173,15 +204,11 @@ function loadServerConfigs(): ServerConfig[] {
     console.error("No config file found, using default servers");
   }
 
-  return [...byName.values()].filter((server) => {
-    if (isSafeCommand(server)) {
-      return true;
-    }
-    console.error(
-      `Ignoring server "${server.name}" (from ${server.source ?? "<unknown>"}) because command "${server.command}" is not in the safe command set. Set "trusted: true" to allow explicit command use.`,
-    );
-    return false;
-  });
+  const { kept, warnings } = mergeSafeServers(defaults, users, isSafeCommand);
+  for (const warning of warnings) {
+    console.error(warning);
+  }
+  return kept;
 }
 
 /** MCP server configurations - lazily loaded to ensure dotenv has run first */
