@@ -1,9 +1,11 @@
+import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import {
+  decodeToolExecutorConfig,
   dedupeByPath,
   findConfigFiles,
   loadConfig,
@@ -774,6 +776,37 @@ describe("config", () => {
       expect(() => parseToolExecutorConfig({ servers: [] })).not.toThrow();
       // Extra top-level keys still rejected.
       expect(() => parseToolExecutorConfig({ servers: [server], extra: true })).toThrow();
+      // STRICT applies to nested server objects too — unlike standalone parseServerConfig.
+      expect(() => parseToolExecutorConfig({ servers: [{ ...server, extra: true }] })).toThrow();
+    });
+  });
+
+  describe("decodeToolExecutorConfig", () => {
+    it("decodes valid input", async () => {
+      const server = {
+        name: "server-name",
+        displayName: "Server Name",
+        command: "node",
+        args: ["server.js"],
+      };
+
+      await expect(
+        Effect.runPromise(decodeToolExecutorConfig({ servers: [server] })),
+      ).resolves.toEqual({ servers: [server] });
+    });
+
+    it("fails with ConfigError on invalid input", async () => {
+      const exit = await Effect.runPromiseExit(
+        decodeToolExecutorConfig({
+          servers: [{ name: "", displayName: "Server Name", command: "node", args: [] }],
+        }),
+      );
+
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (Exit.isFailure(exit)) {
+        const error = Option.getOrThrow(Cause.findErrorOption(exit.cause));
+        expect(error._tag).toBe("ConfigError");
+      }
     });
   });
 });
