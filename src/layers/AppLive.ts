@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { executeCode } from "../sandbox/runtime.js";
+import { invokeSandboxedCode, prepareSandboxCode } from "../sandbox/runtime.js";
 import { getToolByName, searchTools } from "../search.js";
 import { loadConfig } from "../config.js";
 import type { ConfigLoadResult } from "../config.js";
@@ -12,8 +12,7 @@ import type { ExecuteCodeInput, GetToolSchemaInput, SearchToolsInput } from "../
 import type { SearchResponse } from "../search.js";
 import { EXECUTE_CODE_DEFAULT_TIMEOUT_MS } from "../constants.js";
 
-import type { Clients, Workspace } from "./services.js";
-import { AppConfig, Sandbox, Search, ToolSchema } from "./services.js";
+import { AppConfig, Clients, Sandbox, Search, ToolSchema, Workspace } from "./services.js";
 import { ClientsLive, WorkspaceLive } from "./SandboxLayer.js";
 
 /** Empty config fallback when no user config files exist on disk. */
@@ -60,43 +59,51 @@ const ToolSchemaLive: Layer.Layer<ToolSchema> = Layer.succeed(ToolSchema, {
     }),
 });
 
-/** Wrap executeCode, mapping throws to SandboxEvalError and timeout to SandboxTimeout. */
-const SandboxLive: Layer.Layer<Sandbox> = Layer.succeed(Sandbox, {
-  execute: (
-    input: ExecuteCodeInput,
-  ): Effect.Effect<ExecutionResult, SandboxEvalError | SandboxTimeout> =>
-    Effect.tryPromise({
-      try: () =>
-        executeCode(
-          input.code,
-          input.timeout ?? EXECUTE_CODE_DEFAULT_TIMEOUT_MS,
-        ) as Promise<ExecutionResult>,
-      catch: (cause) => {
-        if (
-          cause &&
-          typeof cause === "object" &&
-          "_tag" in cause &&
-          (cause as { _tag: string })._tag === "SandboxTimeout"
-        ) {
-          return new SandboxTimeout({
-            timeoutMs: input.timeout ?? EXECUTE_CODE_DEFAULT_TIMEOUT_MS,
+/**
+ * Wrap sandbox execution. Sync prep builds the AsyncFunction + globals;
+ * only the eval invocation goes through Effect.tryPromise. Acquires Clients
+ * and Workspace from Tags to satisfy the dep requirement (and so future
+ * refactors can route prep through them).
+ */
+export const SandboxLive: Layer.Layer<Sandbox, never, Clients | Workspace> = Layer.effect(
+  Sandbox,
+  Effect.gen(function* () {
+    yield* Clients;
+    yield* Workspace;
+
+    return {
+      execute: (
+        input: ExecuteCodeInput,
+      ): Effect.Effect<ExecutionResult, SandboxEvalError | SandboxTimeout> =>
+        Effect.gen(function* () {
+          const timeoutMs = input.timeout ?? EXECUTE_CODE_DEFAULT_TIMEOUT_MS;
+          const prepared = yield* Effect.sync(() => prepareSandboxCode(input.code));
+
+          const result = yield* Effect.tryPromise({
+            try: () => invokeSandboxedCode(prepared, timeoutMs),
+            catch: (cause) => {
+              const message = cause instanceof Error ? cause.message : String(cause);
+              if (message.includes("timed out")) {
+                return new SandboxTimeout({ timeoutMs });
+              }
+              return new SandboxEvalError({ message, cause });
+            },
           });
-        }
-        return new SandboxEvalError({
-          message: cause instanceof Error ? cause.message : String(cause),
-          cause,
-        });
-      },
-    }),
-});
+
+          return result;
+        }),
+    };
+  }),
+);
 
 /** Composed app layer. Behavior-preserving: each tag delegates to current sync/async APIs. */
-export const AppLive: Layer.Layer<AppConfig | Clients | Sandbox | Search | ToolSchema | Workspace> =
-  Layer.mergeAll(
-    AppConfigLive,
-    ClientsLive,
-    SandboxLive,
-    SearchLive,
-    ToolSchemaLive,
-    WorkspaceLive,
-  );
+export const AppLive = Layer.mergeAll(
+  AppConfigLive,
+  ClientsLive,
+  SearchLive,
+  ToolSchemaLive,
+  WorkspaceLive,
+  SandboxLive.pipe(
+    Layer.provide(Layer.mergeAll(ClientsLive, WorkspaceLive)),
+  ),
+);
