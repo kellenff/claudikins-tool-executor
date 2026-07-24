@@ -1,4 +1,6 @@
 import { z } from "zod";
+
+import { schemaFromZod } from "./zod-effect.js";
 import {
   EXECUTE_CODE_DEFAULT_TIMEOUT_MS,
   EXECUTE_CODE_MAX_TIMEOUT_MS,
@@ -31,6 +33,7 @@ export const SearchToolsInputSchema = z
   .strict();
 
 export type SearchToolsInput = z.infer<typeof SearchToolsInputSchema>;
+export const SearchToolsEffectSchema = schemaFromZod(SearchToolsInputSchema);
 
 /** Input schema for get_tool_schema */
 export const GetToolSchemaInputSchema = z
@@ -43,6 +46,7 @@ export const GetToolSchemaInputSchema = z
   .strict();
 
 export type GetToolSchemaInput = z.infer<typeof GetToolSchemaInputSchema>;
+export const GetToolSchemaEffectSchema = schemaFromZod(GetToolSchemaInputSchema);
 
 /** Input schema for execute_code */
 export const ExecuteCodeInputSchema = z
@@ -62,3 +66,4 @@ export const ExecuteCodeInputSchema = z
   .strict();
 
 export type ExecuteCodeInput = z.infer<typeof ExecuteCodeInputSchema>;
+export const ExecuteCodeEffectSchema = schemaFromZod(ExecuteCodeInputSchema);

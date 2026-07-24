@@ -1,8 +1,12 @@
+import { Effect, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
+  ExecuteCodeEffectSchema,
   ExecuteCodeInputSchema,
+  GetToolSchemaEffectSchema,
   GetToolSchemaInputSchema,
+  SearchToolsEffectSchema,
   SearchToolsInputSchema,
 } from "./schemas.js";
 
@@ -68,5 +72,25 @@ describe("schemas", () => {
     expect(ExecuteCodeInputSchema.shape.timeout.description).toBe(
       "Execution timeout in ms (default: 30000)",
     );
+  });
+
+  it("adapted Effect schemas match Zod.parse", async () => {
+    const rawSearch = { query: "x" };
+    const search = await Effect.runPromise(
+      Schema.decodeUnknownEffect(SearchToolsEffectSchema)(rawSearch),
+    );
+    expect(search).toEqual(SearchToolsInputSchema.parse(rawSearch));
+
+    const rawTool = { name: "t" };
+    const tool = await Effect.runPromise(
+      Schema.decodeUnknownEffect(GetToolSchemaEffectSchema)(rawTool),
+    );
+    expect(tool).toEqual(GetToolSchemaInputSchema.parse(rawTool));
+
+    const rawExec = { code: "1" };
+    const exec = await Effect.runPromise(
+      Schema.decodeUnknownEffect(ExecuteCodeEffectSchema)(rawExec),
+    );
+    expect(exec).toEqual(ExecuteCodeInputSchema.parse(rawExec));
   });
 });
