@@ -13,12 +13,8 @@ import {
   SearchToolsInputSchema,
   GetToolSchemaInputSchema,
   ExecuteCodeInputSchema,
-  parseSearchToolsInput,
-  parseGetToolSchemaInput,
-  parseExecuteCodeInput,
 } from "./schemas.js";
 import { handleSearchTools, handleGetToolSchema, handleExecuteCode } from "./tools/index.js";
-import { registerEffectTools, type AnyEffectToolRegistration } from "./register-tools.js";
 import { startLifecycleManagement } from "./sandbox/clients.js";
 import { getAvailableClientNames, getSandboxClientBindings } from "./sandbox/runtime.js";
 
@@ -27,13 +23,10 @@ const server = new McpServer({
   version: MCP_CLIENT_VERSION,
 });
 
-const clientList = getSandboxClientBindings()
-  .map((binding) => `- ${binding}`)
-  .join("\n");
-
-registerEffectTools(server, [
+/** Tool: search_tools Search for MCP tools across all wrapped servers */
+server.registerTool(
+  "search_tools",
   {
-    name: "search_tools",
     title: "Search MCP Tools",
     description: `Search for MCP tools across all wrapped servers. Returns slim results (name, server, description, example) for discovery.
 
@@ -46,34 +39,44 @@ Example queries:
 - "impact analysis" - codebase-memory graph analysis
 - "generate diagram" - Gemini image/diagram generation
 - "fetch webpage" - HTTP fetch tools`,
-    schema: SearchToolsInputSchema,
-    parse: parseSearchToolsInput,
+    inputSchema: SearchToolsInputSchema,
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: false,
     },
-    handler: handleSearchTools as AnyEffectToolRegistration["handler"],
   },
+  handleSearchTools,
+);
+
+/** Tool: get_tool_schema Get full inputSchema for a specific tool */
+server.registerTool(
+  "get_tool_schema",
   {
-    name: "get_tool_schema",
     title: "Get Tool Schema",
     description: `Get the full inputSchema for a specific tool. Use after search_tools to get parameter details before calling execute_code.
 
 Example: get_tool_schema("gemini-generate-image") - returns full schema with all parameters, types, enums, etc.`,
-    schema: GetToolSchemaInputSchema,
-    parse: parseGetToolSchemaInput,
+    inputSchema: GetToolSchemaInputSchema,
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: false,
     },
-    handler: handleGetToolSchema as AnyEffectToolRegistration["handler"],
   },
+  handleGetToolSchema,
+);
+
+/** Tool: execute_code Execute TypeScript/JavaScript code in sandbox */
+const clientList = getSandboxClientBindings()
+  .map((binding) => `- ${binding}`)
+  .join("\n");
+
+server.registerTool(
+  "execute_code",
   {
-    name: "execute_code",
     title: "Execute Code",
     description: `Execute TypeScript/JavaScript code with access to MCP clients and workspace.
 
@@ -109,17 +112,16 @@ console.log("Saved analysis.json");  // Minimal context cost
 \`\`\`
 
 Results are summarised if console.log output exceeds ${MAX_LOG_CHARS} chars.`,
-    schema: ExecuteCodeInputSchema,
-    parse: parseExecuteCodeInput,
+    inputSchema: ExecuteCodeInputSchema,
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,
       openWorldHint: true,
     },
-    handler: handleExecuteCode as AnyEffectToolRegistration["handler"],
   },
-]);
+  handleExecuteCode as unknown as Parameters<typeof server.registerTool>[2],
+);
 
 /** Main entry point */
 async function main(): Promise<void> {
