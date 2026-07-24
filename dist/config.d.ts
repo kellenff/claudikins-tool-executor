@@ -1,28 +1,53 @@
-import { z } from 'zod';
+import { Schema, Effect } from 'effect';
+import * as effect_Cause from 'effect/Cause';
+import * as effect_Types from 'effect/Types';
 
-declare const ServerConfigSchema: z.ZodObject<{
-    name: z.ZodString;
-    displayName: z.ZodString;
-    command: z.ZodString;
-    commandEnvKey: z.ZodOptional<z.ZodString>;
-    trusted: z.ZodOptional<z.ZodBoolean>;
-    args: z.ZodArray<z.ZodString>;
-    env: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-}, z.core.$strip>;
-declare const ToolExecutorConfigSchema: z.ZodObject<{
-    $schema: z.ZodOptional<z.ZodString>;
-    servers: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        displayName: z.ZodString;
-        command: z.ZodString;
-        commandEnvKey: z.ZodOptional<z.ZodString>;
-        trusted: z.ZodOptional<z.ZodBoolean>;
-        args: z.ZodArray<z.ZodString>;
-        env: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-    }, z.core.$strip>>;
-}, z.core.$strict>;
-type ToolExecutorConfig = z.infer<typeof ToolExecutorConfigSchema>;
-type ServerConfigFromFile = z.infer<typeof ServerConfigSchema>;
+declare const ConfigError_base: new <A extends Record<string, any> = {}>(args: effect_Types.VoidIfEmpty<{ readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }>) => effect_Cause.YieldableError & {
+    readonly _tag: "ConfigError";
+} & Readonly<A>;
+declare class ConfigError extends ConfigError_base<{
+    readonly message: string;
+    readonly cause?: unknown;
+}> {
+}
+
+declare const ServerConfigSchema: Schema.Struct<{
+    readonly name: Schema.String;
+    readonly displayName: Schema.String;
+    readonly command: Schema.String;
+    readonly commandEnvKey: Schema.optional<Schema.String>;
+    readonly trusted: Schema.optional<Schema.Boolean>;
+    readonly args: Schema.$Array<Schema.String>;
+    readonly env: Schema.optional<Schema.$Record<Schema.String, Schema.String>>;
+}>;
+declare const ToolExecutorConfigSchema: Schema.Struct<{
+    readonly $schema: Schema.optional<Schema.String>;
+    readonly servers: Schema.$Array<Schema.Struct<{
+        readonly name: Schema.String;
+        readonly displayName: Schema.String;
+        readonly command: Schema.String;
+        readonly commandEnvKey: Schema.optional<Schema.String>;
+        readonly trusted: Schema.optional<Schema.Boolean>;
+        readonly args: Schema.$Array<Schema.String>;
+        readonly env: Schema.optional<Schema.$Record<Schema.String, Schema.String>>;
+    }>>;
+}>;
+interface ServerConfigFromFile {
+    name: string;
+    displayName: string;
+    command: string;
+    commandEnvKey?: string;
+    trusted?: boolean;
+    args: string[];
+    env?: Record<string, string>;
+}
+interface ToolExecutorConfig {
+    $schema?: string;
+    servers: ServerConfigFromFile[];
+}
+declare const decodeToolExecutorConfig: (input: unknown) => Effect.Effect<ToolExecutorConfig, ConfigError>;
+declare function parseToolExecutorConfig(input: unknown): ToolExecutorConfig;
+declare function parseServerConfig(input: unknown): ServerConfigFromFile;
 /**
  * A server entry tagged with the absolute path of the config layer that supplied it. Used by
  * callers (clients.ts, cli.ts) to report provenance.
@@ -101,4 +126,4 @@ declare function mergeLoadedLayers(layers: ReadonlyArray<{
  */
 declare function loadConfig(configPath?: string, opts?: FindConfigOptions): ConfigLoadResult | null;
 
-export { type ConfigLoadResult, type FindConfigOptions, type LoadedServer, type ServerConfigFromFile, ServerConfigSchema, type ToolExecutorConfig, ToolExecutorConfigSchema, dedupeByPath, findConfigFiles, loadConfig, mergeLoadedLayers };
+export { type ConfigLoadResult, type FindConfigOptions, type LoadedServer, type ServerConfigFromFile, ServerConfigSchema, type ToolExecutorConfig, ToolExecutorConfigSchema, decodeToolExecutorConfig, dedupeByPath, findConfigFiles, loadConfig, mergeLoadedLayers, parseServerConfig, parseToolExecutorConfig };
