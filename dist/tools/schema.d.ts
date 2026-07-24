@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import { G as GetToolSchemaInput } from '../schemas-9t_yp478.js';
 import { ToolDefinition } from '../types.js';
 import 'zod';
@@ -34,6 +35,8 @@ declare function errorToolSchemaResponse(name: string): {
     isError: boolean;
     structuredContent?: undefined;
 };
+type GetToolSchemaResult = ReturnType<typeof errorToolSchemaResponse> | ReturnType<typeof toToolSchemaResponse>;
+declare const getToolSchemaEffect: (params: GetToolSchemaInput) => Effect.Effect<GetToolSchemaResult, unknown>;
 /** Get full inputSchema for a specific tool */
 declare function handleGetToolSchema(params: GetToolSchemaInput): Promise<{
     content: {
@@ -58,4 +61,4 @@ declare function handleGetToolSchema(params: GetToolSchemaInput): Promise<{
     isError?: undefined;
 }>;
 
-export { errorToolSchemaResponse, handleGetToolSchema, toToolSchemaResponse };
+export { errorToolSchemaResponse, getToolSchemaEffect, handleGetToolSchema, toToolSchemaResponse };

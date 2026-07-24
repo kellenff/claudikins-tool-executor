@@ -258,49 +258,77 @@ function buildSandboxGlobals(mockConsole: MockConsole): SandboxGlobals {
   return globals;
 }
 
-/** Execute TypeScript/JavaScript code in a sandboxed environment */
-export async function executeCode(
-  code: string,
-  timeout = DEFAULT_TIMEOUT,
-): Promise<ExecutionResult> {
+/**
+ * Prepared sandbox state: the AsyncFunction to invoke, its globals, and the
+ * mock console that captures logs. Built synchronously so the Layer can split
+ * setup (sync) from eval (async Effect.tryPromise).
+ */
+export interface PreparedSandbox {
+  readonly fn: (...args: unknown[]) => Promise<unknown>;
+  readonly globalValues: unknown[];
+  readonly logs: unknown[];
+}
+
+/**
+ * Build the AsyncFunction + globals for a piece of code without running it.
+ * Pure sync; lets the Effect layer acquire Clients/Workspace before eval.
+ */
+export function prepareSandboxCode(code: string): PreparedSandbox {
   const { console: mockConsole, logs } = createMockConsole();
   const globals = buildSandboxGlobals(mockConsole);
-
-  // Build the async function with injected globals
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
+    ...args: string[]
+  ) => (...args: unknown[]) => Promise<unknown>;
   const globalNames = Object.keys(globals);
   const globalValues = Object.values(globals);
+  const fn = new AsyncFunction(...globalNames, code);
+  return { fn, globalValues, logs };
+}
 
+/**
+ * Run a prepared sandbox with a timeout. The only impurity in the sandbox
+ * pipeline: AsyncFunction invocation. Errors include the timeout message —
+ * callers can match on the message text to map to SandboxTimeout.
+ */
+export async function invokeSandboxedCode(
+  prepared: PreparedSandbox,
+  timeout: number,
+): Promise<ExecutionResult> {
   try {
-    // Create async function with globals as parameters
-    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
-      ...args: string[]
-    ) => (...args: unknown[]) => Promise<unknown>;
-    const fn = new AsyncFunction(...globalNames, code);
-
-    // Execute with timeout
     const result = await Promise.race([
-      fn(...globalValues),
+      prepared.fn(...prepared.globalValues),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Execution timed out after ${timeout}ms`)), timeout),
+        setTimeout(
+          () => reject(new Error(`Execution timed out after ${timeout}ms`)),
+          timeout,
+        ),
       ),
     ]);
 
-    // If the code returned something, add it to logs
     if (result !== undefined) {
-      logs.push({ returned: result });
+      prepared.logs.push({ returned: result });
     }
 
-    return { logs: summariseLogs(logs) };
+    return { logs: summariseLogs(prepared.logs) };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
 
     return {
-      logs: summariseLogs(logs),
+      logs: summariseLogs(prepared.logs),
       error: errorMessage,
       stack,
     };
   }
+}
+
+/** Execute TypeScript/JavaScript code in a sandboxed environment */
+export async function executeCode(
+  code: string,
+  timeout = DEFAULT_TIMEOUT,
+): Promise<ExecutionResult> {
+  const prepared = prepareSandboxCode(code);
+  return invokeSandboxedCode(prepared, timeout);
 }
 
 /** Get a list of available MCP clients (for error messages) */

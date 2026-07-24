@@ -1,4 +1,7 @@
+import { Effect } from "effect";
+
 import { getToolByName } from "../search.js";
+import { getAppRuntime } from "../runtime.js";
 import type { GetToolSchemaInput } from "../schemas.js";
 import type { ToolDefinition } from "../types.js";
 
@@ -55,6 +58,26 @@ export function errorToolSchemaResponse(name: string): {
   };
 }
 
+type GetToolSchemaResult =
+  | ReturnType<typeof errorToolSchemaResponse>
+  | ReturnType<typeof toToolSchemaResponse>;
+
+export const getToolSchemaEffect = (
+  params: GetToolSchemaInput,
+): Effect.Effect<GetToolSchemaResult, unknown> =>
+  Effect.gen(function* () {
+    const tool = yield* Effect.tryPromise({
+      try: () => getToolByName(params.name),
+      catch: (cause) => cause,
+    });
+
+    if (!tool) {
+      return errorToolSchemaResponse(params.name);
+    }
+
+    return toToolSchemaResponse(tool);
+  });
+
 /** Get full inputSchema for a specific tool */
 export async function handleGetToolSchema(params: GetToolSchemaInput): Promise<
   | {
@@ -75,11 +98,5 @@ export async function handleGetToolSchema(params: GetToolSchemaInput): Promise<
       isError?: undefined;
     }
 > {
-  const tool = await getToolByName(params.name);
-
-  if (!tool) {
-    return errorToolSchemaResponse(params.name);
-  }
-
-  return toToolSchemaResponse(tool);
+  return getAppRuntime().runPromise(getToolSchemaEffect(params));
 }

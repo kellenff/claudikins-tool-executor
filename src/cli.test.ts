@@ -10,6 +10,14 @@ vi.mock("./config.js", () => ({
 vi.mock("./sandbox/clients.js", () => ({
   getServerConfigs: vi.fn(),
   DEFAULT_SOURCE_TAG: "<default>",
+  startLifecycleManagement: vi.fn(),
+  stopLifecycleManagement: vi.fn(),
+  disconnectAll: vi.fn(async () => {}),
+  cleanupIdleClients: vi.fn(async () => {}),
+  disconnectClient: vi.fn(async () => {}),
+  getConnectedClients: vi.fn(() => []),
+  getAvailableClients: vi.fn(() => []),
+  getClient: vi.fn(async () => null),
 }));
 
 import * as cli from "./cli.js";

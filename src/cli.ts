@@ -5,8 +5,10 @@ import { existsSync, readFileSync, statSync } from "fs";
 import { delimiter, dirname, extname, isAbsolute, join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
+import { Effect } from "effect";
 import { DEFAULT_SOURCE_TAG, getServerConfigs } from "./sandbox/clients.js";
-import { loadConfig } from "./config.js";
+import { AppConfig } from "./layers/services.js";
+import { getAppRuntime } from "./runtime.js";
 import { MIN_NODE_MAJOR_VERSION } from "./constants.js";
 
 const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -88,12 +90,20 @@ function checkUvx(): void {
 }
 
 function checkConfig(): void {
-  const result = loadConfig(undefined, { pluginDir: CLI_ROOT });
   const configs = getServerConfigs();
   const userCount = configs.filter(
     (config) => config.source && config.source !== DEFAULT_SOURCE_TAG,
   ).length;
   const defaultCount = configs.length - userCount;
+
+  // Acquire config via the AppConfig service so the same Effect load path is exercised as
+  // the rest of the codebase. The result is consumed synchronously here (CLI output).
+  const result = getAppRuntime().runSync(
+    Effect.gen(function* () {
+      const appConfig = yield* AppConfig;
+      return yield* appConfig.load();
+    }),
+  );
 
   if (result && result.sources.length > 0) {
     console.log("Config sources (precedence low → high):");

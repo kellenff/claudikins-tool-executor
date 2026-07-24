@@ -1,3 +1,0 @@
-import {k}from'./chunk-QAJKVWMM.js';function i(e){if(!e)return "";let t=e.split(`
-`)[0].trim();return t.length>80?t.slice(0,77)+"...":t}function u(e,t){return {results:t.results.map(n=>({name:n.tool.name,server:n.tool.server,description:i(n.tool.description)})),count:t.results.length,limit:e.limit,offset:e.offset,totalCount:t.totalCount,has_more:e.offset+t.results.length<(t.totalCount??0),source:t.source,...t.fallbackReason&&{fallbackReason:t.fallbackReason},...t.suggestion&&{suggestion:t.suggestion}}}async function a(e){let t=await k(e.query,e.limit,e.offset),n=u(e,t);return {content:[{type:"text",text:JSON.stringify(n,null,2)}],structuredContent:n}}export{i as a,u as b,a as c};//# sourceMappingURL=chunk-RJF7ESVK.js.map
-//# sourceMappingURL=chunk-RJF7ESVK.js.map

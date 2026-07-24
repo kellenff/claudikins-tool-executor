@@ -1,3 +1,6 @@
+import { Effect } from "effect";
+
+import { getAppRuntime } from "../runtime.js";
 import { searchTools } from "../search.js";
 import { MAX_ONE_LINER_CHARS, ONE_LINER_ELLIPSIS_RESERVE } from "../constants.js";
 import type { SearchToolsInput } from "../schemas.js";
@@ -62,11 +65,34 @@ export function toSearchToolsResponse(
   };
 }
 
+export const searchToolsEffect = (
+  params: SearchToolsInput,
+): Effect.Effect<
+  {
+    content: { type: "text"; text: string }[];
+    structuredContent: ReturnType<typeof toSearchToolsResponse>;
+  },
+  unknown
+> =>
+  Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () => searchTools(params.query, params.limit, params.offset),
+      catch: (cause) => cause,
+    });
+    const output = toSearchToolsResponse(params, response);
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(output, null, 2) }],
+      structuredContent: output,
+    };
+  });
+
 /**
  * Search for MCP tools across all wrapped servers Returns MINIMAL results - just enough to identify
  * and call the tool
  */
-export async function handleSearchTools(params: SearchToolsInput): Promise<{
+export async function handleSearchTools(
+  params: SearchToolsInput,
+): Promise<{
   content: { type: "text"; text: string }[];
   structuredContent: {
     suggestion?: string | undefined;
@@ -84,12 +110,5 @@ export async function handleSearchTools(params: SearchToolsInput): Promise<{
     source: "serena" | "local";
   };
 }> {
-  const response = await searchTools(params.query, params.limit, params.offset);
-
-  const output = toSearchToolsResponse(params, response);
-
-  return {
-    content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
-    structuredContent: output,
-  };
+  return getAppRuntime().runPromise(searchToolsEffect(params));
 }

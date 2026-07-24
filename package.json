@@ -49,6 +49,7 @@
     "fix": "yarn format && yarn lint:fix && yarn format"
   },
   "dependencies": {
+    "@effect/platform-node": "4.0.0-beta.101",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "commander": "^14.0.2",
     "dotenv": "^17.2.3",

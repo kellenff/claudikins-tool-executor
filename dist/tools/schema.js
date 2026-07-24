@@ -1,2 +1,2 @@
-export{b as errorToolSchemaResponse,c as handleGetToolSchema,a as toToolSchemaResponse}from'../chunk-BXDEY5S5.js';import'../chunk-QAJKVWMM.js';import'../chunk-BLPALQLO.js';//# sourceMappingURL=schema.js.map
+export{b as errorToolSchemaResponse,c as getToolSchemaEffect,d as handleGetToolSchema,a as toToolSchemaResponse}from'../chunk-BMUM5XTR.js';import'../chunk-QAJKVWMM.js';import'../chunk-BLPALQLO.js';//# sourceMappingURL=schema.js.map
 //# sourceMappingURL=schema.js.map

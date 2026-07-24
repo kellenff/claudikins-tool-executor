@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import { S as SearchToolsInput } from '../schemas-9t_yp478.js';
 import { SearchResponse } from '../search.js';
 import 'zod';
@@ -33,6 +34,13 @@ declare function oneLiner(text: string): string;
  * when present.
  */
 declare function toSearchToolsResponse(params: SearchToolsInput, response: SearchResponse): SearchToolsResponse;
+declare const searchToolsEffect: (params: SearchToolsInput) => Effect.Effect<{
+    content: {
+        type: "text";
+        text: string;
+    }[];
+    structuredContent: ReturnType<typeof toSearchToolsResponse>;
+}, unknown>;
 /**
  * Search for MCP tools across all wrapped servers Returns MINIMAL results - just enough to identify
  * and call the tool
@@ -59,4 +67,4 @@ declare function handleSearchTools(params: SearchToolsInput): Promise<{
     };
 }>;
 
-export { handleSearchTools, oneLiner, toSearchToolsResponse };
+export { handleSearchTools, oneLiner, searchToolsEffect, toSearchToolsResponse };

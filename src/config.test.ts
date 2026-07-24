@@ -1,15 +1,17 @@
+import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import {
+  decodeToolExecutorConfig,
   dedupeByPath,
   findConfigFiles,
   loadConfig,
   mergeLoadedLayers,
-  ServerConfigSchema,
-  ToolExecutorConfigSchema,
+  parseServerConfig,
+  parseToolExecutorConfig,
 } from "./config.js";
 
 const SAVED_TEST_TOKEN_KEY = "TOOL_EXECUTOR_TEST_TOKEN";
@@ -96,13 +98,13 @@ describe("mergeLoadedLayers", () => {
   });
 
   it("preserves layer order when servers are disjoint across layers", () => {
-    const a = ServerConfigSchema.parse({
+    const a = parseServerConfig({
       name: "a",
       displayName: "A",
       command: "ca",
       args: [],
     });
-    const b = ServerConfigSchema.parse({
+    const b = parseServerConfig({
       name: "b",
       displayName: "B",
       command: "cb",
@@ -122,19 +124,19 @@ describe("mergeLoadedLayers", () => {
   });
 
   it("later layers override earlier ones by name with preserved source", () => {
-    const oldVer = ServerConfigSchema.parse({
+    const oldVer = parseServerConfig({
       name: "shared",
       displayName: "Old",
       command: "co",
       args: ["--old"],
     });
-    const newVer = ServerConfigSchema.parse({
+    const newVer = parseServerConfig({
       name: "shared",
       displayName: "New",
       command: "cn",
       args: ["--new"],
     });
-    const other = ServerConfigSchema.parse({
+    const other = parseServerConfig({
       name: "only-b",
       displayName: "B",
       command: "cb",
@@ -154,7 +156,7 @@ describe("mergeLoadedLayers", () => {
   });
 
   it("skips layers that failed to parse (servers: null)", () => {
-    const a = ServerConfigSchema.parse({
+    const a = parseServerConfig({
       name: "a",
       displayName: "A",
       command: "ca",
@@ -171,7 +173,7 @@ describe("mergeLoadedLayers", () => {
   });
 
   it("treats an empty (but successful) layer as a source but adds no servers", () => {
-    const a = ServerConfigSchema.parse({
+    const a = parseServerConfig({
       name: "a",
       displayName: "A",
       command: "ca",
@@ -742,13 +744,13 @@ describe("config", () => {
         env: { TOKEN: "secret" },
       };
 
-      expect(ServerConfigSchema.parse(server)).toEqual(server);
-      expect(() => ServerConfigSchema.parse({ ...server, name: "" })).toThrow();
-      expect(() => ServerConfigSchema.parse({ ...server, displayName: "" })).toThrow();
-      expect(() => ServerConfigSchema.parse({ ...server, command: "" })).toThrow();
-      expect(() => ServerConfigSchema.parse({ ...server, args: [1] })).toThrow();
+      expect(parseServerConfig(server)).toEqual(server);
+      expect(() => parseServerConfig({ ...server, name: "" })).toThrow();
+      expect(() => parseServerConfig({ ...server, displayName: "" })).toThrow();
+      expect(() => parseServerConfig({ ...server, command: "" })).toThrow();
+      expect(() => parseServerConfig({ ...server, args: [1] })).toThrow();
       // ServerConfigSchema is not strict — extra fields are stripped, not rejected.
-      expect(() => ServerConfigSchema.parse({ ...server, extra: true })).not.toThrow();
+      expect(() => parseServerConfig({ ...server, extra: true })).not.toThrow();
     });
 
     it("ToolExecutorConfigSchema is strict and accepts empty servers", () => {
@@ -762,7 +764,7 @@ describe("config", () => {
       };
 
       expect(
-        ToolExecutorConfigSchema.parse({
+        parseToolExecutorConfig({
           $schema: "https://example.test/schema.json",
           servers: [server],
         }),
@@ -771,9 +773,40 @@ describe("config", () => {
         servers: [server],
       });
       // Empty servers list is legal.
-      expect(() => ToolExecutorConfigSchema.parse({ servers: [] })).not.toThrow();
+      expect(() => parseToolExecutorConfig({ servers: [] })).not.toThrow();
       // Extra top-level keys still rejected.
-      expect(() => ToolExecutorConfigSchema.parse({ servers: [server], extra: true })).toThrow();
+      expect(() => parseToolExecutorConfig({ servers: [server], extra: true })).toThrow();
+      // STRICT applies to nested server objects too — unlike standalone parseServerConfig.
+      expect(() => parseToolExecutorConfig({ servers: [{ ...server, extra: true }] })).toThrow();
+    });
+  });
+
+  describe("decodeToolExecutorConfig", () => {
+    it("decodes valid input", async () => {
+      const server = {
+        name: "server-name",
+        displayName: "Server Name",
+        command: "node",
+        args: ["server.js"],
+      };
+
+      await expect(
+        Effect.runPromise(decodeToolExecutorConfig({ servers: [server] })),
+      ).resolves.toEqual({ servers: [server] });
+    });
+
+    it("fails with ConfigError on invalid input", async () => {
+      const exit = await Effect.runPromiseExit(
+        decodeToolExecutorConfig({
+          servers: [{ name: "", displayName: "Server Name", command: "node", args: [] }],
+        }),
+      );
+
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (Exit.isFailure(exit)) {
+        const error = Option.getOrThrow(Cause.findErrorOption(exit.cause));
+        expect(error._tag).toBe("ConfigError");
+      }
     });
   });
 });
