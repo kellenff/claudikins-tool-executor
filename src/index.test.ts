@@ -140,6 +140,8 @@ describe("index", () => {
       (call) => (call[0] as string) === "close",
     )?.[1] as () => void;
     closeHandler();
+    // shutdown is async (await disposeAppRuntime) — flush microtasks before assertions.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(consoleErrorSpy).toHaveBeenCalledWith("Client disconnected, shutting down");
     expect(exitSpy).toHaveBeenCalledWith(0);
     expect(consoleErrorSpy).toHaveBeenCalledWith("Claudikins Tool Executor running");

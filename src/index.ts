@@ -17,6 +17,7 @@ import {
 import { handleSearchTools, handleGetToolSchema, handleExecuteCode } from "./tools/index.js";
 import { startLifecycleManagement } from "./sandbox/clients.js";
 import { getAvailableClientNames, getSandboxClientBindings } from "./sandbox/runtime.js";
+import { disposeAppRuntime, getAppRuntime } from "./runtime.js";
 
 const server = new McpServer({
   name: "@claudikins/tool-executor",
@@ -123,14 +124,38 @@ Results are summarised if console.log output exceeds ${MAX_LOG_CHARS} chars.`,
   handleExecuteCode as unknown as Parameters<typeof server.registerTool>[2],
 );
 
+/** Graceful shutdown: dispose the ManagedRuntime so Layers' finalizers run (disconnect MCP clients, clear timers). */
+let shuttingDown = false;
+async function shutdown(message: string): Promise<void> {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+  console.error(message);
+  try {
+    await disposeAppRuntime();
+  } catch (error) {
+    console.error("Error during runtime dispose:", error);
+  }
+  process.exit(0);
+}
+
 /** Main entry point */
 async function main(): Promise<void> {
   startLifecycleManagement();
 
-  // Exit gracefully when client disconnects (prevents orphan processes)
+  // Build the process-wide ManagedRuntime eagerly so its finalizers are armed before any tool call.
+  getAppRuntime();
+
+  // Exit gracefully when client disconnects or we receive a termination signal
   process.stdin.on("close", () => {
-    console.error("Client disconnected, shutting down");
-    process.exit(0);
+    void shutdown("Client disconnected, shutting down");
+  });
+  process.on("SIGINT", () => {
+    void shutdown("SIGINT, shutting down");
+  });
+  process.on("SIGTERM", () => {
+    void shutdown("SIGTERM, shutting down");
   });
 
   const transport = new StdioServerTransport();
