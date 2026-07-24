@@ -48,11 +48,14 @@ import {
   listToolsInCategory,
   loadToolDefinition,
   loadToolsFromFiles,
+  scoreByQueryTerms,
   searchTools,
   tokenizeQuery,
 } from "./search.js";
 
 import { initBM25, isBM25Ready, searchBM25 } from "./bm25.js";
+
+import type { ToolDefinition } from "./types.js";
 
 type ToolFixture = {
   name: string;
@@ -629,6 +632,50 @@ describe("search pure helpers", () => {
       const spec = buildSerenaTransportSpec();
 
       expect(spec.env).toBe(process.env);
+    });
+  });
+
+  describe("scoreByQueryTerms", () => {
+    const makeTool = (overrides: Partial<ToolDefinition> = {}): ToolDefinition => ({
+      name: "code-search",
+      server: "serena",
+      category: "code-nav",
+      description: "Search code quickly",
+      inputSchema: {},
+      example: "",
+      ...overrides,
+    });
+
+    it("returns 0 when the query terms list is empty", () => {
+      expect(scoreByQueryTerms(makeTool(), [])).toBe(0);
+    });
+
+    it("returns 0 when no term matches anywhere", () => {
+      expect(scoreByQueryTerms(makeTool(), ["xyz", "abc"])).toBe(0);
+    });
+
+    it("returns 1 for a term matching the description but not name or category", () => {
+      expect(scoreByQueryTerms(makeTool(), ["quickly"])).toBe(1);
+    });
+
+    it("returns 3 for a term matching only the name (searchText +1, name +2)", () => {
+      expect(scoreByQueryTerms(makeTool(), ["search"])).toBe(3);
+    });
+
+    it("returns 2 for a term matching only the category (searchText +1, category +1)", () => {
+      expect(scoreByQueryTerms(makeTool(), ["nav"])).toBe(2);
+    });
+
+    it("returns 4 for a term matching both name and category (+1 +2 +1)", () => {
+      expect(scoreByQueryTerms(makeTool(), ["code"])).toBe(4);
+    });
+
+    it("sums scores across multiple terms", () => {
+      expect(scoreByQueryTerms(makeTool(), ["code", "search"])).toBe(7);
+    });
+
+    it("handles a tool with empty category without throwing", () => {
+      expect(scoreByQueryTerms(makeTool({ category: "" }), ["search"])).toBe(3);
     });
   });
 });

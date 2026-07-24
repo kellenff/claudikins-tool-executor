@@ -1,0 +1,2 @@
+import {n}from'./chunk-QAJKVWMM.js';async function s(e){let t=await n(e.name);if(!t)return {content:[{type:"text",text:JSON.stringify({error:`Tool not found: ${e.name}`,suggestion:"Use search_tools to find available tools first"})}],isError:true};let n$1={name:t.name,server:t.server,description:t.description,inputSchema:t.inputSchema,example:t.example,notes:t.notes};return {content:[{type:"text",text:JSON.stringify(n$1,null,2)}],structuredContent:n$1}}export{s as a};//# sourceMappingURL=chunk-JGBXHZQ7.js.map
+//# sourceMappingURL=chunk-JGBXHZQ7.js.map

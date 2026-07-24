@@ -119,6 +119,14 @@ declare function loadToolDefinition(filePath: string): Promise<ToolDefinition | 
  */
 declare const loadToolsFromFiles: (filePaths: readonly string[]) => Promise<ToolDefinition[]>;
 /**
+ * Compute the raw scoring of a tool against a list of pre-lowercased query terms. Each term
+ * matching the combined searchText (name + description + category + server) contributes +1; an
+ * additional +2 if the term also appears in the tool's name, and +1 if it appears in the category.
+ * Terms that don't appear anywhere contribute 0. Returns the unnormalized total — callers divide by
+ * `queryTerms.length` to get an average per-term score.
+ */
+declare function scoreByQueryTerms(tool: ToolDefinition, queryTerms: readonly string[]): number;
+/**
  * Searches for tools matching the given query, with pagination support.
  *
  * Attempts semantic search first and falls back to text-based search if unavailable or no matches
@@ -140,4 +148,4 @@ declare function getToolByName(toolName: string): Promise<ToolDefinition | null>
 /** Disconnect the registry Serena client (for cleanup) */
 declare function disconnectRegistrySerena(): Promise<void>;
 
-export { type SearchResponse, type SearchResult, buildLookaheadPattern, buildSerenaTransportSpec, connectRegistrySerena, dedupePaths, disconnectRegistrySerena, escapeRegexTerm, extractRegistryPaths, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, loadToolsFromFiles, searchTools, tokenizeQuery };
+export { type SearchResponse, type SearchResult, buildLookaheadPattern, buildSerenaTransportSpec, connectRegistrySerena, dedupePaths, disconnectRegistrySerena, escapeRegexTerm, extractRegistryPaths, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, loadToolsFromFiles, scoreByQueryTerms, searchTools, tokenizeQuery };

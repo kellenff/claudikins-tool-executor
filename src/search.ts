@@ -263,6 +263,33 @@ export const loadToolsFromFiles = async (
 };
 
 /**
+ * Compute the raw scoring of a tool against a list of pre-lowercased query terms. Each term
+ * matching the combined searchText (name + description + category + server) contributes +1; an
+ * additional +2 if the term also appears in the tool's name, and +1 if it appears in the category.
+ * Terms that don't appear anywhere contribute 0. Returns the unnormalized total — callers divide by
+ * `queryTerms.length` to get an average per-term score.
+ */
+export function scoreByQueryTerms(tool: ToolDefinition, queryTerms: readonly string[]): number {
+  const searchText =
+    `${tool.name} ${tool.description} ${tool.category} ${tool.server}`.toLowerCase();
+  const nameLower = tool.name.toLowerCase();
+  const categoryLower = tool.category.toLowerCase();
+  let score = 0;
+  for (const term of queryTerms) {
+    if (searchText.includes(term)) {
+      score += 1;
+      if (nameLower.includes(term)) {
+        score += 2;
+      }
+      if (categoryLower.includes(term)) {
+        score += 1;
+      }
+    }
+  }
+  return score;
+}
+
+/**
  * Resolves a registry-relative path against REGISTRY_ROOT, loads its ToolDefinition, and packages
  * it as a SearchResult. Returns null if the file cannot be loaded.
  *
@@ -384,50 +411,23 @@ async function searchLocally(query: string, limit: number): Promise<SearchResult
   }
 
   // Fall back to simple text matching
-  const queryLower = query.toLowerCase();
-  const queryTerms = queryLower.split(/\s+/).filter(Boolean);
+  const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
   const files = await glob("**/*.{yaml,yml}", {
     cwd: REGISTRY_ROOT,
     absolute: true,
   });
 
-  const results: SearchResult[] = [];
+  const tools = await loadToolsFromFiles(files);
+  const termCount = queryTerms.length;
+  const scored = tools
+    .map((tool) => {
+      const raw = scoreByQueryTerms(tool, queryTerms);
+      return raw > 0 ? { tool, score: raw / termCount } : null;
+    })
+    .filter((entry): entry is SearchResult => entry !== null);
 
-  for (const file of files) {
-    const tool = await loadToolDefinition(file);
-    if (!tool) {
-      continue;
-    }
-
-    // Score based on term matches
-    const searchText =
-      `${tool.name} ${tool.description} ${tool.category || ""} ${tool.server}`.toLowerCase();
-    let score = 0;
-
-    for (const term of queryTerms) {
-      if (searchText.includes(term)) {
-        score += 1;
-        // Bonus for name/category match
-        if (tool.name.toLowerCase().includes(term)) {
-          score += 2;
-        }
-        if (tool.category?.toLowerCase().includes(term)) {
-          score += 1;
-        }
-      }
-    }
-
-    if (score > 0) {
-      results.push({
-        tool,
-        score: score / queryTerms.length,
-      });
-    }
-  }
-
-  // Sort by score descending
-  results.sort((a, b) => b.score - a.score);
-  return results.slice(0, limit);
+  // Sort by score descending and return the top N
+  return scored.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 /**
