@@ -1,4 +1,3 @@
-import type { AnySchema } from "@modelcontextprotocol/sdk/server/zod-compat.js";
 import { Effect, Schema } from "effect";
 
 import {
@@ -11,10 +10,10 @@ import {
 
 const STRICT = { onExcessProperty: "error" as const };
 
-const searchToolsInputSchema = Schema.Struct({
-  query: Schema.String.check(Schema.isNonEmpty({ message: "Query cannot be empty" })).annotate({
+export const SearchToolsInputSchema = Schema.Struct({
+  query: Schema.String.annotate({
     description: "Search query for finding relevant tools",
-  }),
+  }).check(Schema.isNonEmpty({ message: "Query cannot be empty" })),
   limit: Schema.Number.check(
     Schema.isInt(),
     Schema.isBetween({
@@ -33,34 +32,28 @@ const searchToolsInputSchema = Schema.Struct({
     .pipe(Schema.withDecodingDefault(Effect.succeed(0))),
 });
 
-/** Effect schema; cast satisfies legacy `registerTool` typing until Task 8. */
-export const SearchToolsInputSchema = searchToolsInputSchema as unknown as AnySchema;
-
-export type SearchToolsInput = typeof searchToolsInputSchema.Type;
+export type SearchToolsInput = typeof SearchToolsInputSchema.Type;
 
 export function parseSearchToolsInput(input: unknown): SearchToolsInput {
-  return Schema.decodeUnknownSync(searchToolsInputSchema, STRICT)(input);
+  return Schema.decodeUnknownSync(SearchToolsInputSchema, STRICT)(input);
 }
 
-const getToolSchemaInputSchema = Schema.Struct({
-  name: Schema.String.check(Schema.isNonEmpty({ message: "Tool name cannot be empty" })).annotate({
+export const GetToolSchemaInputSchema = Schema.Struct({
+  name: Schema.String.annotate({
     description: "Tool name (from search_tools results)",
-  }),
+  }).check(Schema.isNonEmpty({ message: "Tool name cannot be empty" })),
 });
 
-/** Effect schema; cast satisfies legacy `registerTool` typing until Task 8. */
-export const GetToolSchemaInputSchema = getToolSchemaInputSchema as unknown as AnySchema;
-
-export type GetToolSchemaInput = typeof getToolSchemaInputSchema.Type;
+export type GetToolSchemaInput = typeof GetToolSchemaInputSchema.Type;
 
 export function parseGetToolSchemaInput(input: unknown): GetToolSchemaInput {
-  return Schema.decodeUnknownSync(getToolSchemaInputSchema, STRICT)(input);
+  return Schema.decodeUnknownSync(GetToolSchemaInputSchema, STRICT)(input);
 }
 
-const executeCodeInputSchema = Schema.Struct({
-  code: Schema.String.check(Schema.isNonEmpty({ message: "Code cannot be empty" })).annotate({
+export const ExecuteCodeInputSchema = Schema.Struct({
+  code: Schema.String.annotate({
     description: "TypeScript/JavaScript code to execute",
-  }),
+  }).check(Schema.isNonEmpty({ message: "Code cannot be empty" })),
   timeout: Schema.Number.check(
     Schema.isInt(),
     Schema.isBetween({
@@ -74,11 +67,8 @@ const executeCodeInputSchema = Schema.Struct({
     .pipe(Schema.withDecodingDefault(Effect.succeed(EXECUTE_CODE_DEFAULT_TIMEOUT_MS))),
 });
 
-/** Effect schema; cast satisfies legacy `registerTool` typing until Task 8. */
-export const ExecuteCodeInputSchema = executeCodeInputSchema as unknown as AnySchema;
-
-export type ExecuteCodeInput = typeof executeCodeInputSchema.Type;
+export type ExecuteCodeInput = typeof ExecuteCodeInputSchema.Type;
 
 export function parseExecuteCodeInput(input: unknown): ExecuteCodeInput {
-  return Schema.decodeUnknownSync(executeCodeInputSchema, STRICT)(input);
+  return Schema.decodeUnknownSync(ExecuteCodeInputSchema, STRICT)(input);
 }

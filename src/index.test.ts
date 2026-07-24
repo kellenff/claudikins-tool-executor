@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const registerTool = vi.fn();
+const registerEffectTools = vi.fn();
 const mcpServerConstructor = vi.fn();
 const startLifecycleManagement = vi.fn();
 const getAvailableClientNames = vi.fn().mockReturnValue(["serena", "gemini"]);
@@ -17,12 +17,11 @@ vi.mock("dotenv", () => ({
 
 vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
   McpServer: class {
-    registerTool = registerTool;
     connect = connect;
 
     constructor(options: unknown) {
       mcpServerConstructor(options);
-      return { registerTool, connect };
+      return { connect };
     }
   },
 }));
@@ -44,6 +43,13 @@ vi.mock("./schemas.js", () => ({
   SearchToolsInputSchema: {},
   GetToolSchemaInputSchema: {},
   ExecuteCodeInputSchema: {},
+  parseSearchToolsInput: vi.fn(),
+  parseGetToolSchemaInput: vi.fn(),
+  parseExecuteCodeInput: vi.fn(),
+}));
+
+vi.mock("./register-tools.js", () => ({
+  registerEffectTools,
 }));
 
 vi.mock("./tools/index.js", () => ({
@@ -65,7 +71,7 @@ describe("index", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.resetModules();
-    registerTool.mockReset();
+    registerEffectTools.mockReset();
     mcpServerConstructor.mockReset();
     startLifecycleManagement.mockReset();
     getAvailableClientNames.mockReset().mockReturnValue(["serena", "gemini"]);
@@ -92,11 +98,17 @@ describe("index", () => {
     expect(startLifecycleManagement).toHaveBeenCalledTimes(1);
     expect(getAvailableClientNames).toHaveBeenCalledTimes(1);
     expect(getSandboxClientBindings).toHaveBeenCalledTimes(1);
-    expect(registerTool).toHaveBeenCalledTimes(3);
+    expect(registerEffectTools).toHaveBeenCalledTimes(1);
 
-    const toolNames = registerTool.mock.calls.map((call) => call[0]);
+    const registrations = registerEffectTools.mock.calls[0]?.[1] as Array<{
+      name: string;
+      title: string;
+      description: string;
+      annotations: Record<string, boolean>;
+    }>;
+    const toolNames = registrations.map((tool) => tool.name);
     expect(toolNames).toEqual(["search_tools", "get_tool_schema", "execute_code"]);
-    expect(registerTool.mock.calls[0]?.[1]).toMatchObject({
+    expect(registrations[0]).toMatchObject({
       title: "Search MCP Tools",
       annotations: {
         readOnlyHint: true,
@@ -105,7 +117,7 @@ describe("index", () => {
         openWorldHint: false,
       },
     });
-    expect(registerTool.mock.calls[1]?.[1]).toMatchObject({
+    expect(registrations[1]).toMatchObject({
       title: "Get Tool Schema",
       annotations: {
         readOnlyHint: true,
@@ -115,8 +127,8 @@ describe("index", () => {
       },
     });
 
-    const executeToolOptions = registerTool.mock.calls[2]?.[1];
-    expect(executeToolOptions).toMatchObject({
+    const executeTool = registrations[2];
+    expect(executeTool).toMatchObject({
       title: "Execute Code",
       annotations: {
         readOnlyHint: false,
@@ -125,10 +137,10 @@ describe("index", () => {
         openWorldHint: true,
       },
     });
-    expect(executeToolOptions?.description).toContain("Available MCP clients");
-    expect(executeToolOptions?.description).toContain("- serena");
-    expect(executeToolOptions?.description).toContain("- gemini");
-    expect(executeToolOptions?.description).toContain(
+    expect(executeTool?.description).toContain("Available MCP clients");
+    expect(executeTool?.description).toContain("- serena");
+    expect(executeTool?.description).toContain("- gemini");
+    expect(executeTool?.description).toContain(
       "Results are summarised if console.log output exceeds",
     );
 
