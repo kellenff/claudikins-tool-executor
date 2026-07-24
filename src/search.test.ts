@@ -47,6 +47,7 @@ import {
   getToolByName,
   listToolsInCategory,
   loadToolDefinition,
+  loadToolsFromFiles,
   searchTools,
   tokenizeQuery,
 } from "./search.js";
@@ -120,6 +121,98 @@ describe("loadToolDefinition", () => {
     mockReadFile.mockRejectedValue(new Error("missing"));
 
     await expect(loadToolDefinition("/registry/ui/missing.yaml")).resolves.toBeNull();
+  });
+});
+
+describe("loadToolsFromFiles", () => {
+  it("returns an empty array when given no paths", async () => {
+    expect(await loadToolsFromFiles([])).toEqual([]);
+  });
+
+  it("loads multiple valid tools and preserves input order", async () => {
+    mockReadFile.mockImplementation(async (path) => {
+      const p = path as string;
+      if (p === "/a.yaml") {
+        return "a-content";
+      }
+      if (p === "/b.yaml") {
+        return "b-content";
+      }
+      throw new Error(`unexpected path: ${p}`);
+    });
+    mockYamlLoad.mockImplementation((content) => {
+      const c = content as string;
+      if (c === "a-content") {
+        return toolFixtures["/registry/ui/diagram.yaml"];
+      }
+      if (c === "b-content") {
+        return toolFixtures["/registry/code-nav/search.yaml"];
+      }
+      throw new Error(`unexpected content: ${c}`);
+    });
+
+    const tools = await loadToolsFromFiles(["/a.yaml", "/b.yaml"]);
+
+    expect(tools).toHaveLength(2);
+    expect(tools[0]?.name).toBe("diagram-generator");
+    expect(tools[1]?.name).toBe("code-search");
+  });
+
+  it("drops files that fail to read", async () => {
+    mockReadFile.mockImplementation(async (path) => {
+      const p = path as string;
+      if (p === "/ok.yaml") {
+        return "ok-content";
+      }
+      if (p === "/also-ok.yaml") {
+        return "also-ok-content";
+      }
+      throw new Error("missing");
+    });
+    mockYamlLoad.mockImplementation((content) => {
+      const c = content as string;
+      if (c === "ok-content") {
+        return toolFixtures["/registry/ui/diagram.yaml"];
+      }
+      if (c === "also-ok-content") {
+        return toolFixtures["/registry/code-nav/search.yaml"];
+      }
+      throw new Error("invalid");
+    });
+
+    const tools = await loadToolsFromFiles(["/ok.yaml", "/missing.yaml", "/also-ok.yaml"]);
+
+    expect(tools).toHaveLength(2);
+    expect(tools[0]?.name).toBe("diagram-generator");
+    expect(tools[1]?.name).toBe("code-search");
+  });
+
+  it("drops files that fail validation (loadToolDefinition returns null)", async () => {
+    mockReadFile.mockImplementation(async (path) => {
+      const p = path as string;
+      if (p === "/valid.yaml") {
+        return "valid-content";
+      }
+      if (p === "/invalid.yaml") {
+        return "invalid-content";
+      }
+      throw new Error("unexpected path");
+    });
+    mockYamlLoad.mockImplementation((content) => {
+      const c = content as string;
+      if (c === "valid-content") {
+        return toolFixtures["/registry/ui/diagram.yaml"];
+      }
+      if (c === "invalid-content") {
+        return { name: "partial" };
+      }
+      throw new Error("unexpected content");
+    });
+
+    const tools = await loadToolsFromFiles(["/valid.yaml", "/invalid.yaml"]);
+
+    expect(tools).toHaveLength(1);
+    expect(tools[0]?.name).toBe("diagram-generator");
   });
 });
 

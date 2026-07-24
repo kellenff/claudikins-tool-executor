@@ -252,6 +252,17 @@ export async function loadToolDefinition(filePath: string): Promise<ToolDefiniti
 }
 
 /**
+ * Load YAML tool definitions from a list of file paths concurrently, dropping any that fail to load
+ * or fail validation. Surviving entries preserve the input order.
+ */
+export const loadToolsFromFiles = async (
+  filePaths: readonly string[],
+): Promise<ToolDefinition[]> => {
+  const loaded = await Promise.all(filePaths.map((path) => loadToolDefinition(path)));
+  return loaded.filter((tool): tool is ToolDefinition => tool !== null);
+};
+
+/**
  * Resolves a registry-relative path against REGISTRY_ROOT, loads its ToolDefinition, and packages
  * it as a SearchResult. Returns null if the file cannot be loaded.
  *
@@ -338,15 +349,7 @@ async function loadAllTools(): Promise<ToolDefinition[]> {
     cwd: REGISTRY_ROOT,
     absolute: true,
   });
-
-  const tools: ToolDefinition[] = [];
-  for (const file of files) {
-    const tool = await loadToolDefinition(file);
-    if (tool) {
-      tools.push(tool);
-    }
-  }
-  return tools;
+  return loadToolsFromFiles(files);
 }
 
 /**
@@ -502,33 +505,17 @@ export async function listToolsInCategory(category: string): Promise<ToolDefinit
     cwd: categoryPath,
     absolute: true,
   });
-
-  const tools: ToolDefinition[] = [];
-  for (const file of files) {
-    const tool = await loadToolDefinition(file);
-    if (tool) {
-      tools.push(tool);
-    }
-  }
-  return tools;
+  return loadToolsFromFiles(files);
 }
 
 /** Get a specific tool by name (for full schema retrieval) */
 export async function getToolByName(toolName: string): Promise<ToolDefinition | null> {
-  // Search all YAML files in registry
   const files = await glob("**/*.{yaml,yml}", {
     cwd: REGISTRY_ROOT,
     absolute: true,
   });
-
-  for (const file of files) {
-    const tool = await loadToolDefinition(file);
-    if (tool && tool.name === toolName) {
-      return tool;
-    }
-  }
-
-  return null;
+  const tools = await loadToolsFromFiles(files);
+  return tools.find((tool) => tool.name === toolName) ?? null;
 }
 
 /** Disconnect the registry Serena client (for cleanup) */

@@ -114,6 +114,11 @@ declare const dedupePaths: (paths: string[]) => string[];
 /** Load a tool definition from a YAML file */
 declare function loadToolDefinition(filePath: string): Promise<ToolDefinition | null>;
 /**
+ * Load YAML tool definitions from a list of file paths concurrently, dropping any that fail to load
+ * or fail validation. Surviving entries preserve the input order.
+ */
+declare const loadToolsFromFiles: (filePaths: readonly string[]) => Promise<ToolDefinition[]>;
+/**
  * Searches for tools matching the given query, with pagination support.
  *
  * Attempts semantic search first and falls back to text-based search if unavailable or no matches
@@ -135,4 +140,4 @@ declare function getToolByName(toolName: string): Promise<ToolDefinition | null>
 /** Disconnect the registry Serena client (for cleanup) */
 declare function disconnectRegistrySerena(): Promise<void>;
 
-export { type SearchResponse, type SearchResult, buildLookaheadPattern, buildSerenaTransportSpec, connectRegistrySerena, dedupePaths, disconnectRegistrySerena, escapeRegexTerm, extractRegistryPaths, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, searchTools, tokenizeQuery };
+export { type SearchResponse, type SearchResult, buildLookaheadPattern, buildSerenaTransportSpec, connectRegistrySerena, dedupePaths, disconnectRegistrySerena, escapeRegexTerm, extractRegistryPaths, getCategories, getToolByName, listToolsInCategory, loadToolDefinition, loadToolsFromFiles, searchTools, tokenizeQuery };
