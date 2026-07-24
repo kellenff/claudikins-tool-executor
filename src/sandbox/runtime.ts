@@ -259,9 +259,9 @@ function buildSandboxGlobals(mockConsole: MockConsole): SandboxGlobals {
 }
 
 /**
- * Prepared sandbox state: the AsyncFunction to invoke, its globals, and the
- * mock console that captures logs. Built synchronously so the Layer can split
- * setup (sync) from eval (async Effect.tryPromise).
+ * Prepared sandbox state: the AsyncFunction to invoke, its globals, and the mock console that
+ * captures logs. Built synchronously so the Layer can split setup (sync) from eval (async
+ * Effect.tryPromise).
  */
 export interface PreparedSandbox {
   readonly fn: (...args: unknown[]) => Promise<unknown>;
@@ -270,8 +270,8 @@ export interface PreparedSandbox {
 }
 
 /**
- * Build the AsyncFunction + globals for a piece of code without running it.
- * Pure sync; lets the Effect layer acquire Clients/Workspace before eval.
+ * Build the AsyncFunction + globals for a piece of code without running it. Pure sync; lets the
+ * Effect layer acquire Clients/Workspace before eval.
  */
 export function prepareSandboxCode(code: string): PreparedSandbox {
   const { console: mockConsole, logs } = createMockConsole();
@@ -286,9 +286,9 @@ export function prepareSandboxCode(code: string): PreparedSandbox {
 }
 
 /**
- * Run a prepared sandbox with a timeout. The only impurity in the sandbox
- * pipeline: AsyncFunction invocation. Errors include the timeout message —
- * callers can match on the message text to map to SandboxTimeout.
+ * Run a prepared sandbox with a timeout. The only impurity in the sandbox pipeline: AsyncFunction
+ * invocation. Errors include the timeout message — callers can match on the message text to map to
+ * SandboxTimeout.
  */
 export async function invokeSandboxedCode(
   prepared: PreparedSandbox,
@@ -298,10 +298,7 @@ export async function invokeSandboxedCode(
     const result = await Promise.race([
       prepared.fn(...prepared.globalValues),
       new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`Execution timed out after ${timeout}ms`)),
-          timeout,
-        ),
+        setTimeout(() => reject(new Error(`Execution timed out after ${timeout}ms`)), timeout),
       ),
     ]);
 

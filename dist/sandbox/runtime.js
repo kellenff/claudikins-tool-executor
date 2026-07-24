@@ -1,2 +1,2 @@
-export{a as executeCode,b as getAvailableClientNames,c as getSandboxClientBindings}from'../chunk-ZBLIAMPM.js';import'../chunk-IBKFI3SY.js';import'../chunk-3NTYOWX5.js';import'../chunk-J3LZVY42.js';import'../chunk-BLPALQLO.js';//# sourceMappingURL=runtime.js.map
+export{c as executeCode,d as getAvailableClientNames,e as getSandboxClientBindings,b as invokeSandboxedCode,a as prepareSandboxCode}from'../chunk-UQSGICPU.js';import'../chunk-NLHCLLH7.js';import'../chunk-VWBXAODI.js';import'../chunk-J3LZVY42.js';import'../chunk-BLPALQLO.js';//# sourceMappingURL=runtime.js.map
 //# sourceMappingURL=runtime.js.map

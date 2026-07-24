@@ -60,10 +60,9 @@ const ToolSchemaLive: Layer.Layer<ToolSchema> = Layer.succeed(ToolSchema, {
 });
 
 /**
- * Wrap sandbox execution. Sync prep builds the AsyncFunction + globals;
- * only the eval invocation goes through Effect.tryPromise. Acquires Clients
- * and Workspace from Tags to satisfy the dep requirement (and so future
- * refactors can route prep through them).
+ * Wrap sandbox execution. Sync prep builds the AsyncFunction + globals; only the eval invocation
+ * goes through Effect.tryPromise. Acquires Clients and Workspace from Tags to satisfy the dep
+ * requirement (and so future refactors can route prep through them).
  */
 export const SandboxLive: Layer.Layer<Sandbox, never, Clients | Workspace> = Layer.effect(
   Sandbox,
@@ -103,7 +102,5 @@ export const AppLive = Layer.mergeAll(
   SearchLive,
   ToolSchemaLive,
   WorkspaceLive,
-  SandboxLive.pipe(
-    Layer.provide(Layer.mergeAll(ClientsLive, WorkspaceLive)),
-  ),
+  SandboxLive.pipe(Layer.provide(Layer.mergeAll(ClientsLive, WorkspaceLive))),
 );

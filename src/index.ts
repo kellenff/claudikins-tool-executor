@@ -124,7 +124,10 @@ Results are summarised if console.log output exceeds ${MAX_LOG_CHARS} chars.`,
   handleExecuteCode as unknown as Parameters<typeof server.registerTool>[2],
 );
 
-/** Graceful shutdown: dispose the ManagedRuntime so Layers' finalizers run (disconnect MCP clients, clear timers). */
+/**
+ * Graceful shutdown: dispose the ManagedRuntime so Layers' finalizers run (disconnect MCP clients,
+ * clear timers).
+ */
 let shuttingDown = false;
 async function shutdown(message: string): Promise<void> {
   if (shuttingDown) {
