@@ -240,3 +240,48 @@ describe("cli helpers", () => {
     rmSync(rootDir, { recursive: true, force: true });
   });
 });
+
+describe("findExecutable", () => {
+  it("returns false when pathDirs is empty", () => {
+    expect(cli.findExecutable("foo", [], [""], () => true)).toBe(false);
+  });
+
+  it("returns false when no candidate exists", () => {
+    expect(cli.findExecutable("foo", ["/a", "/b"], [""], () => false)).toBe(false);
+  });
+
+  it("returns true on the first match and skips later directories", () => {
+    const calls: string[] = [];
+    const result = cli.findExecutable("foo", ["/a", "/b"], [""], (candidate) => {
+      calls.push(candidate);
+      return candidate === "/a/foo";
+    });
+
+    expect(result).toBe(true);
+    expect(calls).toEqual(["/a/foo"]);
+  });
+
+  it("builds each candidate as join(dir, command + ext) in (dir, ext) order", () => {
+    const calls: string[] = [];
+    cli.findExecutable("foo", ["/a"], [".exe", ".bat"], (candidate) => {
+      calls.push(candidate);
+      return false;
+    });
+
+    expect(calls).toEqual(["/a/foo.exe", "/a/foo.bat"]);
+  });
+
+  it("strips surrounding single or double quotes from PATH entries", () => {
+    const calls: string[] = [];
+    cli.findExecutable("foo", ['"/a"', "'/b'"], [""], (candidate) => {
+      calls.push(candidate);
+      return false;
+    });
+
+    expect(calls).toEqual(["/a/foo", "/b/foo"]);
+  });
+
+  it("skips PATH entries that are empty after quote-stripping", () => {
+    expect(cli.findExecutable("foo", ['""'], [""], () => true)).toBe(false);
+  });
+});

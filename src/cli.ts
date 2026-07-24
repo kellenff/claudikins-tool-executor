@@ -22,6 +22,35 @@ function hasExecutable(pathToCheck: string): boolean {
   }
 }
 
+/**
+ * Pure: scan `pathDirs` (PATH-style directories) for an executable matching `command + ext`.
+ * Returns true on the first candidate that `exists` accepts. PATH entries are stripped of
+ * surrounding single/double quotes; empty entries (after stripping) are skipped.
+ *
+ * IO contract: delegates the existence check to the caller-supplied `exists` function — no
+ * filesystem, process, or env reads happen inside this function.
+ */
+export function findExecutable(
+  command: string,
+  pathDirs: readonly string[],
+  pathExtensions: readonly string[],
+  exists: (candidate: string) => boolean,
+): boolean {
+  for (const pathDir of pathDirs) {
+    const cleanDir = pathDir.replace(/^["']|["']$/g, "");
+    if (!cleanDir) {
+      continue;
+    }
+    for (const ext of pathExtensions) {
+      const candidate = join(cleanDir, `${command}${ext}`);
+      if (exists(candidate)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function isCommandAvailable(command: string): boolean {
   const commandHasExtension = process.platform === "win32" && Boolean(extname(command));
   const pathExtensions =
@@ -34,20 +63,7 @@ function isCommandAvailable(command: string): boolean {
     return hasExecutable(command);
   }
 
-  for (const pathDir of pathDirs) {
-    const cleanDir = pathDir.replace(/^["']|["']$/g, "");
-    for (const ext of pathExtensions) {
-      if (!cleanDir) {
-        continue;
-      }
-
-      if (hasExecutable(join(cleanDir, `${command}${ext}`))) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  return findExecutable(command, pathDirs, pathExtensions, hasExecutable);
 }
 
 function checkCommand(command: string, label: string, hint?: string): void {
