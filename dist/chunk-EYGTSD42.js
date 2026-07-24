@@ -1,0 +1,2 @@
+import {a}from'./chunk-ZBLIAMPM.js';import {Effect}from'effect';var u=e=>Effect.gen(function*(){let t=yield*Effect.tryPromise({try:()=>a(e.code,e.timeout),catch:n=>n});return {content:[{type:"text",text:JSON.stringify(t,null,2)}],structuredContent:{...t},isError:!!t.error}});async function i(e){return Effect.runPromise(u(e))}export{u as a,i as b};//# sourceMappingURL=chunk-EYGTSD42.js.map
+//# sourceMappingURL=chunk-EYGTSD42.js.map
