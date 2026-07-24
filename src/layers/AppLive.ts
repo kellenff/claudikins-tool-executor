@@ -12,7 +12,9 @@ import type { ExecuteCodeInput, GetToolSchemaInput, SearchToolsInput } from "../
 import type { SearchResponse } from "../search.js";
 import { EXECUTE_CODE_DEFAULT_TIMEOUT_MS } from "../constants.js";
 
+import type { Clients, Workspace } from "./services.js";
 import { AppConfig, Sandbox, Search, ToolSchema } from "./services.js";
+import { ClientsLive, WorkspaceLive } from "./SandboxLayer.js";
 
 /** Empty config fallback when no user config files exist on disk. */
 const EMPTY_CONFIG: ConfigLoadResult = { servers: [], sources: [] };
@@ -89,9 +91,12 @@ const SandboxLive: Layer.Layer<Sandbox> = Layer.succeed(Sandbox, {
 });
 
 /** Composed app layer. Behavior-preserving: each tag delegates to current sync/async APIs. */
-export const AppLive: Layer.Layer<AppConfig | Sandbox | Search | ToolSchema> = Layer.mergeAll(
-  AppConfigLive,
-  SandboxLive,
-  SearchLive,
-  ToolSchemaLive,
-);
+export const AppLive: Layer.Layer<AppConfig | Clients | Sandbox | Search | ToolSchema | Workspace> =
+  Layer.mergeAll(
+    AppConfigLive,
+    ClientsLive,
+    SandboxLive,
+    SearchLive,
+    ToolSchemaLive,
+    WorkspaceLive,
+  );
