@@ -277,3 +277,4 @@ Temporary Items
 .apdisk
 
 /.rag/lancedb/chunks.lance/
+.worktrees/
