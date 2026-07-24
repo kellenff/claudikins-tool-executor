@@ -2,88 +2,116 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use snowball:subagent-driven-development (recommended) or snowball:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Restore Zod as the MCP tool-input SoT with `registerTool`, add a Zod → `effect.Schema` adapter, keep config on native `effect.Schema`, and migrate the app to Effect programs + Layers + `ManagedRuntime` in four mergeable phases.
+**Goal:** Revert the declined Effect-Schema-SoT implementation on this branch, then implement Effect FP from that clean Zod baseline: Zod tool inputs + `registerTool`, Zod→`effect.Schema` adapter, config on native `effect.Schema`, Layers + `ManagedRuntime`.
 
-**Architecture:** Zod schemas feed `McpServer.registerTool`. `schemaFromZod` wraps each Zod schema so Effect decode runs the full Zod pipeline. Config stays Effect Schema. Process I/O lives in `AppLive` behind `ManagedRuntime`; handlers call `runtime.runPromise`. Sandbox eval stays `Effect.tryPromise(AsyncFunction)`.
+**Architecture:** **Do not migrate forward from the declined port.** Task 1 hard-resets implementation files to pre-port git state. Then build greenfield: Zod SoT for MCP tools → `schemaFromZod` → Effect programs; config ported Zod→Effect Schema; `AppLive` + `ManagedRuntime`; sandbox eval via `Effect.tryPromise(AsyncFunction)`.
 
-**Tech Stack:** TypeScript ESM, Vitest, `effect@4.0.0-beta.101`, `zod@4.4.3` (pinned, no `^`), `@effect/platform-node` (pinned to Effect 4 beta line; FileSystem/Path live in `effect` itself — do **not** add legacy `@effect/platform` or `@effect/schema`).
+**Tech Stack:** TypeScript ESM, Vitest, `effect@4.0.0-beta.101`, `zod@4.4.3` (pinned, no `^`), `@effect/platform-node` (Effect 4 beta line; FileSystem/Path from `effect` — **not** `@effect/platform` or `@effect/schema`).
 
 **Spec:** `docs/snowball/specs/2026-07-24-effect-fp-zod-adapter-design.md`
+
+**Pre-port baseline commit:** `2c3b930a058e6dda74be0e251d863a2607f4b2e6` (parent of `c967d3072` “chore: add effect Schema dependency”; Zod + `registerTool`, no `effect`, no `register-tools.ts`).
 
 ## File Structure
 
 | File | Action | Phase | Responsibility |
 | --- | --- | --- | --- |
-| `package.json` / `yarn.lock` | Modify | 1, 3 | Re-add `zod`; later add `@effect/platform-node` (+ `@effect/vitest` if used) |
-| `src/zod-effect.ts` | Create | 1 | `schemaFromZod` adapter |
-| `src/zod-effect.test.ts` | Create | 1 | Adapter decode/idempotency/refine tests |
-| `src/schemas.ts` | Modify | 1 | Zod SoT + adapted Effect schemas + `parse*` via adapter |
-| `src/schemas.test.ts` | Modify | 1 | Zod `.shape` descriptions + `parse*` / adapter decode |
-| `src/index.ts` | Modify | 1, 4 | Restore `registerTool`; later runtime lifecycle |
-| `src/index.test.ts` | Modify | 1, 4 | Mock `registerTool` instead of `registerEffectTools` |
-| `src/register-tools.ts` | Delete | 1 | Declined custom registrar |
-| `src/register-tools.test.ts` | Delete | 1 | Goes with registrar |
-| `src/errors.ts` | Create | 2 | Shared `Data.TaggedError` types |
-| `src/config.ts` | Modify | 2, 3 | Effect decode helpers; later platform FS load |
-| `src/tools/*.ts` | Modify | 2–3 | Effect handlers |
-| `src/search.ts` | Modify | 2–3 | Effect search behind Tag |
-| `src/sandbox/*.ts` | Modify | 3 | Layers + tryPromise eval |
-| `src/layers/*.ts` | Create | 3 | Domain Tags + `AppLive` |
-| `src/runtime.ts` | Create | 3 | `ManagedRuntime` factory |
-| `src/cli.ts` | Modify | 4 | Effect CLI actions |
+| `package.json` / `yarn.lock` | Revert then modify | 0–1, 3 | Restore pre-port deps; pin `zod`; add `effect` / later `@effect/platform-node` |
+| `src/schemas.ts` / `schemas.test.ts` | Revert then modify | 0–1 | Zod tool schemas; then export adapted Effect schemas |
+| `src/config.ts` / `config.test.ts` | Revert then modify | 0, 2 | Start Zod; port to native `effect.Schema` in Phase 2 |
+| `src/index.ts` / `index.test.ts` | Revert then modify | 0, 4 | Zod `registerTool` baseline; later runtime lifecycle |
+| `src/register-tools.ts` (+ test) | Delete (via revert) | 0 | Must not exist after Task 1 |
+| `dist/**` | Rebuild | 0 | After revert, `yarn build` — do not hand-merge declined dist |
+| `src/zod-effect.ts` (+ test) | Create | 1 | `schemaFromZod` |
+| `src/errors.ts` (+ test) | Create | 2 | Tagged errors |
+| `src/tools/*`, `src/search.ts`, `src/sandbox/*` | Modify | 2–3 | Effectify |
+| `src/layers/*`, `src/runtime.ts` | Create | 3 | Tags + `AppLive` + `ManagedRuntime` |
+| `src/cli.ts` | Modify | 4 | Effect CLI |
+| `docs/snowball/specs/2026-07-24-*` / `plans/2026-07-24-*` | Keep | — | New design/plan — **do not revert** |
 
 ## Implementation Notes (read first)
 
-1. **Baseline:** This branch may still contain the declined Effect-Schema-SoT port. Phase 1 intentionally restores Zod + `registerTool` and deletes `register-tools.ts`.
-2. **Pins:** No `^` on new deps. Prefer `zod: "4.4.3"` (matches current lockfile transitive). Keep `effect: "4.0.0-beta.101"`. Pin `@effect/platform-node` to the same beta line (probe npm for `4.0.0-beta.101` or nearest published; vendored tree shows `4.0.0-beta.100`).
-3. **Effect 4 platform:** `FileSystem` / `Path` import from `"effect"`. Node live layer from `@effect/platform-node` (`NodeFileSystem.layer`). There is **no** separate `@effect/platform` package on this Effect line.
-4. **Adapter:** Prefer community Effect4+Zod4 → `effect.Schema` bridge if found and peer-compatible; otherwise use in-repo `Schema.declareConstructor` that calls `zod.safeParse` (full pipeline). Never pass adapted schemas to `registerTool`.
-5. **Double decode:** SDK validates with Zod; Effect entry re-decodes via adapter. Schemas must be idempotent (defaults/strictness).
-6. **Do not add** `@effect/schema`.
-7. **Lint:** `yarn fix` on touched files before commit; explicit return types; `.js` import extensions.
+1. **Start from scratch via revert:** Task 1 restores implementation to `2c3b930a`. Do **not** incrementally undo Effect Schema types in place. Keep the 2026-07-24 design/plan commits; discard declined port *code*.
+2. **After Task 1:** Zod tool + config schemas, `registerTool`, no `effect`, no `register-tools.ts`. All later tasks assume that baseline.
+3. **Pins:** No `^` on new/changed deps. After revert, replace `"zod": "^4.3.5"` with `"zod": "4.4.3"`. Add `"effect": "4.0.0-beta.101"`. Pin `@effect/platform-node` to the same beta line.
+4. **Effect 4 platform:** `FileSystem` / `Path` from `"effect"`; Node layer from `@effect/platform-node`. No `@effect/platform`, no `@effect/schema`.
+5. **Adapter:** Community Effect4+Zod4 → `effect.Schema` if peer-compatible; else in-repo `Schema.declareConstructor` + `zod.safeParse`. Never pass adapted schemas to `registerTool`.
+6. **Double decode:** SDK Zod + Effect adapter re-decode; must be idempotent.
+7. **Lint:** `yarn fix` on touched files; explicit return types; `.js` import extensions.
 
 ---
 
-# Phase 1 — MCP edge restore + adapter
+# Phase 0 — Revert declined port (implementation only)
 
-### Task 1: Re-add pinned `zod`
+### Task 1: Hard-reset implementation files to pre-port baseline
 
 **Files:**
-- Modify: `package.json`
-- Modify: `yarn.lock` (via yarn)
+- Restore from `2c3b930a`: `package.json`, `yarn.lock`, `src/schemas.ts`, `src/schemas.test.ts`, `src/config.ts`, `src/config.test.ts`, `src/index.ts`, `src/index.test.ts`, and any other `src/**` / `dist/**` touched only by the declined port commits (`c967d3072`..`41c8021e9`)
+- Delete if present: `src/register-tools.ts`, `src/register-tools.test.ts`
+- **Do not** revert: `docs/snowball/specs/2026-07-24-effect-fp-zod-adapter-design.md`, `docs/snowball/plans/2026-07-24-effect-fp-zod-adapter.md`
 
-- [ ] **Step 1: Edit `package.json` dependencies**
-
-Add under `dependencies` (keep `"effect": "4.0.0-beta.101"`):
-
-```json
-"zod": "4.4.3"
-```
-
-Do not use `^`. Do not remove `effect`.
-
-- [ ] **Step 2: Install**
-
-Run: `yarn install`
-
-Expected: lockfile updates; `zod@4.4.3` resolvable from this package.
-
-- [ ] **Step 3: Sanity-check import**
+- [ ] **Step 1: Identify declined-port paths**
 
 Run:
 
 ```bash
-node --input-type=module -e 'import { z } from "zod"; console.log(typeof z.object, z.version ?? "ok");'
+git diff --name-only 2c3b930a..41c8021e9 -- package.json yarn.lock src dist
 ```
 
-Expected: `function` and a version/ok print; exit 0.
+Expected: lists the Effect Schema port files (schemas, config, index, register-tools, package/lock, dist). Note paths for checkout.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 2: Restore implementation from baseline**
 
 ```bash
-git add package.json yarn.lock
+git checkout 2c3b930a -- package.json yarn.lock src/
+rm -f src/register-tools.ts src/register-tools.test.ts
+```
+
+If `dist/` is tracked and was changed by the port:
+
+```bash
+git checkout 2c3b930a -- dist/
+```
+
+Or delete generated artifacts and rebuild in Step 4.
+
+Confirm new docs remain:
+
+```bash
+test -f docs/snowball/specs/2026-07-24-effect-fp-zod-adapter-design.md
+test -f docs/snowball/plans/2026-07-24-effect-fp-zod-adapter.md
+```
+
+- [ ] **Step 3: Install + sanity**
+
+```bash
+yarn install
+node --input-type=module -e 'import { z } from "zod"; console.log("zod", typeof z.object); import("effect").then(() => console.log("effect SHOULD NOT resolve")).catch(() => console.log("effect absent ok"))'
+rg -n "registerEffectTools|register-tools|from \"effect\"" src || true
+```
+
+Expected: Zod works; `effect` not a direct app dependency yet; no `registerEffectTools` / `from "effect"` under `src/`.
+
+- [ ] **Step 4: Rebuild dist if needed; unit gate**
+
+```bash
+yarn build
+yarn test:unit
+yarn tchk
+```
+
+Expected: PASS on the restored Zod/`registerTool` codebase.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add -A package.json yarn.lock src dist
+git status   # confirm 2026-07-24 design/plan docs are NOT deleted
 git commit -m "$(cat <<'EOF'
-chore: re-add pinned zod for MCP registerTool
+revert: restore pre-Effect-Schema-port implementation baseline
+
+Discard the declined Zod→Effect Schema SoT port (register-tools, Effect
+tool schemas). Keep 2026-07-24 Effect FP + Zod adapter design/plan docs.
 
 EOF
 )"
@@ -91,7 +119,49 @@ EOF
 
 ---
 
-### Task 2: Red — adapter tests
+# Phase 1 — Add Effect + Zod→Schema adapter (from clean baseline)
+
+### Task 2: Pin `zod` and add `effect`
+
+**Files:**
+- Modify: `package.json`
+- Modify: `yarn.lock` (via yarn)
+
+- [ ] **Step 1: Edit dependencies**
+
+In `package.json` `dependencies`:
+
+- Change `"zod": "^4.3.5"` → `"zod": "4.4.3"` (no caret)
+- Add `"effect": "4.0.0-beta.101"`
+
+- [ ] **Step 2: Install**
+
+Run: `yarn install`
+
+Expected: both packages resolve; lockfile updated.
+
+- [ ] **Step 3: Sanity-check**
+
+```bash
+node --input-type=module -e 'import { z } from "zod"; import { Schema } from "effect"; console.log(typeof z.object, typeof Schema.declareConstructor, typeof Schema.decodeUnknownEffect);'
+```
+
+Expected: `function function function`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add package.json yarn.lock
+git commit -m "$(cat <<'EOF'
+chore: pin zod 4.4.3 and add effect for Schema adapter
+
+EOF
+)"
+```
+
+---
+
+### Task 3: Red — adapter tests
 
 **Files:**
 - Create: `src/zod-effect.test.ts`
@@ -175,7 +245,7 @@ EOF
 
 ---
 
-### Task 3: Green — implement `schemaFromZod`
+### Task 4: Green — implement `schemaFromZod`
 
 **Files:**
 - Create: `src/zod-effect.ts`
@@ -260,205 +330,77 @@ EOF
 
 ---
 
-### Task 4: Restore Zod tool schemas
+### Task 5: Export Effect adapters from existing Zod tool schemas
 
 **Files:**
 - Modify: `src/schemas.ts`
 - Modify: `src/schemas.test.ts`
 
-- [ ] **Step 1: Rewrite `src/schemas.ts`**
+After Task 1, `schemas.ts` is already the pre-port Zod SoT. Do **not** rewrite the Zod objects — only add adapter exports and keep `.parse` behavior.
 
-Replace file contents with:
+- [ ] **Step 1: Extend `src/schemas.ts`**
+
+Add imports and Effect schema exports (keep existing Zod definitions and `z.infer` types unchanged):
 
 ```typescript
-import { z } from "zod";
-
-import {
-  EXECUTE_CODE_DEFAULT_TIMEOUT_MS,
-  EXECUTE_CODE_MAX_TIMEOUT_MS,
-  EXECUTE_CODE_MIN_TIMEOUT_MS,
-  SEARCH_TOOLS_DEFAULT_LIMIT,
-  SEARCH_TOOLS_MAX_LIMIT,
-} from "./constants.js";
 import { decodeZodSync, schemaFromZod } from "./zod-effect.js";
 
-/** Input schema for search_tools (Zod SoT for MCP registerTool) */
-export const SearchToolsInputSchema = z
-  .object({
-    query: z
-      .string()
-      .min(1, "Query cannot be empty")
-      .describe("Search query for finding relevant tools"),
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(SEARCH_TOOLS_MAX_LIMIT)
-      .default(SEARCH_TOOLS_DEFAULT_LIMIT)
-      .describe(`Maximum results to return (default: ${SEARCH_TOOLS_DEFAULT_LIMIT})`),
-    offset: z
-      .number()
-      .int()
-      .min(0)
-      .default(0)
-      .describe("Number of results to skip for pagination (default: 0)"),
-  })
-  .strict();
-
-export type SearchToolsInput = z.infer<typeof SearchToolsInputSchema>;
-
+// after each Zod schema + type:
 export const SearchToolsEffectSchema = schemaFromZod(SearchToolsInputSchema);
+export const GetToolSchemaEffectSchema = schemaFromZod(GetToolSchemaInputSchema);
+export const ExecuteCodeEffectSchema = schemaFromZod(ExecuteCodeInputSchema);
 
+// optional thin helpers (or call Schema.decodeUnknownSync via decodeZodSync):
 export function parseSearchToolsInput(input: unknown): SearchToolsInput {
   return decodeZodSync(SearchToolsInputSchema, input);
 }
-
-/** Input schema for get_tool_schema */
-export const GetToolSchemaInputSchema = z
-  .object({
-    name: z
-      .string()
-      .min(1, "Tool name cannot be empty")
-      .describe("Tool name (from search_tools results)"),
-  })
-  .strict();
-
-export type GetToolSchemaInput = z.infer<typeof GetToolSchemaInputSchema>;
-
-export const GetToolSchemaEffectSchema = schemaFromZod(GetToolSchemaInputSchema);
-
 export function parseGetToolSchemaInput(input: unknown): GetToolSchemaInput {
   return decodeZodSync(GetToolSchemaInputSchema, input);
 }
-
-/** Input schema for execute_code */
-export const ExecuteCodeInputSchema = z
-  .object({
-    code: z
-      .string()
-      .min(1, "Code cannot be empty")
-      .describe("TypeScript/JavaScript code to execute"),
-    timeout: z
-      .number()
-      .int()
-      .min(EXECUTE_CODE_MIN_TIMEOUT_MS)
-      .max(EXECUTE_CODE_MAX_TIMEOUT_MS)
-      .default(EXECUTE_CODE_DEFAULT_TIMEOUT_MS)
-      .describe(`Execution timeout in ms (default: ${EXECUTE_CODE_DEFAULT_TIMEOUT_MS})`),
-  })
-  .strict();
-
-export type ExecuteCodeInput = z.infer<typeof ExecuteCodeInputSchema>;
-
-export const ExecuteCodeEffectSchema = schemaFromZod(ExecuteCodeInputSchema);
-
 export function parseExecuteCodeInput(input: unknown): ExecuteCodeInput {
   return decodeZodSync(ExecuteCodeInputSchema, input);
 }
 ```
 
-- [ ] **Step 2: Restore Zod-oriented `src/schemas.test.ts`**
+If the baseline already uses `SearchToolsInputSchema.parse` at call sites, either keep using `.parse` directly **or** switch call sites to `parse*` in the same PR — prefer keeping `.parse` in tests that assert Zod `.shape` and add `parse*` only if useful for Effect edges.
 
-Replace with:
+- [ ] **Step 2: Extend `src/schemas.test.ts`**
+
+Keep existing Zod `.parse` / `.shape.description` cases. Append:
 
 ```typescript
-import { describe, expect, it } from "vitest";
 import { Effect, Schema } from "effect";
-
 import {
   ExecuteCodeEffectSchema,
-  ExecuteCodeInputSchema,
   GetToolSchemaEffectSchema,
-  GetToolSchemaInputSchema,
-  parseExecuteCodeInput,
-  parseGetToolSchemaInput,
-  parseSearchToolsInput,
   SearchToolsEffectSchema,
   SearchToolsInputSchema,
+  GetToolSchemaInputSchema,
+  ExecuteCodeInputSchema,
 } from "./schemas.js";
 
-describe("schemas", () => {
-  it("applies defaults for search tools input", () => {
-    const parsed = parseSearchToolsInput({ query: "diagram" });
-    expect(parsed).toMatchObject({
-      query: "diagram",
-      limit: 5,
-      offset: 0,
-    });
-  });
+it("adapted Effect schemas match Zod.parse", async () => {
+  const rawSearch = { query: "x" };
+  const search = await Effect.runPromise(
+    Schema.decodeUnknownEffect(SearchToolsEffectSchema)(rawSearch),
+  );
+  expect(search).toEqual(SearchToolsInputSchema.parse(rawSearch));
 
-  it("validates search tools input", () => {
-    expect(() => parseSearchToolsInput({ query: "" })).toThrow();
-    expect(() => parseSearchToolsInput({ query: "ok", limit: 0 })).toThrow();
-    expect(() => parseSearchToolsInput({ query: "ok", limit: 51 })).toThrow();
-    expect(() => parseSearchToolsInput({ query: "ok", limit: 1.5 })).toThrow();
-    expect(() => parseSearchToolsInput({ query: "ok", offset: -1 })).toThrow();
-    expect(() => parseSearchToolsInput({ query: "ok", extra: true })).toThrow();
-    expect(parseSearchToolsInput({ query: "ok", limit: 50, offset: 2 })).toEqual({
-      query: "ok",
-      limit: 50,
-      offset: 2,
-    });
-    expect(SearchToolsInputSchema.shape.query.description).toBe(
-      "Search query for finding relevant tools",
-    );
-    expect(SearchToolsInputSchema.shape.limit.description).toBe(
-      "Maximum results to return (default: 5)",
-    );
-    expect(SearchToolsInputSchema.shape.offset.description).toBe(
-      "Number of results to skip for pagination (default: 0)",
-    );
-  });
+  const rawTool = { name: "t" };
+  const tool = await Effect.runPromise(
+    Schema.decodeUnknownEffect(GetToolSchemaEffectSchema)(rawTool),
+  );
+  expect(tool).toEqual(GetToolSchemaInputSchema.parse(rawTool));
 
-  it("validates get tool schema input", () => {
-    expect(() => parseGetToolSchemaInput({ name: "" })).toThrow();
-    expect(() => parseGetToolSchemaInput({ name: "ok" })).not.toThrow();
-    expect(() => parseGetToolSchemaInput({ name: "ok", extra: true })).toThrow();
-    expect(GetToolSchemaInputSchema.shape.name.description).toBe(
-      "Tool name (from search_tools results)",
-    );
-  });
-
-  it("applies defaults and validates execute input", () => {
-    const parsed = parseExecuteCodeInput({ code: "1 + 1" });
-    expect(parsed.timeout).toBe(30000);
-    expect(() => parseExecuteCodeInput({ code: "" })).toThrow();
-    expect(() => parseExecuteCodeInput({ code: "1+1", timeout: 10 })).toThrow();
-    expect(() => parseExecuteCodeInput({ code: "1+1", timeout: 600001 })).toThrow();
-    expect(() => parseExecuteCodeInput({ code: "1+1", timeout: 1000.5 })).toThrow();
-    expect(() => parseExecuteCodeInput({ code: "1+1", timeout: 1000, extra: true })).toThrow();
-    expect(parseExecuteCodeInput({ code: "1+1", timeout: 1000 })).toEqual({
-      code: "1+1",
-      timeout: 1000,
-    });
-    expect(ExecuteCodeInputSchema.shape.code.description).toBe(
-      "TypeScript/JavaScript code to execute",
-    );
-    expect(ExecuteCodeInputSchema.shape.timeout.description).toBe(
-      "Execution timeout in ms (default: 30000)",
-    );
-  });
-
-  it("adapted Effect schemas match parse helpers", async () => {
-    const search = await Effect.runPromise(
-      Schema.decodeUnknownEffect(SearchToolsEffectSchema)({ query: "x" }),
-    );
-    expect(search).toEqual(parseSearchToolsInput({ query: "x" }));
-
-    const tool = await Effect.runPromise(
-      Schema.decodeUnknownEffect(GetToolSchemaEffectSchema)({ name: "t" }),
-    );
-    expect(tool).toEqual(parseGetToolSchemaInput({ name: "t" }));
-
-    const exec = await Effect.runPromise(
-      Schema.decodeUnknownEffect(ExecuteCodeEffectSchema)({ code: "1" }),
-    );
-    expect(exec).toEqual(parseExecuteCodeInput({ code: "1" }));
-  });
+  const rawExec = { code: "1" };
+  const exec = await Effect.runPromise(
+    Schema.decodeUnknownEffect(ExecuteCodeEffectSchema)(rawExec),
+  );
+  expect(exec).toEqual(ExecuteCodeInputSchema.parse(rawExec));
 });
 ```
 
-- [ ] **Step 3: Run schema tests**
+- [ ] **Step 3: Run tests**
 
 Run: `yarn vitest run src/schemas.test.ts src/zod-effect.test.ts`
 
@@ -469,174 +411,7 @@ Expected: PASS.
 ```bash
 git add src/schemas.ts src/schemas.test.ts
 git commit -m "$(cat <<'EOF'
-feat(schemas): restore Zod SoT and export Effect adapters
-
-EOF
-)"
-```
-
----
-
-### Task 5: Restore `registerTool`; delete custom registrar
-
-**Files:**
-- Modify: `src/index.ts`
-- Modify: `src/index.test.ts`
-- Delete: `src/register-tools.ts`
-- Delete: `src/register-tools.test.ts`
-
-- [ ] **Step 1: Update `src/index.test.ts` mocks**
-
-Replace the schemas + register-tools mocks and assertions to expect `registerTool` on `McpServer`:
-
-```typescript
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-const registerTool = vi.fn();
-const mcpServerConstructor = vi.fn();
-const startLifecycleManagement = vi.fn();
-const getAvailableClientNames = vi.fn().mockReturnValue(["serena", "gemini"]);
-const getSandboxClientBindings = vi.fn().mockReturnValue(["serena", "gemini"]);
-const connect = vi.fn().mockResolvedValue(undefined);
-const dotenvConfig = vi.fn();
-const stdioConstructor = vi.fn();
-
-vi.mock("dotenv", () => ({
-  default: {
-    config: dotenvConfig,
-  },
-}));
-
-vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
-  McpServer: class {
-    registerTool = registerTool;
-    connect = connect;
-
-    constructor(options: unknown) {
-      mcpServerConstructor(options);
-    }
-  },
-}));
-
-vi.mock("@modelcontextprotocol/sdk/server/stdio.js", async () => {
-  const actual = await vi.importActual("@modelcontextprotocol/sdk/server/stdio.js");
-  return {
-    ...(actual as Record<string, unknown>),
-    StdioServerTransport: class {
-      type = "stdio-transport";
-      constructor() {
-        stdioConstructor();
-      }
-    },
-  };
-});
-
-vi.mock("./schemas.js", () => ({
-  SearchToolsInputSchema: { _zod: "search" },
-  GetToolSchemaInputSchema: { _zod: "schema" },
-  ExecuteCodeInputSchema: { _zod: "execute" },
-}));
-
-vi.mock("./tools/index.js", () => ({
-  handleSearchTools: vi.fn(),
-  handleGetToolSchema: vi.fn(),
-  handleExecuteCode: vi.fn(),
-}));
-
-vi.mock("./sandbox/clients.js", () => ({
-  startLifecycleManagement,
-}));
-
-vi.mock("./sandbox/runtime.js", () => ({
-  getAvailableClientNames,
-  getSandboxClientBindings,
-}));
-
-describe("index", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.resetModules();
-    registerTool.mockReset();
-    mcpServerConstructor.mockReset();
-    startLifecycleManagement.mockReset();
-    getAvailableClientNames.mockReset().mockReturnValue(["serena", "gemini"]);
-    getSandboxClientBindings.mockReset().mockReturnValue(["serena", "gemini"]);
-    connect.mockReset().mockResolvedValue(undefined);
-    dotenvConfig.mockReset();
-    stdioConstructor.mockReset();
-  });
-
-  it("registers three tools with Zod inputSchema via registerTool", async () => {
-    await import("./index.js");
-    expect(registerTool).toHaveBeenCalledTimes(3);
-    const names = registerTool.mock.calls.map((call) => call[0]);
-    expect(names).toEqual(["search_tools", "get_tool_schema", "execute_code"]);
-    for (const call of registerTool.mock.calls) {
-      expect(call[1].inputSchema).toBeTruthy();
-    }
-  });
-});
-```
-
-Keep/adapt any remaining existing cases for `main`/lifecycle if present in the file after this change — do not drop coverage for `startLifecycleManagement` / `connect` if those tests already exist; update them to the `registerTool` mock style instead of deleting.
-
-- [ ] **Step 2: Rewrite `src/index.ts` tool registration**
-
-Remove `registerEffectTools` / `parse*` imports used only for the custom registrar. Restore three `server.registerTool(...)` calls with Zod schemas and existing handlers (same descriptions/annotations as current `registerEffectTools` table). Pattern:
-
-```typescript
-server.registerTool(
-  "search_tools",
-  {
-    title: "Search MCP Tools",
-    description: `...`, // keep existing description text verbatim
-    inputSchema: SearchToolsInputSchema,
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-    },
-  },
-  handleSearchTools,
-);
-```
-
-Repeat for `get_tool_schema` and `execute_code` (keep dynamic `clientList` in execute description).
-
-Leave `main()` lifecycle as-is for Phase 1.
-
-- [ ] **Step 3: Delete registrar files**
-
-```bash
-rm src/register-tools.ts src/register-tools.test.ts
-```
-
-Grep for `register-tools` / `registerEffectTools` under `src/` and fix any stragglers.
-
-- [ ] **Step 4: Run unit tests for touched surface**
-
-Run:
-
-```bash
-yarn vitest run src/schemas.test.ts src/zod-effect.test.ts src/index.test.ts
-yarn tchk
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Full unit gate**
-
-Run: `yarn test:unit`
-
-Expected: PASS (fix any fallout from deleted registrar helpers).
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add -A src/index.ts src/index.test.ts src/register-tools.ts src/register-tools.test.ts
-git commit -m "$(cat <<'EOF'
-feat(mcp): restore Zod registerTool; remove Effect registrar
+feat(schemas): export effect.Schema adapters alongside Zod SoT
 
 EOF
 )"
@@ -646,17 +421,17 @@ EOF
 
 ### Task 6: Phase 1 gate
 
-- [ ] **Step 1: Verify success criteria for Phase 1**
+- [ ] **Step 1: Verify Phase 1 criteria**
 
-- Three tools use Zod via `registerTool`
+- Implementation baseline restored (no declined registrar; Zod `registerTool` intact from Task 1)
 - `schemaFromZod` + `*EffectSchema` exports exist
-- No `register-tools.ts`
+- `effect` + pinned `zod` in `package.json`
 - No `@effect/schema`
 - `yarn test:unit` and `yarn tchk` pass
 
-- [ ] **Step 2: Commit any leftover fixups, then stop for PR if splitting phases**
+- [ ] **Step 2: Stop for PR if splitting phases**
 
-Phase 1 is mergeable on its own.
+Phase 0+1 is mergeable on its own.
 
 ---
 
@@ -735,19 +510,45 @@ EOF
 
 ---
 
-### Task 8: Config decode as Effect (keep sync FS for now)
+### Task 8: Port config Zod → native `effect.Schema`
 
 **Files:**
 - Modify: `src/config.ts`
 - Modify: `src/config.test.ts`
 
-- [ ] **Step 1: Add Effect decode helpers alongside existing sync parsers**
+After Task 1, config schemas are Zod. Spec requires **native** `effect.Schema` for config (not Zod + adapter).
 
-In `src/config.ts`, keep `ServerConfigSchema` / `ToolExecutorConfigSchema` as native Effect Schema. Add:
+- [ ] **Step 1: Red — adjust tests for Effect decode**
+
+Update `config.test.ts` assertions that call `ToolExecutorConfigSchema.parse` / `ServerConfigSchema.parse` to use sync decode helpers you will add (e.g. `parseToolExecutorConfig`). Keep behavioral cases (strict top-level, optional fields, merge fixtures).
+
+- [ ] **Step 2: Replace Zod config schemas with Effect Schema**
+
+In `src/config.ts`, remove `import { z } from "zod"`. Define:
 
 ```typescript
 import { Effect, Schema } from "effect";
 import { ConfigError } from "./errors.js";
+
+const STRICT = { onExcessProperty: "error" as const };
+
+export const ServerConfigSchema = Schema.Struct({
+  name: Schema.String.check(Schema.isNonEmpty()),
+  displayName: Schema.String.check(Schema.isNonEmpty()),
+  command: Schema.String.check(Schema.isNonEmpty()),
+  commandEnvKey: Schema.optional(Schema.String),
+  trusted: Schema.optional(Schema.Boolean),
+  args: Schema.Array(Schema.String),
+  env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+});
+
+export const ToolExecutorConfigSchema = Schema.Struct({
+  $schema: Schema.optional(Schema.String),
+  servers: Schema.Array(ServerConfigSchema),
+});
+
+export type ServerConfigFromFile = typeof ServerConfigSchema.Type;
+export type ToolExecutorConfig = typeof ToolExecutorConfigSchema.Type;
 
 export const decodeToolExecutorConfig = (
   input: unknown,
@@ -760,30 +561,31 @@ export const decodeToolExecutorConfig = (
           cause: error,
         }),
     ),
-    Effect.map((value) => value as ToolExecutorConfig),
   );
-```
 
-Keep `parseToolExecutorConfig` as:
-
-```typescript
 export function parseToolExecutorConfig(input: unknown): ToolExecutorConfig {
-  return Effect.runSync(decodeToolExecutorConfig(input));
+  return Schema.decodeUnknownSync(ToolExecutorConfigSchema, STRICT)(input);
+}
+
+export function parseServerConfig(input: unknown): ServerConfigFromFile {
+  return Schema.decodeUnknownSync(ServerConfigSchema)(input);
 }
 ```
 
-(Or `decodeUnknownSync` if `runSync` on Schema errors is awkward — preserve throw behavior for existing tests.)
+Wire `loadConfig` / `parseLayer` to call `parseToolExecutorConfig` instead of Zod `.parse`. Preserve env-expand + merge behavior.
 
-- [ ] **Step 2: Ensure `config.test.ts` still passes**
+- [ ] **Step 3: Run config tests**
 
 Run: `yarn vitest run src/config.test.ts`
 
-- [ ] **Step 3: Commit**
+Expected: PASS with parity to pre-port Zod behavior (nested server strictness may be slightly stricter under Effect — acceptable per prior port notes; document if tests need a one-line update).
+
+- [ ] **Step 4: Commit**
 
 ```bash
 git add src/config.ts src/config.test.ts
 git commit -m "$(cat <<'EOF'
-refactor(config): expose Effect decode path for ToolExecutorConfig
+feat(config): port config validation to native effect.Schema
 
 EOF
 )"
@@ -1120,9 +922,11 @@ server.registerTool("search_tools", { /* ... */ }, (args) =>
 
 | Spec requirement | Tasks |
 | --- | --- |
-| Zod SoT + `registerTool` | 1, 4, 5 |
-| `schemaFromZod` full pipeline | 2, 3 |
-| Config native Effect Schema | 8 (exists), 13 (FS) |
+| Revert declined port; start from Zod baseline | 1 |
+| Pin zod + add effect | 2 |
+| `schemaFromZod` full pipeline | 3, 4 |
+| Zod SoT + `registerTool` (via revert) + Effect schema exports | 1, 5, 6 |
+| Config native Effect Schema (from Zod baseline) | 8, then 13 (FS) |
 | Layers + ManagedRuntime | 11–15 |
 | Sandbox tryPromise eval | 14 |
 | Tagged errors | 7, 9, 13–14 |
@@ -1132,3 +936,5 @@ server.registerTool("search_tools", { /* ... */ }, (args) =>
 | Testing / parity | Embedded in each task |
 
 **Design note absorbed:** Effect 4 ships `FileSystem`/`Path` in `effect`; plan installs `@effect/platform-node` only (not `@effect/platform`).
+
+**Execution note:** Prefer landing Task 1 (revert) + Phase 1 as the first PR before Layers work.
