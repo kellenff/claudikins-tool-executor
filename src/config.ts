@@ -178,6 +178,36 @@ function parseLayer(path: string): ServerConfigFromFile[] | null {
 }
 
 /**
+ * Merge a list of parsed config layers into a single {@link ConfigLoadResult}.
+ *
+ * Each layer is either a successful parse (with a `servers` array, possibly empty) or a parse
+ * failure (`servers: null`, already logged by the caller). Later layers override earlier ones by
+ * `name`. Each surviving server is tagged with the source path of the layer that supplied it. Empty
+ * input and all-failed layers both return null.
+ */
+export function mergeLoadedLayers(
+  layers: ReadonlyArray<{
+    readonly path: string;
+    readonly servers: readonly ServerConfigFromFile[] | null;
+  }>,
+): ConfigLoadResult | null {
+  const byName = new Map<string, LoadedServer>();
+  const sources: string[] = [];
+
+  for (const layer of layers) {
+    if (layer.servers === null) {
+      continue;
+    }
+    for (const server of layer.servers) {
+      byName.set(server.name, { ...server, source: layer.path });
+    }
+    sources.push(layer.path);
+  }
+
+  return sources.length > 0 ? { servers: [...byName.values()], sources } : null;
+}
+
+/**
  * Load and merge config from all lookup layers (or from a single explicit path).
  *
  * - With no arguments: walks {@link findConfigFiles} rules and merges all hits.
@@ -197,23 +227,10 @@ export function loadConfig(configPath?: string, opts?: FindConfigOptions): Confi
   } else {
     paths = findConfigFiles(opts);
   }
-  if (paths.length === 0) {
-    return null;
-  }
+  const layers = paths.map((path) => ({
+    path,
+    servers: parseLayer(path),
+  }));
 
-  const byName = new Map<string, LoadedServer>();
-  const sources: string[] = [];
-
-  for (const path of paths) {
-    const servers = parseLayer(path);
-    if (servers === null) {
-      continue;
-    } // malformed; already logged
-    for (const server of servers) {
-      byName.set(server.name, { ...server, source: path });
-    }
-    sources.push(path);
-  }
-
-  return sources.length > 0 ? { servers: [...byName.values()], sources } : null;
+  return mergeLoadedLayers(layers);
 }

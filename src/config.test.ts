@@ -7,6 +7,7 @@ import {
   dedupeByPath,
   findConfigFiles,
   loadConfig,
+  mergeLoadedLayers,
   ServerConfigSchema,
   ToolExecutorConfigSchema,
 } from "./config.js";
@@ -78,6 +79,112 @@ describe("dedupeByPath", () => {
       { path: "/a", isExplicit: false, exists: true },
     ];
     expect(dedupeByPath(resolved)).toEqual({ paths: ["/a"], missingExplicit: null });
+  });
+});
+
+describe("mergeLoadedLayers", () => {
+  it("returns null for an empty layer list", () => {
+    expect(mergeLoadedLayers([])).toBeNull();
+  });
+
+  it("returns null when every layer failed to parse", () => {
+    const layers = [
+      { path: "/a", servers: null },
+      { path: "/b", servers: null },
+    ];
+    expect(mergeLoadedLayers(layers)).toBeNull();
+  });
+
+  it("preserves layer order when servers are disjoint across layers", () => {
+    const a = ServerConfigSchema.parse({
+      name: "a",
+      displayName: "A",
+      command: "ca",
+      args: [],
+    });
+    const b = ServerConfigSchema.parse({
+      name: "b",
+      displayName: "B",
+      command: "cb",
+      args: [],
+    });
+    const layers = [
+      { path: "/x", servers: [a] },
+      { path: "/y", servers: [b] },
+    ];
+    expect(mergeLoadedLayers(layers)).toEqual({
+      servers: [
+        { ...a, source: "/x" },
+        { ...b, source: "/y" },
+      ],
+      sources: ["/x", "/y"],
+    });
+  });
+
+  it("later layers override earlier ones by name with preserved source", () => {
+    const oldVer = ServerConfigSchema.parse({
+      name: "shared",
+      displayName: "Old",
+      command: "co",
+      args: ["--old"],
+    });
+    const newVer = ServerConfigSchema.parse({
+      name: "shared",
+      displayName: "New",
+      command: "cn",
+      args: ["--new"],
+    });
+    const other = ServerConfigSchema.parse({
+      name: "only-b",
+      displayName: "B",
+      command: "cb",
+      args: [],
+    });
+    const layers = [
+      { path: "/low", servers: [oldVer, other] },
+      { path: "/high", servers: [newVer] },
+    ];
+    const result = mergeLoadedLayers(layers);
+
+    expect(result?.sources).toEqual(["/low", "/high"]);
+    expect(result?.servers).toEqual([
+      { ...newVer, source: "/high" },
+      { ...other, source: "/low" },
+    ]);
+  });
+
+  it("skips layers that failed to parse (servers: null)", () => {
+    const a = ServerConfigSchema.parse({
+      name: "a",
+      displayName: "A",
+      command: "ca",
+      args: [],
+    });
+    const layers = [
+      { path: "/bad", servers: null },
+      { path: "/good", servers: [a] },
+    ];
+    expect(mergeLoadedLayers(layers)).toEqual({
+      servers: [{ ...a, source: "/good" }],
+      sources: ["/good"],
+    });
+  });
+
+  it("treats an empty (but successful) layer as a source but adds no servers", () => {
+    const a = ServerConfigSchema.parse({
+      name: "a",
+      displayName: "A",
+      command: "ca",
+      args: [],
+    });
+    const layers = [
+      { path: "/empty", servers: [] },
+      { path: "/has-a", servers: [a] },
+    ];
+    expect(mergeLoadedLayers(layers)).toEqual({
+      servers: [{ ...a, source: "/has-a" }],
+      sources: ["/empty", "/has-a"],
+    });
   });
 });
 

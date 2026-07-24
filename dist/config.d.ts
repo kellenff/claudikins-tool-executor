@@ -76,6 +76,18 @@ declare function dedupeByPath(resolved: readonly ResolvedCandidate[]): {
  */
 declare function findConfigFiles(opts?: FindConfigOptions): string[];
 /**
+ * Merge a list of parsed config layers into a single {@link ConfigLoadResult}.
+ *
+ * Each layer is either a successful parse (with a `servers` array, possibly empty) or a parse
+ * failure (`servers: null`, already logged by the caller). Later layers override earlier ones by
+ * `name`. Each surviving server is tagged with the source path of the layer that supplied it. Empty
+ * input and all-failed layers both return null.
+ */
+declare function mergeLoadedLayers(layers: ReadonlyArray<{
+    readonly path: string;
+    readonly servers: readonly ServerConfigFromFile[] | null;
+}>): ConfigLoadResult | null;
+/**
  * Load and merge config from all lookup layers (or from a single explicit path).
  *
  * - With no arguments: walks {@link findConfigFiles} rules and merges all hits.
@@ -89,4 +101,4 @@ declare function findConfigFiles(opts?: FindConfigOptions): string[];
  */
 declare function loadConfig(configPath?: string, opts?: FindConfigOptions): ConfigLoadResult | null;
 
-export { type ConfigLoadResult, type FindConfigOptions, type LoadedServer, type ServerConfigFromFile, ServerConfigSchema, type ToolExecutorConfig, ToolExecutorConfigSchema, dedupeByPath, findConfigFiles, loadConfig };
+export { type ConfigLoadResult, type FindConfigOptions, type LoadedServer, type ServerConfigFromFile, ServerConfigSchema, type ToolExecutorConfig, ToolExecutorConfigSchema, dedupeByPath, findConfigFiles, loadConfig, mergeLoadedLayers };
