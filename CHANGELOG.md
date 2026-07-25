@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `dotenv.config()` in `src/index.ts` was writing its `◇ injected env ...` banner to stdout, which corrupts the JSON-RPC stream MCP uses for transport — the server started but clients could not complete the initialize handshake, so the tool executor failed to load. Added `quiet: true` to suppress the banner. Test updated to lock in the option.
+- `tsup.config.ts` was bundling with all 9 runtime deps (`@modelcontextprotocol/sdk`, `commander`, `dotenv`, `effect`, `glob`, `js-yaml`, `wink-bm25-text-search`, `wink-nlp-utils`, `zod`) externalised — plugin caches ship without `node_modules`, so every cached install crashed on first import with `ERR_MODULE_NOT_FOUND`. Added a surgical `noExternal` list plus a `banner` that injects a `createRequire` shim so bundled CJS deps can run as ESM. Cache installs are now self-contained.
 
 ### Added
 

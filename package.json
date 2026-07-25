@@ -1,6 +1,6 @@
 {
   "name": "@claudikins/tool-executor",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "MCP server that wraps multiple MCP servers into a single context-efficient interface - part of the Claudikins framework",
   "keywords": [
     "anthropic",
