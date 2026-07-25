@@ -1,2 +1,2 @@
-export{a as selectStaleFiles,b as workspace}from'../chunk-J3LZVY42.js';import'../chunk-BLPALQLO.js';//# sourceMappingURL=workspace.js.map
+import {createRequire}from'module';export{a as selectStaleFiles,b as workspace}from'../chunk-M6SM7VWT.js';import'../chunk-J4FJWXFW.js';import'../chunk-7MRQFJDD.js';import'../chunk-UX3MUDJC.js';createRequire(import.meta.url);//# sourceMappingURL=workspace.js.map
 //# sourceMappingURL=workspace.js.map

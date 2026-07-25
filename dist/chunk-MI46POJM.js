@@ -1,2 +1,0 @@
-import {f}from'./chunk-65OZHBV5.js';import {c as c$1}from'./chunk-UQSGICPU.js';import {Effect}from'effect';var c=e=>Effect.gen(function*(){let t=yield*Effect.tryPromise({try:()=>c$1(e.code,e.timeout),catch:u=>u});return {content:[{type:"text",text:JSON.stringify(t,null,2)}],structuredContent:{...t},isError:!!t.error}});async function x(e){return f().runPromise(c(e))}export{c as a,x as b};//# sourceMappingURL=chunk-MI46POJM.js.map
-//# sourceMappingURL=chunk-MI46POJM.js.map
