@@ -4,7 +4,9 @@ import { fileURLToPath } from "url";
 
 // Load .env from module directory (not cwd) for plugin portability
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: resolve(__dirname, "..", ".env") });
+// ponytail: quiet:true suppresses dotenv's stdout banner — MCP servers must NOT
+// write to stdout (the JSON-RPC channel). One flag, zero behavior change otherwise.
+dotenv.config({ path: resolve(__dirname, "..", ".env"), quiet: true });
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";

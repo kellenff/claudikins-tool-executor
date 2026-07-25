@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `dotenv.config()` in `src/index.ts` was writing its `◇ injected env ...` banner to stdout, which corrupts the JSON-RPC stream MCP uses for transport — the server started but clients could not complete the initialize handshake, so the tool executor failed to load. Added `quiet: true` to suppress the banner. Test updated to lock in the option.
+
 ### Added
 
 - Layered config resolution: Tool Executor now searches 5 locations in precedence order for `tool-executor.config.json` (plugin dir → cwd → `~/.claude/tool-executor/` → `$XDG_CONFIG_HOME/tool-executor/` → `$TOOL_EXECUTOR_CONFIG`). User configs outside the plugin install dir survive plugin updates.
