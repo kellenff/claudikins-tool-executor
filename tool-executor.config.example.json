@@ -21,6 +21,13 @@
       "displayName": "Python Server",
       "command": "uvx",
       "args": ["some-python-mcp"]
+    },
+    {
+      "name": "unused-server",
+      "displayName": "Unused Server",
+      "command": "npx",
+      "args": ["-y", "some-mcp"],
+      "disabled": true
     }
   ]
 }

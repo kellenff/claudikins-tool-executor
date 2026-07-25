@@ -17,6 +17,7 @@ export const ServerConfigSchema = Schema.Struct({
   command: Schema.String.check(Schema.isNonEmpty()),
   commandEnvKey: Schema.optional(Schema.String),
   trusted: Schema.optional(Schema.Boolean),
+  disabled: Schema.optional(Schema.Boolean),
   args: Schema.Array(Schema.String),
   env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
 });
@@ -32,6 +33,7 @@ export interface ServerConfigFromFile {
   command: string;
   commandEnvKey?: string;
   trusted?: boolean;
+  disabled?: boolean;
   args: string[];
   env?: Record<string, string>;
 }
