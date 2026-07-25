@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ServerConfigSchema` accepts an optional `disabled: true` flag. A user entry marked `disabled` is dropped from the resolved server list **and** removes any built-in default of the same name (tombstone semantics), so `{ "name": "gemini", "disabled": true }` in `tool-executor.config.json` turns off the built-in Gemini server without losing its declaration. Each disabled entry logs `Disabled server "<name>" (from <source>)` at startup for visibility.
 - Layered config resolution: Tool Executor now searches 5 locations in precedence order for `tool-executor.config.json` (plugin dir → cwd → `~/.claude/tool-executor/` → `$XDG_CONFIG_HOME/tool-executor/` → `$TOOL_EXECUTOR_CONFIG`). User configs outside the plugin install dir survive plugin updates.
 - User-supplied server entries are **merged with** built-in `DEFAULT_CONFIGS` instead of replacing them. A user entry whose `name` matches a default overrides that default; other defaults remain. Adding one custom server now needs a 1-server config, not an 8-server config.
 - `ServerConfigSchema` accepts `commandEnvKey` on user entries (previously defaults-only) for runtime command-path override via env var.
