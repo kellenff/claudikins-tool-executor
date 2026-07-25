@@ -1,207 +1,173 @@
-<p align="center">
-  <img src="assets/banner.png" alt="claudikins-tool-executor" width="100%">
-</p>
+# Tool Executor
 
-<p align="center">
-  <a href="https://github.com/elb-pr/claudikins-tool-executor/commits/main"><img src="https://img.shields.io/github/last-commit/elb-pr/claudikins-tool-executor?style=flat-square" alt="Last Commit"></a>
-  <img src="https://img.shields.io/badge/node-18%2B-brightgreen?style=flat-square" alt="Node.js 18+">
-  <img src="https://img.shields.io/npm/v/@claudikins/tool-executor?style=flat-square&color=cb3837" alt="npm">
-  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Claude%20Code-plugin-D97757?style=flat-square&logo=claude&logoColor=white" alt="Claude Code Plugin">
-</p>
+> **N tool calls, one round-trip.**
+>
+> `execute_code` lets you write a TypeScript block that calls 30 tools, aggregates their results, and returns a single payload to the model — bypassing the round-trip and the context-window costs that would otherwise make a workflow like that impossible.
 
-<h1 align="center">Tool Executor</h1>
+A single MCP server exposes **3** tools to Claude Code and wraps **218** tools across **9** specialised servers behind them. Tool Executor is the control plane for Claude Code when you would otherwise wire up many MCP servers by hand.
 
-<p align="center">
-  <strong>Loading 100+ MCP tools into Claude Code burns 55k tokens before you type a word,<br>
-  and chaining them together is agonizingly slow.</strong><br><br>
-  Tool Executor gives Claude Code a sandboxed TypeScript environment to search, batch-execute,<br>
-  and auto-save tool results autonomously — cutting context overhead by <strong>98%</strong>.
-</p>
+| Tools exposed | Wrapped tools | Wrapped servers |
+| ---: | ---: | ---: |
+| **3** | **218** | **9** |
 
-<p align="center">
-  <a href="#install--see-it-work">Get Started</a> ·
-  <a href="#the-3-tool-workflow">How It Works</a> ·
-  <a href="#wrapped-servers">Wrapped Servers</a> ·
-  <a href="#graph-intelligence">Graph Intelligence</a> ·
-  <a href="#add-your-own">Configuration</a>
-</p>
+_Last generated: 2026-07-24. Run `pnpm run inventory` to refresh; see [Methodology](./docs/methodology.md)._
 
----
-
-## Install & See It Work
-
-```bash
-# Add the Claudikins marketplace
-/marketplace add elb-pr/claudikins-marketplace
-
-# Install the plugin
-/plugin install claudikins-tool-executor
-```
-
-Restart Claude Code. That's it — 110 tools available, 3 exposed.
-
-### First Workflow
-
-Ask Claude anything that benefits from specialized tools:
-
-```
-Research the latest MCP server patterns and generate a diagram of the architecture.
-```
-
-Claude will:
-
-1. Call `search_tools` to find relevant research and image generation tools
-2. Call `get_tool_schema` to load exact parameters for each
-3. Call `execute_code` once — running this in the sandbox:
-
-```typescript
-// Claude writes and executes this as a single batched call
-const research = await gemini["gemini-deep-research"]({
-  query: "latest MCP server patterns and architecture",
-});
-
-const diagram = await gemini["gemini-generate-image"]({
-  prompt: "MCP server architecture diagram, clean technical style",
-  aspectRatio: "16:9",
-});
-
-// Large responses auto-saved — context stays lean
-if (research._savedTo) {
-  const full = await workspace.readJSON(research._savedTo);
-  await workspace.writeJSON("research-summary.json", full);
-}
-
-console.log("Research saved. Diagram:", diagram.url);
-```
-
-Two tools called. One return. No serial waiting.
-
----
-
-## The 3-Tool Workflow
-
-Tool Executor exposes exactly 3 tools to Claude Code. Everything else happens inside the sandbox.
-
-```
+```text
 search_tools("intent")  →  get_tool_schema("name")  →  execute_code(typescript)
 ```
 
-### `search_tools` — Find by Intent
+## Why
 
-Semantic search over all 110 wrapped tools. Describe what you need; get back names, servers, and descriptions — no schemas loaded yet.
+### Round-trip cost
+
+Without Tool Executor, Claude Code pauses after every MCP call. Five dependent calls mean five model round-trips, five prompt rebuilds, and five places to retry. Tool Executor collapses the dependency chain into a single `execute_code` block: the model writes one TypeScript program, the program walks the dependency graph, and the model sees one result. (`src/tools/execute.ts:16-35`, `src/sandbox/runtime.ts:275-327`.)
+
+### Context-window bloat
+
+Eight native MCP servers expose roughly 100–500 tokens per tool schema. Eight servers × 40 tools × 400 tokens ≈ 128k tokens before Claude reads a single file. Tool Executor ships three tool definitions of about 370 tokens each. Anything heavier is loaded on demand through `get_tool_schema`. (`src/index.ts:23-126`, `src/constants.ts:1-13`.)
+
+### Registry sprawl and wrapper duplication
+
+Tool Executor ships one registry schema, one schema-extraction script, and one layered config loader. Adding a new wrapped server takes one YAML file under `registry/<category>/<server>/<tool>.yaml` and one line in `tool-executor.config.json`. There is no second schema format to maintain. (`src/config.ts:13-67`, `scripts/extract-schemas.ts:147-199`.)
+
+## Safety boundary
+
+Read this before running `execute_code`. Tool Executor does not sandbox user code:
+
+1. User TypeScript runs **in-process** via `AsyncFunction`. There is no VM isolation.
+2. Tool calls inside the block share the **event loop with the MCP server itself**. A runaway call can wedge the server, not just waste tokens.
+3. Today, the only protections are **workspace path-traversal checks** (`src/sandbox/workspace.ts:14-35`) and a **per-call timeout** of 30 seconds by default, capped at 10 minutes (`src/constants.ts:64-73`).
+
+Treat submitted code and configured servers as trusted. Use `tool-executor.config.json` with `"trusted": true` only for servers you would otherwise run yourself. See [SAFETY.md](./docs/SAFETY.md) for the full boundary spec.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    CC[Claude Code]
+    subgraph TE[Tool Executor process]
+      Search[search_tools]
+      Schema[get_tool_schema]
+      Exec[execute_code]
+      WS[(workspace/mcp-results<br/>path-traversal-safe)]
+    end
+    subgraph Wrapped[Wrapped MCP servers]
+      Gemini[gemini]
+      Serena[serena]
+      CBM[codebase-memory]
+      NLM[notebooklm]
+      C7[context7]
+      Apify[apify]
+      Shadcn[shadcn]
+      Seq[sequentialThinking]
+    end
+    CC -->|"intents"| Search
+    CC -->|"schema lookups"| Schema
+    CC -->|"TypeScript"| Exec
+    Exec -->|"tool calls"| Wrapped
+    Wrapped -->|"response > 200 chars"| WS
+    Exec -->|"workspace API"| WS
+    Exec -->|"filtered preview"| CC
+```
+
+A short response returns inline. A response over 200 serialized characters is auto-saved to `workspace/mcp-results/` and replaced with `{ _savedTo, _preview, _size }` so the model's context stays flat. The executor does not stream; one call, one return. (`src/sandbox/runtime.ts:77-103`, `src/sandbox/runtime.ts:287-327`.)
+
+## The three tools
+
+### `search_tools` — find by intent
+
+Slim discovery over every wrapped tool. Returns names, servers, and one-line descriptions; **never** the full schema. Backed by Serena semantic search, with BM25 and term matching as fallbacks. (`src/tools/search.ts:46-110`, `src/search.ts:444-488`.)
 
 ```json
 { "query": "generate images", "limit": 5 }
 ```
 
-Returns slim results: name, server, 80-char description. **~1.1k tokens total** for the full tool surface.
+### `get_tool_schema` — load on demand
 
-### `get_tool_schema` — Load on Demand
-
-Fetch the full JSON Schema for a specific tool. Only pay the token cost when you're ready to call it.
+Fetch the JSON Schema and a generated example for a specific tool. Pay the schema token cost only for tools you actually call. (`src/tools/schema.ts:11-34`.)
 
 ```json
 { "name": "gemini-generate-image" }
 ```
 
-### `execute_code` — Run in the Sandbox
+### `execute_code` — one call, many tools
 
-TypeScript execution with pre-connected MCP clients. Write code that calls multiple tools, branches on results, loops — Claude returns once with everything done.
+A sandboxed TypeScript runtime with pre-connected MCP client proxies. Call any wrapped tool, branch on results, loop, and aggregate before returning. Default timeout: 30 seconds. (`src/tools/execute.ts:16-35`, `src/sandbox/runtime.ts:275-327`.)
 
 ```typescript
-const client = gemini; // pre-connected, no setup
-const result = await client["gemini-generate-image"]({ prompt: "..." });
+const research = await gemini["gemini-deep-research"]({
+  query: "latest MCP server patterns",
+});
+if (research._savedTo) {
+  await workspace.writeJSON("research-summary.json", await workspace.readJSON(research._savedTo));
+}
+const diagram = await gemini["gemini-generate-image"]({
+  prompt: "MCP server architecture diagram, clean technical style",
+  aspectRatio: "16:9",
+});
+console.log("Saved summary. Diagram URL:", diagram.url);
 ```
 
-### Workflow Guidance
+## Working example
 
-The session hook injects a standard MCP-first workflow for each prompt:
+The full example lives in [`docs/examples/pr-summary.ts`](./docs/examples/pr-summary.ts). First 10 lines:
 
-```
-Identify if MCP helps → if so, run search_tools first
-```
+```typescript
+import { workspace } from "@claudikins/tool-executor/runtime";
 
-This keeps MCP usage discoverable while still allowing Claude to proceed when MCP is not the right fit.
+// 1. Detect the changed files via Serena's git-aware symbol graph
+const diff = await codebase_memory["detect_changes"]({
+  project: "claudikins-tool-executor",
+  base_branch: "main",
+});
 
----
+// 2. Pull the docstrings for each changed symbol from the graph
+const touched = await Promise.all(
+  diff.changed.map((sym) =>
+    codebase_memory["get_code_snippet"]({ project: "claudikins-tool-executor", symbol: sym }),
+  ),
+);
 
-## The Execution Gap
-
-This isn't a limitation of Claude. It's a structural gap between how the Anthropic API works and how Claude Code works.
-
-| Aspect               | Anthropic API               | Claude Code (native)      | Tool Executor                |
-| -------------------- | --------------------------- | ------------------------- | ---------------------------- |
-| Schema loading       | Developer-controlled        | All upfront (~55k tokens) | Lazy — search on demand      |
-| Execution model      | Batched (N tools, 1 return) | Serial (pause per tool)   | Batched (TypeScript sandbox) |
-| Large responses      | Developer-managed           | Dumped to context         | Auto-saved to workspace      |
-| Protocol enforcement | Code                        | None                      | Hook-gated                   |
-
-**Context cost in practice:**
-
-```
-Native Claude Code with 8 MCP servers:
-  110 tools × avg 500 tokens/schema = ~55,000 tokens
-
-Tool Executor:
-  3 tool definitions × ~370 tokens each = ~1,100 tokens
-
-Savings: ~98%
+// 3. Ask Gemini for a one-paragraph PR summary
+const summary = await gemini["gemini-summarize"]({
+  text: touched.map((s) => s.body).join("\n\n"),
+  maxWords: 60,
+});
 ```
 
-The API gives developers programmatic control over every tool call. Claude Code users get serial execution and a context window that fills before the conversation starts. Tool Executor imports the API execution model into the IDE — without leaving Claude Code.
+One round-trip. Three wrapped tools. No serial hand-offs. See the [example directory](./docs/examples/) for the full workflow and run instructions.
 
----
+## Wrapped servers
 
-## Wrapped Servers
+Inventory generated from `registry/<category>/<server>/*.yaml`. Counts reflect registry entries; runtime availability depends on `tool-executor.config.json`.
 
-110 tools across 8 servers. All are discoverable via `search_tools`, and executable in the sandbox when the underlying server command is available.
+| Category | Server | Wrapped tools |
+| --- | --- | ---: |
+| `ai-models` | `gemini` | 37 |
+| `code-nav` | `intellij` (registry only) | 82 |
+| `code-nav` | `serena` | 49 |
+| `graph-analysis` | `codebase-memory` | 14 |
+| `knowledge` | `context7` | 2 |
+| `knowledge` | `notebooklm` | 20 |
+| `reasoning` | `sequentialThinking` | 1 |
+| `ui` | `shadcn` | 4 |
+| `web` | `apify` | 9 |
+| **Total** | | **218** |
 
-### Research & Generation
+> **Note:** `intellij` is registered for search-time discovery but is not a default runtime client. The eight default runtime servers are `gemini`, `serena`, `codebase-memory`, `notebooklm`, `context7`, `apify`, `shadcn`, and `sequentialThinking`. (`src/sandbox/clients.ts:23-81`.)
 
-| Server   | Tools | Capabilities                                                                                                                                             |
-| -------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gemini` | 37    | Deep research agent, Claude+Gemini brainstorming, code analysis, structured output, 4K image generation, video generation, text-to-speech, Google Search |
+## Install
 
-### Code Intelligence
+```bash
+/marketplace add elb-pr/claudikins-marketplace
+/plugin install claudikins-tool-executor
+```
 
-| Server            | Tools | Capabilities                                                                                 |
-| ----------------- | ----- | -------------------------------------------------------------------------------------------- |
-| `serena`          | 29    | Semantic symbol search, rename/refactor, file operations, shell execution, persistent memory |
-| `codebase-memory` | 14    | Graph-based code analysis — see [Graph Intelligence](#graph-intelligence)                    |
+Requires Node.js 18+ and the underlying servers configured under `tool-executor.config.json`. For a Python MCP server, also install `uvx`; for the bundled `codebase-memory-mcp`, follow that project's install instructions. Run `claudikins doctor` afterwards to verify the registry, config, and command availability. (`src/cli.ts:77-155`.)
 
-In `execute_code`, `codebase-memory` is exposed as `codebase_memory` because JavaScript identifiers cannot contain hyphens. The original server name is also available as `clients["codebase-memory"]`.
+## Configuration
 
-### Web & Data
-
-| Server  | Tools | Capabilities                                                      |
-| ------- | ----- | ----------------------------------------------------------------- |
-| `apify` | 7     | Actor-based web scraping, RAG browser, structured data extraction |
-
-### Knowledge & Docs
-
-| Server       | Tools | Capabilities                                              |
-| ------------ | ----- | --------------------------------------------------------- |
-| `context7`   | 2     | Library documentation lookup, version-aware API reference |
-| `notebooklm` | 16    | Notebook management, Q&A, research synthesis              |
-
-### Reasoning
-
-| Server               | Tools | Capabilities                                      |
-| -------------------- | ----- | ------------------------------------------------- |
-| `sequentialThinking` | 1     | Multi-step reasoning with explicit thought chains |
-
-### UI Components
-
-| Server   | Tools | Capabilities                                                 |
-| -------- | ----- | ------------------------------------------------------------ |
-| `shadcn` | 4     | Component search, implementation examples, Tailwind variants |
-
-> **Note:** Serena is required — it powers `search_tools` discovery in addition to being a full sandbox client. All other servers are optional; configure your own in `tool-executor.config.json`.
-
-### Add Your Own
-
-Any MCP server can be wrapped. Drop a `tool-executor.config.json` with **just the servers you're adding** — defaults are merged in automatically.
+Tool Executor merges user configuration with built-in defaults across five locations (lowest → highest precedence): plugin dir, cwd, `~/.claude/tool-executor/`, `$XDG_CONFIG_HOME/tool-executor/`, `$TOOL_EXECUTOR_CONFIG`. Later entries override earlier ones by `name`. (`src/config.ts:156-276`.)
 
 ```json
 {
@@ -211,208 +177,58 @@ Any MCP server can be wrapped. Drop a `tool-executor.config.json` with **just th
       "displayName": "My Server",
       "command": "npx",
       "args": ["-y", "my-mcp-package"],
-      "trusted": true,
       "env": { "API_KEY": "${MY_API_KEY}" }
     }
   ]
 }
 ```
 
-Tip: For custom command wrappers, include `"trusted": true` when `command` is not one of the built-in launcher patterns (`npx`, `uvx`, `node`, `python`, `codebase-memory-mcp`) or an explicit path.
+Set `"trusted": true` when the command is not one of `npx`, `uvx`, `node`, `python`, or `codebase-memory-mcp`. Set `"disabled": true` to remove a default server without deleting it from config. See [CONFIGURATION.md](./docs/configuration.md) for layering rules, `disabled` semantics, and provenance reporting.
 
-Run `npm run extract` to generate registry entries. Your tools are now searchable.
+After editing config, run `claudikins extract --all` to regenerate registry YAML for the new server.
 
-#### Where to Put It
+## Add your own
 
-Tool Executor searches **5 locations** in precedence order (lowest → highest; later layers override earlier ones by `name`):
+1. Add the server to `tool-executor.config.json` (start with a minimal `name`, `command`, `args` entry).
+2. Run `claudikins extract --all` to generate `registry/<category>/<server>/*.yaml`.
+3. Reinstall the plugin; the new server is now searchable and executable.
 
-| #   | Location                                                                                      | Use case                                                             |
-| --- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| 1   | `<plugin>/tool-executor.config.json`                                                          | Plugin install dir (purged on update — avoid)                        |
-| 2   | `<cwd>/tool-executor.config.json`                                                             | Per-project override                                                 |
-| 3   | `~/.claude/tool-executor/tool-executor.config.json`                                           | **Recommended for personal customisation** — survives plugin updates |
-| 4   | `$XDG_CONFIG_HOME/tool-executor/tool-executor.config.json` (or `~/.config/tool-executor/...`) | XDG-compliant systems                                                |
-| 5   | `$TOOL_EXECUTOR_CONFIG` (full path)                                                           | Explicit override for testing / one-off configs                      |
+PRs that ship a useful wrapped server are welcome.
 
-User entries are **merged with** built-in defaults rather than replacing them — to add one server you write a 1-server config, not an 8-server config. A user entry whose `name` matches a default overrides that default; defaults you don't mention stay as they are.
+## When NOT to use this
 
-If `$TOOL_EXECUTOR_CONFIG` is set but points to a missing file, the loader warns and continues with the other layers.
-
-Check what's loaded with `claudikins doctor` — it lists every contributing source path and reports `Resolved N server(s) (M default + K user)`.
-
----
-
-## Graph Intelligence
-
-> **New in v1.1.0**
-
-Once you have cheap context and batched execution, the question becomes: what do you do with it?
-
-`codebase-memory-mcp` answers that for codebases. It pre-indexes your repository into a knowledge graph, then exposes 14 tools for traversal, analysis, and architectural reasoning — all accessible through the same `search_tools → execute_code` workflow.
-
-**This is not grep.** It's the difference between Claude reading your files and Claude understanding how your code is connected.
-
-### Index Your Repository
-
-```typescript
-// One-time setup — index the codebase into the graph
-await codebase_memory["index_repository"]({
-  repo_path: "/path/to/repo",
-});
-```
-
-### What Becomes Possible
-
-**Find what calls what — across your entire codebase:**
-
-```typescript
-const callers = await codebase_memory["trace_path"]({
-  project: "my-project",
-  function_name: "handleAuth",
-  mode: "calls",
-});
-// Returns: every function in the call chain, with file paths and line numbers
-```
-
-**Know impact analysis before you refactor:**
-
-```typescript
-const impact = await codebase_memory["detect_changes"]({
-  project: "my-project",
-  base_branch: "main",
-});
-// Returns: changed symbols + affected call chains + risk score
-```
-
-**Query the codebase like a database:**
-
-```typescript
-const routes = await codebase_memory["query_graph"]({
-  project: "my-project",
-  query:
-    "MATCH (f:Function)-[:CALLS]->(g:Function) WHERE g.name CONTAINS 'Auth' RETURN f, g LIMIT 20",
-});
-```
-
-### The 14 Graph Tools
-
-| Tool               | Purpose                                                              |
-| ------------------ | -------------------------------------------------------------------- |
-| `index_repository` | Index a repo into the knowledge graph                                |
-| `index_status`     | Check indexing progress                                              |
-| `get_architecture` | High-level overview: packages, hotspots, entry points                |
-| `search_graph`     | BM25 + semantic + pattern search over the symbol graph               |
-| `get_code_snippet` | Fetch source by qualified name — cheaper than grep for known symbols |
-| `trace_path`       | BFS traversal: callers, callees, data flow, cross-service            |
-| `query_graph`      | Cypher-subset queries for multi-hop relationship patterns            |
-| `detect_changes`   | Git diff → affected symbols + impact/ blast-radius analysis          |
-| `search_code`      | Graph-augmented grep: deduplicates matches into containing functions |
-| `get_graph_schema` | Discover the graph schema before composing queries                   |
-| `manage_adr`       | Architecture Decision Records stored in the graph                    |
-| `ingest_traces`    | Runtime HTTP trace ingestion for call-path validation                |
-| `list_projects`    | List indexed projects                                                |
-| `delete_project`   | Remove a project from the graph                                      |
-
-### vs. Serena
-
-Both `serena` and `codebase-memory` navigate code. They do different things:
-
-|               | Serena                         | codebase-memory                          |
-| ------------- | ------------------------------ | ---------------------------------------- |
-| Approach      | LSP — asks the language server | Graph — pre-indexed knowledge graph      |
-| Best for      | Find symbol, rename, refactor  | Multi-hop queries, impact analysis, ADRs |
-| Startup       | Instant                        | Requires one-time indexing               |
-| Cross-service | No                             | Yes                                      |
-
----
-
-## Workspace Auto-Save
-
-MCP tools return large payloads — web scrapes, research reports, generated content. Tool Executor intercepts responses over 200 characters and saves them to workspace automatically.
-
-```typescript
-const result = await apify["apify-slash-rag-web-browser"]({
-  query: "MCP server patterns",
-});
-
-// Large response auto-saved — context untouched
-// { _savedTo: "mcp-results/1705312345678.json", _preview: "...", _size: 15234 }
-
-// Read inside execute_code when you need it
-const full = await workspace.readJSON(result._savedTo);
-```
-
-> **Note:** Workspace files are not on the filesystem. Access them via `workspace.readJSON()` inside `execute_code`, not via the `Read` tool.
-
----
-
-## When NOT to Use This
-
-Tool Executor optimises for breadth across many servers. Skip it if:
-
-- **You use 1-2 MCP servers** — the overhead isn't worth it; connect them directly
-- **You need streaming** — the sandbox batches and returns once, no streaming
-- **You're building production pipelines** — use the Anthropic SDK directly
-- **You need sub-100ms latency** — sandbox startup adds overhead
-
----
-
-## Skills & Commands
-
-**Skills** (invoke from any Claude Code session):
-
-- `/te-guide` — usage patterns and workflow examples
-- `/te-config` — configuration help and custom server setup
-- `/te-doctor` — diagnose connection issues with wrapped servers
-
-**Commands**:
-
-- `/tool-executor` — overview and quick reference
-
----
+- You use one or two MCP servers — connect them directly. The aggregation overhead is not worth it.
+- You need streamed intermediate output — `execute_code` batches and returns once.
+- You are building a production application — use the Anthropic SDK directly.
+- You need sub-100 ms latency — sandbox preparation adds startup cost.
 
 ## Development
 
-This repo uses [oxlint](https://oxc.rs) (Rust-based linter) and [oxfmt](https://oxc.rs/docs/guide/usage/formatter) (Rust-based formatter), both pinned to exact versions. Rules are tuned for **low required context**: explicit return types, semicolons + braces everywhere, sorted imports with `.js` extensions, no magic numbers or cryptic single-letter names.
+oxlint + oxfmt with a strict rule set tuned for low required context (explicit return types, sorted imports with `.js` extensions, no magic numbers). Pinned versions in `package.json`; upgrades are deliberate work.
 
-| Script              | What it does                                                                           |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| `yarn lint`         | Type-aware lint (runs `oxlint --type-aware`). Reports errors; no fixes.                |
-| `yarn lint:fix`     | Auto-fix what's safely fixable (`oxlint --type-aware --fix --fix-suggestions`).        |
-| `yarn format`       | Format all in-scope files (rewrites in place).                                         |
-| `yarn format:check` | Check formatting without writing (CI/hook-friendly; non-zero exit on drift).           |
-| `yarn fix`          | One-shot: `format` → `lint --fix` → `format` again (the second format settles output). |
+| Script | What it does |
+| --- | --- |
+| `yarn lint` | Type-aware lint (no fixes). |
+| `yarn lint:fix` | Auto-fix what's safely fixable. |
+| `yarn format` | Format in-scope files in place. |
+| `yarn fix` | One-shot: `format` → `lint --fix` → `format`. |
 
-### Pre-commit gate
-
-The `.githooks/pre-commit` hook runs `oxfmt --check` and `oxlint --type-aware` on staged in-scope files. A failed hook prints a `yarn fix` hint and aborts the commit — re-stage the fixes, then re-commit.
-
-**Emergency bypass:** `git commit --no-verify` skips the hook entirely. Use sparingly — there is no CI lint gate today, so anything that lands via `--no-verify` won't be caught until the next dev runs a local lint.
-
-**Out-of-scope files** (registry YAML, docs, `dist/`, `tests/integration/`) skip lint/format entirely.
-
-### Adding new source files
-
-Run `yarn fix` after creating a new `.ts` file in `src/` or `scripts/` to align with the rule set. The formatter and linter agree on shape; if they disagree, run `yarn fix` twice and it converges.
-
----
+The `.githooks/pre-commit` hook runs `oxfmt --check` and `oxlint --type-aware` on staged in-scope files. A failed hook prints a `yarn fix` hint and aborts the commit — re-stage the fixes, then re-commit. Out-of-scope files (`registry/`, `docs/`, `dist/`, `tests/integration/`) skip lint/format entirely.
 
 ## Part of Claudikins
 
 Tool Executor is the execution layer of the Claudikins framework — a set of Claude Code plugins designed to work together.
 
-| Plugin                        | Purpose                                    |
-| ----------------------------- | ------------------------------------------ |
-| **Tool Executor**             | Programmatic MCP execution — you are here  |
-| **Automatic Context Manager** | Seamless context handoff across sessions   |
-| **Klaus**                     | Rigorous debugging with Germanic precision |
-| **GRFP**                      | README generation through dual-AI research |
+| Plugin | Purpose |
+| --- | --- |
+| **Tool Executor** | Programmatic MCP execution — you are here |
+| **Automatic Context Manager** | Seamless context handoff across sessions |
+| **Klaus** | Rigorous debugging with Germanic precision |
+| **GRFP** | README generation through dual-AI research |
 
 ```bash
 /marketplace add elb-pr/claudikins-marketplace
 ```
-
----
 
 ## License
 
