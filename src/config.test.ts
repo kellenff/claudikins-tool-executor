@@ -751,6 +751,11 @@ describe("config", () => {
       expect(() => parseServerConfig({ ...server, args: [1] })).toThrow();
       // ServerConfigSchema is not strict — extra fields are stripped, not rejected.
       expect(() => parseServerConfig({ ...server, extra: true })).not.toThrow();
+      // disabled: true round-trips through the schema.
+      expect(parseServerConfig({ ...server, disabled: true })).toEqual({
+        ...server,
+        disabled: true,
+      });
     });
 
     it("ToolExecutorConfigSchema is strict and accepts empty servers", () => {

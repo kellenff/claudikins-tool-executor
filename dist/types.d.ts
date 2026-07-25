@@ -27,6 +27,7 @@ interface ServerConfig {
     displayName: string;
     command: string;
     trusted?: boolean;
+    disabled?: boolean;
     args: string[];
     env?: Record<string, string>;
     commandEnvKey?: string;

@@ -192,9 +192,19 @@ export function mergeSafeServers(
 function loadServerConfigs(): ServerConfig[] {
   const result = loadConfig();
   const defaults = DEFAULT_CONFIGS.map((config) => ({ source: DEFAULT_SOURCE, config }));
-  const users = result
-    ? result.servers.map((config) => ({ source: config.source ?? "<unknown>", config }))
-    : [];
+  const rawUsers = result ? result.servers : [];
+
+  const users: Array<{ source: string; config: ServerConfig }> = [];
+  const disabledNames = new Set<string>();
+  for (const config of rawUsers) {
+    const source = config.source ?? "<unknown>";
+    if (config.disabled === true) {
+      console.error(`Disabled server "${config.name}" (from ${source})`);
+      disabledNames.add(config.name);
+      continue;
+    }
+    users.push({ source, config });
+  }
 
   if (result) {
     console.error(
@@ -208,7 +218,7 @@ function loadServerConfigs(): ServerConfig[] {
   for (const warning of warnings) {
     console.error(warning);
   }
-  return kept;
+  return disabledNames.size === 0 ? kept : kept.filter((cfg) => !disabledNames.has(cfg.name));
 }
 
 /** MCP server configurations - lazily loaded to ensure dotenv has run first */

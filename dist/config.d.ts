@@ -17,6 +17,7 @@ declare const ServerConfigSchema: Schema.Struct<{
     readonly command: Schema.String;
     readonly commandEnvKey: Schema.optional<Schema.String>;
     readonly trusted: Schema.optional<Schema.Boolean>;
+    readonly disabled: Schema.optional<Schema.Boolean>;
     readonly args: Schema.$Array<Schema.String>;
     readonly env: Schema.optional<Schema.$Record<Schema.String, Schema.String>>;
 }>;
@@ -28,6 +29,7 @@ declare const ToolExecutorConfigSchema: Schema.Struct<{
         readonly command: Schema.String;
         readonly commandEnvKey: Schema.optional<Schema.String>;
         readonly trusted: Schema.optional<Schema.Boolean>;
+        readonly disabled: Schema.optional<Schema.Boolean>;
         readonly args: Schema.$Array<Schema.String>;
         readonly env: Schema.optional<Schema.$Record<Schema.String, Schema.String>>;
     }>>;
@@ -38,6 +40,7 @@ interface ServerConfigFromFile {
     command: string;
     commandEnvKey?: string;
     trusted?: boolean;
+    disabled?: boolean;
     args: string[];
     env?: Record<string, string>;
 }

@@ -208,6 +208,35 @@ describe("sandbox clients", () => {
     expect(configs).toHaveLength(8);
   });
 
+  it("drops user entries marked disabled and emits a provenance log", async () => {
+    mocks.loadConfig.mockReturnValue(
+      userLayer([
+        { name: "kept", displayName: "Kept", command: "npx", args: ["pkg"] },
+        { name: "off", displayName: "Off", command: "npx", args: ["pkg"], disabled: true },
+      ]),
+    );
+
+    const { getServerConfigs } = await importClients();
+    const configs = getServerConfigs();
+
+    expect(configs.map((c) => c.name)).not.toContain("off");
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Disabled server "off"'));
+  });
+
+  it("uses disabled as a tombstone: a disabled user entry for a default name removes the default", async () => {
+    mocks.loadConfig.mockReturnValue(
+      userLayer([
+        { name: "gemini", displayName: "Gemini", command: "npx", args: ["x"], disabled: true },
+      ]),
+    );
+
+    const { getServerConfigs } = await importClients();
+    const configs = getServerConfigs();
+
+    expect(configs.find((c) => c.name === "gemini")).toBeUndefined();
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Disabled server "gemini"'));
+  });
+
   it("falls back to defaults and resolves default env keys when no user config is found", async () => {
     delete process.env.GEMINI_API_KEY;
     process.env.APIFY_TOKEN = "apify-secret";

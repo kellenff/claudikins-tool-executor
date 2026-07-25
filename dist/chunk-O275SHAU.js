@@ -1,0 +1,3 @@
+import {createRequire}from'module';import {f}from'./chunk-UYAQICPZ.js';import {c as c$1}from'./chunk-HC75NKIS.js';import {d}from'./chunk-3D66UHAK.js';createRequire(import.meta.url);
+var c=e=>d.gen(function*(){let t=yield*d.tryPromise({try:()=>c$1(e.code,e.timeout),catch:u=>u});return {content:[{type:"text",text:JSON.stringify(t,null,2)}],structuredContent:{...t},isError:!!t.error}});async function x(e){return f().runPromise(c(e))}export{c as a,x as b};//# sourceMappingURL=chunk-O275SHAU.js.map
+//# sourceMappingURL=chunk-O275SHAU.js.map
