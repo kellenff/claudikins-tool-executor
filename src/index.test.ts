@@ -84,6 +84,7 @@ describe("index", () => {
 
     expect(dotenvConfig).toHaveBeenCalledWith({
       path: expect.stringContaining(".env"),
+      quiet: true,
     });
     expect(mcpServerConstructor).toHaveBeenCalledWith({
       name: "@claudikins/tool-executor",
